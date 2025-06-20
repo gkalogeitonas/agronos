@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { router } from '@inertiajs/vue3'
 import { Download, Pencil, Trash2 } from 'lucide-vue-next'
+import MapboxMap from '@/components/MapboxMap.vue'
 
 // Props
 const props = defineProps<{
@@ -26,6 +27,11 @@ const deleteFarm = () => {
     router.delete(route('farms.destroy', props.farm.id))
   }
 }
+
+// Parse coordinates from WKT "POINT(lng lat)"
+const match = props.farm.coordinates?.match(/POINT\\(([-\\d.]+) ([-\\d.]+)\\)/);
+const lng = match ? parseFloat(match[1]) : 0;
+const lat = match ? parseFloat(match[2]) : 0;
 </script>
 
 <template>
@@ -55,6 +61,7 @@ const deleteFarm = () => {
         </div>
       </div>
 
+      <MapboxMap :lng="lng" :lat="lat" :zoom="12" class="mb-6" />
       <Card class="mb-6">
         <CardHeader>
           <CardTitle>Farm Details</CardTitle>

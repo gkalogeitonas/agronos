@@ -105,7 +105,7 @@ describe('Show (Viewing a Single Farm)', function () {
 
         $response = get(route('farms.show', $otherUserFarm));
 
-        $response->assertStatus(404);
+        $response->assertStatus(403);
     });
 
     test('farm details page shows all required information', function () {
@@ -261,7 +261,7 @@ describe('Update (Modifying Farms)', function () {
 
         $response = put(route('farms.update', $otherUserFarm), $updatedData);
 
-        $response->assertStatus(403);
+        $response->assertStatus(404);
 
         $otherUserFarm->refresh();
         $this->assertEquals('Other User Farm', $otherUserFarm->name);
@@ -344,7 +344,7 @@ describe('Delete (Removing Farms)', function () {
 
         $response = delete(route('farms.destroy', $otherUserFarm));
 
-        $response->assertStatus(403);
+        $response->assertStatus(404);
         assertDatabaseHas('farms', ['id' => $otherUserFarm->id]); // Farm should still exist
     });
 
