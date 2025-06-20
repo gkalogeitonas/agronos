@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { router } from '@inertiajs/vue3'
 import { Download, Pencil, Trash2 } from 'lucide-vue-next'
 import MapboxMap from '@/components/MapboxMap.vue'
+import { type BreadcrumbItem } from '@/types'
 
 // Props
 const props = defineProps<{
@@ -21,6 +22,22 @@ const props = defineProps<{
   }
 }>()
 
+const breadcrumbs: BreadcrumbItem[] = [
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+  },
+  {
+    title: 'Farms',
+    href: '/farms',
+  },
+  {
+    title: props.farm.name,
+    href: route('farms.show', props.farm.id),
+    current: true,
+  },
+]
+
 // Delete farm handler
 const deleteFarm = () => {
   if (confirm(`Are you sure you want to delete ${props.farm.name}?`)) {
@@ -29,7 +46,7 @@ const deleteFarm = () => {
 }
 
 // Parse coordinates from WKT "POINT(lng lat)"
-const match = props.farm.coordinates?.match(/POINT\\(([-\\d.]+) ([-\\d.]+)\\)/);
+const match = props.farm.coordinates?.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
 const lng = match ? parseFloat(match[1]) : 0;
 const lat = match ? parseFloat(match[2]) : 0;
 </script>
@@ -37,7 +54,7 @@ const lat = match ? parseFloat(match[2]) : 0;
 <template>
   <Head :title="farm.name" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="container py-8">
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">{{ farm.name }}</h1>
