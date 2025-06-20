@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Farm;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -13,11 +14,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Create the test user
+        $user = User::factory()->create([
+            'name' => 'gkalog',
+            'email' => 'gkalog2@gmail.com',
+            'password' => bcrypt('password'), // Use bcrypt for password hashing
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Create 10 farms for the test user
+        Farm::factory(10)->create([
+            'user_id' => $user->id,
         ]);
     }
 }
