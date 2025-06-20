@@ -57,3 +57,10 @@ php artisan make:model ModelName
 ```
 
 Refer to the [Laravel documentation](https://laravel.com/docs/artisan) or `docs/Laravel_guidelines.md` for more details on available Artisan commands and their usage.
+
+## UI Component Library Guidance
+
+For all frontend UI development, prefer using [ShadCN](https://ui.shadcn.com/) Vue components whenever possible.  
+This ensures a consistent look and feel across the application and aligns with the project’s frontend technology stack.
+
+Refer to the ShadCN documentation and the frontend implementation notes in `docs/technical_reference.md` for usage examples and best practices.

@@ -274,7 +274,7 @@ For HTTP-based data collection from Wi-Fi devices:
 
 ### Frontend Implementation
 
-The Agronos frontend will be a Laravel + Vue.js + Inertia application with:
+The frontend is based on Laravel’s native Vue starter pack, enhanced with ShadCN components for UI consistency and rapid development.
 
 1. **Dashboard Views**
    - farm overview with maps
