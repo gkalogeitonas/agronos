@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('location');
             $table->decimal('size', 10, 2)->comment('Size in square meters');
-            $table->string('coordinates')->nullable()->comment('Geographic coordinates in POINT format');
+            $table->json('coordinates')->nullable()
+                ->comment('Geographic coordinates as GeoJSON polygon');
             $table->text('description')->nullable();
             $table->timestamps();
 

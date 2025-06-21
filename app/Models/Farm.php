@@ -26,6 +26,10 @@ class Farm extends Model
         'description',
     ];
 
+    protected $casts = [
+        'coordinates' => 'array',
+    ];
+
     /**
      * The "booted" method of the model.
      *
@@ -43,4 +47,26 @@ class Farm extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getAreaAttribute()
+    {
+        if (!$this->coordinates || !isset($this->coordinates['coordinates'][0])) {
+            return 0;
+        }
+
+        // Calculate area using turf.js port or geometry library
+        return $this->calculatePolygonArea($this->coordinates['coordinates'][0]);
+    }
+
+    public function getCenterAttribute()
+    {
+        if (!$this->coordinates || !isset($this->coordinates['coordinates'][0])) {
+            return null;
+        }
+
+        // Calculate centroid
+        $points = $this->coordinates['coordinates'][0];
+        // Implementation of centroid calculation...
+    }
+
 }

@@ -17,12 +17,30 @@ class FarmFactory extends Factory
      */
     public function definition(): array
     {
+        // Generate a simple square polygon near a random point
+        $centerLng = $this->faker->longitude;
+        $centerLat = $this->faker->latitude;
+        $delta = 0.001; // ~100m
+
+        $polygon = [
+            [
+                [$centerLng, $centerLat],
+                [$centerLng + $delta, $centerLat],
+                [$centerLng + $delta, $centerLat + $delta],
+                [$centerLng, $centerLat + $delta],
+                [$centerLng, $centerLat], // Close the polygon
+            ]
+        ];
+
         return [
             'user_id' => User::factory(),
             'name' => $this->faker->company() . ' Farm',
             'location' => $this->faker->city(),
             'size' => $this->faker->randomFloat(2, 10, 1000),
-            'coordinates' => 'POINT(' . $this->faker->longitude() . ' ' . $this->faker->latitude() . ')',
+            'coordinates' => [
+                'type' => 'Polygon',
+                'coordinates' => $polygon,
+            ],
             'description' => $this->faker->paragraph(),
         ];
     }
