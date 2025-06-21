@@ -290,7 +290,6 @@ describe('Update (Modifying Farms)', function () {
             'location' => 'New Location',
             'size' => 300.50,
             'description' => 'Updated detailed description',
-            'coordinates' => 'POINT(21.7379 38.2466)',
         ];
 
         $response = put(route('farms.update', $farm), $updatedData);

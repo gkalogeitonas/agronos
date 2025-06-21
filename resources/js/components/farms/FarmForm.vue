@@ -55,11 +55,9 @@ const { form, polygon, onUpdatePolygon, onResetPolygon, onSubmit, isEdit, defaul
               :editable="true"
               :polygon="polygon"
               @update:polygon="onUpdatePolygon"
+              @reset:polygon="onResetPolygon"
               class="mt-4"
             />
-            <div class="flex gap-2">
-              <Button type="button" variant="secondary" @click="onResetPolygon">Reset Polygon</Button>
-            </div>
           </div>
           <div class="text-xs text-muted-foreground mt-2">Use the polygon tool to draw your farm's boundaries. Click to add points, double-click to finish.</div>
           <div v-if="form.errors.coordinates" class="text-red-500 text-sm mt-1">{{ form.errors.coordinates }}</div>
