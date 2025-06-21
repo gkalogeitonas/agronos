@@ -30,15 +30,7 @@ class Farm extends Model
         'coordinates' => 'array',
     ];
 
-    /**
-     * The "booted" method of the model.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::addGlobalScope(new TenantScope);
-    }
+
 
     /**
      * Get the user that owns the farm.
