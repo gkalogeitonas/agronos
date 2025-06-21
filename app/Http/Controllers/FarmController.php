@@ -70,6 +70,7 @@ class FarmController extends Controller
      */
     public function edit(Farm $farm)
     {
+        $this->authorize('update', $farm);
         return Inertia::render('Farms/Edit', [
             'farm' => $farm,
         ]);
