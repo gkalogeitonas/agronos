@@ -25,7 +25,7 @@ class UpdateFarmRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'location' => ['required', 'string', 'max:255'],
             'size' => ['required', 'numeric', 'min:0'],
-            'coordinates' => ['nullable', 'string'],
+            'coordinates' => ['nullable', 'array'],
             'description' => ['nullable', 'string'],
         ];
     }
