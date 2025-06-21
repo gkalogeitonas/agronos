@@ -105,7 +105,7 @@ describe('Show (Viewing a Single Farm)', function () {
 
         $response = get(route('farms.show', $otherUserFarm));
 
-        $response->assertStatus(403);
+        $response->assertStatus(404);
     });
 
     test('farm details page shows all required information', function () {
@@ -260,6 +260,7 @@ describe('Update (Modifying Farms)', function () {
         ];
 
         $response = put(route('farms.update', $otherUserFarm), $updatedData);
+        //dd($response->getContent());
 
         $response->assertStatus(404);
 

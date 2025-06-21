@@ -80,6 +80,7 @@ class FarmController extends Controller
      */
     public function update(UpdateFarmRequest $request, Farm $farm)
     {
+        $this->authorize('update', $farm);
         $farm->update($request->validated());
 
         return redirect()->route('farms.show', $farm)
@@ -91,6 +92,7 @@ class FarmController extends Controller
      */
     public function destroy(Farm $farm)
     {
+        $this->authorize('delete', $farm);
         $farm->delete();
 
         return redirect()->route('farms.index')
