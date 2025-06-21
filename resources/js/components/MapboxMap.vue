@@ -2,22 +2,27 @@
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import mapboxgl from 'mapbox-gl';
 
+// @ts-ignore
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+
 const props = defineProps<{
   lng: number,
   lat: number,
   zoom?: number,
-  polygon?: any // GeoJSON Polygon
+  polygon?: any, // GeoJSON Polygon
+  editable?: boolean
 }>();
+
+const emit = defineEmits(['update:polygon']);
 
 const mapContainer = ref<HTMLElement | null>(null);
 let map: mapboxgl.Map | null = null;
+let draw: any = null;
 
 function fitPolygon(polygon) {
   if (!map || !polygon || !polygon.coordinates || !polygon.coordinates[0]) return;
-  const bounds = new mapboxgl.LngLatBounds(
-    polygon.coordinates[0][0],
-    polygon.coordinates[0][0]
-  );
+  const bounds = new mapboxgl.LngLatBounds();
   polygon.coordinates[0].forEach(coord => bounds.extend(coord));
   map.fitBounds(bounds, { padding: 40, maxZoom: 17 });
 }
@@ -33,7 +38,27 @@ onMounted(() => {
   map.addControl(new mapboxgl.NavigationControl());
   map.addControl(new mapboxgl.FullscreenControl());
 
-  if (props.polygon && props.polygon.type === 'Polygon') {
+  if (props.editable) {
+    draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: { polygon: true, trash: true },
+      defaultMode: 'draw_polygon',
+    });
+    map.addControl(draw);
+    map.on('draw.create', updatePolygon);
+    map.on('draw.update', updatePolygon);
+    map.on('draw.delete', () => emit('update:polygon', null));
+    // If a polygon is provided, add it to the draw tool
+    map.on('load', () => {
+      if (props.polygon && props.polygon.type === 'Polygon') {
+        draw.add({
+          type: 'Feature',
+          geometry: props.polygon,
+        });
+        fitPolygon(props.polygon);
+      }
+    });
+  } else if (props.polygon && props.polygon.type === 'Polygon') {
     map.on('load', () => {
       if (map.getSource('farm-area')) {
         map.removeLayer('farm-fill');
@@ -74,9 +99,21 @@ onMounted(() => {
   }
 });
 
+function updatePolygon() {
+  if (!draw) return;
+  const data = draw.getAll();
+  if (data.features.length > 0) {
+    const polygon = data.features[0].geometry;
+    emit('update:polygon', polygon);
+    fitPolygon(polygon);
+  } else {
+    emit('update:polygon', null);
+  }
+}
+
 watch(() => props.polygon, (newPolygon) => {
   if (map && newPolygon && newPolygon.type === 'Polygon') {
-    if (map.getSource('farm-area')) {
+    if (!props.editable && map.getSource('farm-area')) {
       map.getSource('farm-area').setData({
         type: 'Feature',
         geometry: newPolygon,

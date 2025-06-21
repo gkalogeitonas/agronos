@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useForm, Head, router } from '@inertiajs/vue3';
+import { useForm, Head } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import MapboxMap from '@/components/MapboxMap.vue';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -21,6 +22,13 @@ const form = useForm({
   coordinates: '',
   description: '',
 });
+
+const defaultLng = 23.7275; // Example: Athens
+const defaultLat = 37.9838;
+
+const handleMapPolygon = (polygon: any) => {
+  form.coordinates = polygon || null;
+};
 
 const submit = () => {
   form.post(route('farms.store'));
@@ -54,8 +62,16 @@ const submit = () => {
               <div v-if="form.errors.size" class="text-red-500 text-sm mt-1">{{ form.errors.size }}</div>
             </div>
             <div>
-              <label class="block mb-1 font-medium">Coordinates (POINT format)</label>
-              <Input v-model="form.coordinates" placeholder="POINT(lng lat)" />
+              <label class="block mb-1 font-medium">Farm Area (draw on map)</label>
+              <MapboxMap
+                :lng="defaultLng"
+                :lat="defaultLat"
+                :zoom="6"
+                :editable="true"
+                @update:polygon="handleMapPolygon"
+                class="mt-4"
+              />
+              <div class="text-xs text-muted-foreground mt-2">Use the polygon tool to draw your farm's boundaries. Click to add points, double-click to finish.</div>
               <div v-if="form.errors.coordinates" class="text-red-500 text-sm mt-1">{{ form.errors.coordinates }}</div>
             </div>
             <div>

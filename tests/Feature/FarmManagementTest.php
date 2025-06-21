@@ -57,7 +57,10 @@ describe('Index (Viewing Farms List)', function () {
             'name' => 'Test Farm',
             'location' => 'Athens, Greece',
             'size' => 100.5,
-            'coordinates' => 'POINT(23.7275 37.9838)',
+            'coordinates' => [
+                'type' => 'Polygon',
+                'coordinates' => [[[22.9444, 40.6401], [22.945, 40.6401], [22.945, 40.641], [22.9444, 40.641], [22.9444, 40.6401]]],
+            ],
         ]);
 
         actingAs($this->user);
@@ -143,7 +146,10 @@ describe('Create (Adding New Farms)', function () {
             'name' => 'New Test Farm',
             'location' => 'Thessaloniki, Greece',
             'size' => 150.25,
-            'coordinates' => 'POINT(22.9444 40.6401)',
+            'coordinates' => [
+                'type' => 'Polygon',
+                'coordinates' => [[[22.9444, 40.6401], [22.945, 40.6401], [22.945, 40.641], [22.9444, 40.641], [22.9444, 40.6401]]],
+            ],
             'description' => 'A test farm in Thessaloniki',
         ];
 
