@@ -97,10 +97,27 @@ Agronos is the successor, implemented as:
 | id          | BIGINT     | Primary key                     |
 | user_id     | BIGINT     | Foreign key to `users` table    |
 | name        | STRING     | farm name                      |
-| coordinates | JSON       | GPS coordinates of the farm    |
+| coordinates | JSON       | GeoJSON Polygon of the farm area |
 | size        | DECIMAL    | Size in hectares/acres          |
 | crop_id     | BIGINT     | Optional Foreign key to `crops` table    |
 | timestamps  | TIMESTAMP  | Created/updated times           |
+
+- The `coordinates` column now stores a GeoJSON Polygon, e.g.:
+  ```json
+  {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [23.7275, 37.9838],
+        [23.7280, 37.9838],
+        [23.7280, 37.9843],
+        [23.7275, 37.9843],
+        [23.7275, 37.9838]
+      ]
+    ]
+  }
+  ```
+- This format is compatible with Mapbox, Leaflet, and most geospatial libraries.
 
 #### Devices Table
 | Column      | Type       | Description                       |

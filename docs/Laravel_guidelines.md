@@ -264,3 +264,72 @@ $allFarms = Farm::withoutTenant()->get();
 - **Security by default**: Prevents accidental data leakage
 - **Simplified controllers**: No need to add user filtering in every query
 - **Consistent approach**: Works the same way across all models
+
+
+# Laravel Guidelines
+
+## Resource Class Structure
+
+### Farm Model Example
+```php
+class Farm extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'name',
+        'location',
+        'size',
+        'coordinates', // GeoJSON Polygon
+        'description',
+    ];
+
+    protected $casts = [
+        'coordinates' => 'array', // Store as GeoJSON
+    ];
+}
+```
+
+### Farm Factory Example
+```php
+public function definition(): array
+{
+    $centerLng = $this->faker->longitude;
+    $centerLat = $this->faker->latitude;
+    $delta = 0.001;
+    $polygon = [
+        [
+            [$centerLng, $centerLat],
+            [$centerLng + $delta, $centerLat],
+            [$centerLng + $delta, $centerLat + $delta],
+            [$centerLng, $centerLat + $delta],
+            [$centerLng, $centerLat], // Close polygon
+        ]
+    ];
+    return [
+        'user_id' => User::factory(),
+        'name' => $this->faker->company . ' Farm',
+        'location' => $this->faker->city,
+        'size' => $this->faker->numberBetween(1000, 100000),
+        'coordinates' => [
+            'type' => 'Polygon',
+            'coordinates' => $polygon,
+        ],
+        'description' => $this->faker->sentence,
+    ];
+}
+```
+
+### Validation Example
+```php
+public function rules(): array
+{
+    return [
+        'coordinates' => 'nullable|array',
+        // ...other rules
+    ];
+}
+```
+
+- The `coordinates` field is a JSON column storing a GeoJSON Polygon.
+- Use the `array` cast in the model for automatic serialization.
+- This format is compatible with Mapbox and geospatial libraries.

@@ -48,7 +48,7 @@ This platform allows users (e.g., gardeners, farmers) to deploy IoT-enabled envi
 
 ### 2. farm Management
 
-* Create farms with coordinates, size, and crop association
+* Create farms with coordinates (stored as GeoJSON Polygon in a JSON column), size, and crop association
 
 ### 3. Crop Management
 
