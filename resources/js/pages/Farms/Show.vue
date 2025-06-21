@@ -85,7 +85,7 @@ if (props.farm.coordinates && props.farm.coordinates.type === 'Polygon') {
         </div>
       </div>
 
-      <MapboxMap :lng="lng" :lat="lat" :zoom="12" class="mb-6" />
+      <MapboxMap :lng="lng" :lat="lat" :zoom="12" :polygon="farm.coordinates" class="mb-6" />
       <Card class="mb-6">
         <CardHeader>
           <CardTitle>Farm Details</CardTitle>
