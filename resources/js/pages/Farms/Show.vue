@@ -16,7 +16,7 @@ const props = defineProps<{
     location: string
     size: number
     description: string | null
-    coordinates: string | null
+    coordinates: any // Now GeoJSON object or null
     created_at: string
     updated_at: string
   }
@@ -45,10 +45,17 @@ const deleteFarm = () => {
   }
 }
 
-// Parse coordinates from WKT "POINT(lng lat)"
-const match = props.farm.coordinates?.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
-const lng = match ? parseFloat(match[1]) : 0;
-const lat = match ? parseFloat(match[2]) : 0;
+// Get center of polygon for map view
+let lng = 0, lat = 0;
+if (props.farm.coordinates && props.farm.coordinates.type === 'Polygon') {
+  const coords = props.farm.coordinates.coordinates[0];
+  if (coords && coords.length > 0) {
+    // Simple centroid: average of all points
+    const sum = coords.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1]], [0, 0]);
+    lng = sum[0] / coords.length;
+    lat = sum[1] / coords.length;
+  }
+}
 </script>
 
 <template>
