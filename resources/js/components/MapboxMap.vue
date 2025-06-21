@@ -12,6 +12,16 @@ const props = defineProps<{
 const mapContainer = ref<HTMLElement | null>(null);
 let map: mapboxgl.Map | null = null;
 
+function fitPolygon(polygon) {
+  if (!map || !polygon || !polygon.coordinates || !polygon.coordinates[0]) return;
+  const bounds = new mapboxgl.LngLatBounds(
+    polygon.coordinates[0][0],
+    polygon.coordinates[0][0]
+  );
+  polygon.coordinates[0].forEach(coord => bounds.extend(coord));
+  map.fitBounds(bounds, { padding: 40, maxZoom: 17 });
+}
+
 onMounted(() => {
   mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
   map = new mapboxgl.Map({
@@ -57,6 +67,7 @@ onMounted(() => {
           'line-width': 2,
         },
       });
+      fitPolygon(props.polygon);
     });
   } else {
     new mapboxgl.Marker().setLngLat([props.lng, props.lat]).addTo(map);
@@ -70,6 +81,7 @@ watch(() => props.polygon, (newPolygon) => {
         type: 'Feature',
         geometry: newPolygon,
       });
+      fitPolygon(newPolygon);
     }
   }
 });
