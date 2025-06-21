@@ -64,7 +64,7 @@ if (props.farm.coordinates && props.farm.coordinates.type === 'Polygon') {
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="container py-8">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">{{ farm.name }}</h1>
+        <h1 class="text-3xl font-bold pl-3">{{ farm.name }}</h1>
         <div class="space-x-2">
           <Button
             variant="outline"
