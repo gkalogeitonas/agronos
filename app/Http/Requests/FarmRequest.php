@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreFarmRequest extends FormRequest
+class FarmRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,7 +24,7 @@ class StoreFarmRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'location' => ['required', 'string', 'max:255'],
-            'size' => ['required', 'numeric', 'min:0'],
+            'size' => ['nullable', 'numeric', 'min:0'],
             'coordinates' => ['nullable', 'array'],
             'description' => ['nullable', 'string'],
         ];

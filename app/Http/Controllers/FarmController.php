@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreFarmRequest;
-use App\Http\Requests\UpdateFarmRequest;
+use App\Http\Requests\FarmRequest;
 use App\Models\Farm;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -43,7 +41,7 @@ class FarmController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreFarmRequest $request)
+    public function store(FarmRequest $request)
     {
         $validated = $request->validated();
         $validated['user_id'] = Auth::id();
@@ -79,7 +77,7 @@ class FarmController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateFarmRequest $request, Farm $farm)
+    public function update(FarmRequest $request, Farm $farm)
     {
         $this->authorize('update', $farm);
         $farm->update($request->validated());
