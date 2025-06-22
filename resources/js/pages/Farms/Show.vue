@@ -19,6 +19,10 @@ const props = defineProps<{
     coordinates: any // Now GeoJSON object or null
     created_at: string
     updated_at: string
+    center: {
+      lng: number
+      lat: number
+    } | null
   }
 }>()
 
@@ -46,16 +50,8 @@ const deleteFarm = () => {
 }
 
 // Get center of polygon for map view
-let lng = 0, lat = 0;
-if (props.farm.coordinates && props.farm.coordinates.type === 'Polygon') {
-  const coords = props.farm.coordinates.coordinates[0];
-  if (coords && coords.length > 0) {
-    // Simple centroid: average of all points
-    const sum = coords.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1]], [0, 0]);
-    lng = sum[0] / coords.length;
-    lat = sum[1] / coords.length;
-  }
-}
+const lng = props.farm.center?.lng ?? 0;
+const lat = props.farm.center?.lat ?? 0;
 </script>
 
 <template>

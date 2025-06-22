@@ -30,7 +30,7 @@ class Farm extends Model
         'coordinates' => 'array',
     ];
 
-
+    protected $appends = ['center'];
 
     /**
      * Get the user that owns the farm.
@@ -55,10 +55,18 @@ class Farm extends Model
         if (!$this->coordinates || !isset($this->coordinates['coordinates'][0])) {
             return null;
         }
-
-        // Calculate centroid
-        $points = $this->coordinates['coordinates'][0];
-        // Implementation of centroid calculation...
+        $coords = $this->coordinates['coordinates'][0];
+        $count = count($coords);
+        if ($count === 0) {
+            return null;
+        }
+        $sum = array_reduce($coords, function ($acc, $p) {
+            return [$acc[0] + $p[0], $acc[1] + $p[1]];
+        }, [0, 0]);
+        return [
+            'lng' => $sum[0] / $count,
+            'lat' => $sum[1] / $count,
+        ];
     }
 
 }
