@@ -60,7 +60,11 @@ const formatSize = (size: number): string => {
       <div v-if="farms.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Card v-for="farm in farms" :key="farm.id" class="overflow-hidden">
           <CardHeader class="bg-muted/20">
-            <CardTitle>{{ farm.name }}</CardTitle>
+            <CardTitle>
+              <Link :href="route('farms.show', farm.id)" class="hover:underline text-primary">
+                {{ farm.name }}
+              </Link>
+            </CardTitle>
             <CardDescription>{{ farm.location }}</CardDescription>
           </CardHeader>
           <CardContent class="pt-6">

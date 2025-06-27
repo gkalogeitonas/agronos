@@ -7,6 +7,7 @@ import { router } from '@inertiajs/vue3'
 import { Download, Pencil, Trash2 } from 'lucide-vue-next'
 import MapboxMap from '@/components/MapboxMap.vue'
 import { type BreadcrumbItem } from '@/types'
+import { Link } from '@inertiajs/vue3'
 
 // Props
 const props = defineProps<{
@@ -62,14 +63,15 @@ const lat = props.farm.center?.lat ?? 0;
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold pl-3">{{ farm.name }}</h1>
         <div class="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            :href="route('farms.edit', farm.id)"
-          >
-            <Pencil class="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <Link :href="route('farms.edit', farm.id)">
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <Pencil class="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
           <Button
             variant="destructive"
             size="sm"
@@ -112,13 +114,11 @@ const lat = props.farm.center?.lat ?? 0;
           </div>
         </CardContent>
         <CardFooter class="flex justify-between">
-          <Button variant="outline" :href="route('farms.index')">
-            Back to Farms
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download class="h-4 w-4 mr-2" />
-            Export Data
-          </Button>
+          <Link :href="route('farms.index')">
+            <Button variant="outline">
+              Back to Farms
+            </Button>
+          </Link>
         </CardFooter>
       </Card>
     </div>
