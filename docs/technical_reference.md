@@ -209,19 +209,26 @@ Sensor measurements will be stored in InfluxDB with the following structure:
 
 ## Device HTTP Endpoints
 
-Since Agronos will initially be a web application, we will implement these HTTP endpoints for IoT devices to register themselves and submit data:
+### Device Registration & Authentication Flow
 
-### Device Registration & Authentication
-- `POST /api/device/register` - Register a new device with initial information
-  - Payload: `{ "device_type": "wifi|lora", "hardware_id": "unique-id", "registration_code": "code-from-qr" }`
-  - Response: `{ "device_id": 123, "token": "auth-token-for-future-requests" }`
+1. **User-Initiated Registration** (Browser-based)
+   - `POST /devices/register-by-user` - User registers device after scanning QR code
+     - Requires authenticated user session
+     - Payload: `{ "uuid": "unique-device-id", "secret": "from-qr-code", "name": "My Device", "farm_id": 123, "type": "wifi|lora", "location": {"lat": 37.9838, "lng": 23.7275} }`
+     - Response: Device successfully registered confirmation
 
-- `POST /api/device/auth` - Authenticate an existing device and get a new token
-  - Payload: `{ "hardware_id": "unique-id", "token": "current-token" }`
-  - Response: `{ "token": "new-auth-token" }`
+2. **Device First Communication**
+   - `POST /api/devices/register` - First device communication to get auth token
+     - Payload: `{ "uuid": "unique-device-id", "secret": "device-secret" }`
+     - Response: `{ "device_id": 123, "token": "auth-token-for-future-requests" }`
 
-### Data Submission
-- `POST /api/device/data` - Submit sensor readings from a device
+3. **Device Authentication Renewal**
+   - `POST /api/devices/auth` - Authenticate an existing device and get a new token
+     - Payload: `{ "uuid": "unique-device-id", "token": "current-token" }`
+     - Response: `{ "token": "new-auth-token" }`
+
+### Data Submission (Authenticated Devices)
+- `POST /api/devices/data` - Submit sensor readings from a device
   - Headers: `Authorization: Bearer {device-token}`
   - Payload:
     ```json
@@ -238,19 +245,11 @@ Since Agronos will initially be a web application, we will implement these HTTP 
     }
     ```
 
-- `POST /api/device/status` - Report device status and diagnostics
+- `POST /api/devices/status` - Update device status information
   - Headers: `Authorization: Bearer {device-token}`
-  - Payload:
-    ```json
-    {
-      "device_id": 123,
-      "status": "online|offline|error",
-      "battery_level": 85, // Percentage, if applicable
-      "signal_strength": -70, // dBm, if applicable
-      "error_code": null, // Error code if status is "error"
-      "firmware_version": "1.2.3"
-    }
-    ```
+  - Payload: `{ "device_id": 123, "status": "online|offline|error", "battery": 85, "signal": 4 }`
+
+
 
 
 ## Technical Implementation
