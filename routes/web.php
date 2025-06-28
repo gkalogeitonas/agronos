@@ -53,6 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // View specific device details
     Route::get('/devices/{device}', [DeviceController::class, 'show'])
         ->name('devices.show');
+
+    Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])
+        ->name('devices.destroy');
 });
 
 require __DIR__.'/settings.php';

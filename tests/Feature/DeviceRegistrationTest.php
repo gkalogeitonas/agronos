@@ -31,6 +31,7 @@ test('authenticated user can register a device with valid data', function () {
         'uuid' => $deviceData['uuid'],
         'name' => $deviceData['name'],
         'user_id' => $this->user->id,
+        'status' => 'registered',
     ]);
 });
 
@@ -60,7 +61,7 @@ test('device registration requires valid data', function () {
         ->withHeaders(['Accept' => 'application/json'])
         ->postJson(route('devices.register-by-user'), $deviceData);
 
-    $response->dump();
+    //$response->dump();
 
     $response->assertStatus(422);
 });

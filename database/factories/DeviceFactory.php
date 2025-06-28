@@ -23,7 +23,7 @@ class DeviceFactory extends Factory
             'uuid' => $this->faker->uuid(),
             'secret' => $this->faker->sha256(),
             'type' => $this->faker->randomElement(['wifi', 'lora', 'other']),
-            'status' => $this->faker->randomElement(['pending','registered', 'online', 'offline', 'error']),
+            'status' => $this->faker->randomElement(['registered', 'online', 'offline', 'error']),
             'last_seen_at' => $this->faker->optional()->dateTime(),
             'battery_level' => $this->faker->optional()->numberBetween(0, 100),
             'signal_strength' => $this->faker->optional()->numberBetween(0, 5),

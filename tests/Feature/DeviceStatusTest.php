@@ -16,10 +16,9 @@ beforeEach(function () {
     // Create a device with a valid registration
     $this->device = Device::create([
         'user_id' => $this->user->id,
-        'farm_id' => $this->farm->id,
         'name' => 'Test Status Device',
         'uuid' => 'status-device-uuid',
-        'secret_hash' => bcrypt('device-secret'),
+        'secret' => bcrypt('device-secret'),
         'type' => 'wifi',
         'status' => 'online',
     ]);
@@ -75,10 +74,9 @@ test('device cannot update another device status', function () {
     // Create another device
     $anotherDevice = Device::create([
         'user_id' => $this->user->id,
-        'farm_id' => $this->farm->id,
         'name' => 'Another Device',
         'uuid' => 'another-device-uuid',
-        'secret_hash' => bcrypt('another-secret'),
+        'secret' => bcrypt('another-secret'),
         'type' => 'wifi',
         'status' => 'offline',
     ]);
