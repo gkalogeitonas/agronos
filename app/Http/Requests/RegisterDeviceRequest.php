@@ -26,7 +26,7 @@ class RegisterDeviceRequest extends FormRequest
         return [
             'uuid' => 'required|string|unique:devices,uuid',
             'secret' => 'required|string',
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'type' => 'required|string|in:wifi,lora,other',
         ];
     }
