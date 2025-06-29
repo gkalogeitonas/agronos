@@ -2,7 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import mapboxgl from 'mapbox-gl';
 
-// @ts-ignore
+// @ts-expect-error: MapboxDraw has no TypeScript types
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 

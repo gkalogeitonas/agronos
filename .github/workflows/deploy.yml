@@ -27,4 +27,6 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ~/apps/agronos && \
           git pull && \
           docker-compose down && \
-          docker-compose up -d --build"
+          docker-compose up -d --build && \
+          docker compose exec -T app php artisan migrate --force && \
+          docker compose exec -T app npm run build"
