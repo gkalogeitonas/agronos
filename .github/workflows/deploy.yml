@@ -28,5 +28,5 @@ jobs:
           git pull && \
           docker-compose down && \
           docker-compose up -d --build && \
-          docker compose exec -T app php artisan migrate --force && \
-          docker compose exec -T app npm run build"
+          docker-compose exec app php artisan migrate --force && \
+          docker-compose exec app npm run build"
