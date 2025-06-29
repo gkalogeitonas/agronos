@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('uuid')->unique();
             $table->string('secret');
             $table->enum('type', ['wifi', 'lora', 'other'])->default('wifi');
-            $table->enum('status', ['registered', 'online', 'offline', 'error'])->default('pending');
+            $table->enum('status', ['registered', 'online', 'offline', 'error'])->default('registered');
             $table->timestamp('last_seen_at')->nullable();
             $table->integer('battery_level')->nullable();
             $table->integer('signal_strength')->nullable();
