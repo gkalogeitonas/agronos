@@ -43,8 +43,9 @@ if [ -f /var/www/package.json ]; then\n\
   npm run build\n\
 fi\n\
 \n\
-# Run Laravel optimizations\n\
+# Run Laravel optimizations and migrations\n\
 if [ -f /var/www/artisan ]; then\n\
+  php /var/www/artisan migrate --force\n\
   php /var/www/artisan config:cache\n\
   php /var/www/artisan route:cache\n\
   php /var/www/artisan view:cache\n\
