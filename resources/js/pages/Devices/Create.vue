@@ -74,4 +74,20 @@ function submit() {
   </AppLayout>
 </template>
 
+<style scoped>
+.input {
+  border: 1px solid #d1d5db; /* Tailwind's gray-300 */
+  border-radius: 0.375rem; /* rounded-md */
+  padding: 0.5rem 0.75rem; /* px-3 py-2 */
+  outline: none;
+  transition: box-shadow 0.2s;
+  width: 100%;
+  background: var(--color-background, #fff);
+  color: var(--color-foreground, #111);
+}
+.input:focus {
+  box-shadow: 0 0 0 2px var(--color-primary, #2563eb33);
+}
+</style>
+
 
