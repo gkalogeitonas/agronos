@@ -52,10 +52,7 @@ class DeviceController extends Controller
             'status' => 'registered',
         ]);
 
-        return response()->json([
-            'message' => 'Device registered successfully',
-            'device' => $device,
-        ], 201);
+        return redirect()->route('devices.index')->with('success', 'Device registered successfully');
     }
 
     /**
