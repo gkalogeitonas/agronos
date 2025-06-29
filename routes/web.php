@@ -62,5 +62,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('devices.destroy');
 });
 
+
+    // Device QR Tool route
+    Route::get('/tools/device-qr', function () {
+        return Inertia::render('Tools/DeviceQr');
+    })->name('tools.device-qr');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
