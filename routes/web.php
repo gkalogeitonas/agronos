@@ -46,6 +46,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/devices', [DeviceController::class, 'index'])
         ->name('devices.index');
 
+    //Create new device
+    Route::get('/devices/create', [DeviceController::class, 'create'])
+        ->name('devices.create');
+
     // View specific device details
     Route::get('/devices/{device}', [DeviceController::class, 'show'])
         ->name('devices.show');
