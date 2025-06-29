@@ -4,7 +4,8 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -19,11 +20,8 @@ const form = useForm({
   type: '',
 });
 
-const deviceTypes = [
-  { label: 'Sensor', value: 'sensor' },
-  { label: 'Controller', value: 'controller' },
-  { label: 'Gateway', value: 'gateway' },
-];
+const page = usePage();
+const deviceTypes = computed(() => page.props.deviceTypes ?? []);
 
 function submit() {
   form.post(route('devices.store'));
