@@ -42,7 +42,7 @@ const submit = () => {
 <template>
   <Head title="Create Farm" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="container py-8 max-w-2xl mx-auto">
+    <div class="container py-8 max-w-7xl mx-auto">
       <FarmForm
         :form="form"
         :polygon="polygon"

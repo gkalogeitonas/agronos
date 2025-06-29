@@ -31,7 +31,7 @@ function submit() {
 <template>
   <Head title="Register Device" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col h-full gap-6 p-4 max-w-xl mx-auto">
+    <div class="flex flex-col h-full gap-6 p-4 w-full max-w-7xl mx-auto">
       <Card>
         <CardHeader>
           <CardTitle>Register New Device</CardTitle>

@@ -57,7 +57,7 @@ const lat = props.farm.center?.lat ?? 37.9838;
 <template>
   <Head :title="`Edit ${props.farm.name}`" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="container py-8 max-w-2xl mx-auto">
+    <div class="container py-8 max-w-7xl mx-auto">
       <FarmForm
         :form="form"
         :polygon="farm.coordinates"
