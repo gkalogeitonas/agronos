@@ -14,34 +14,26 @@
           </Button>
         </Link>
       </div>
-      <!-- Device Cards Grid -->
-      <div v-if="devices.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <!-- Device List -->
+      <div v-if="devices.length > 0" class="flex flex-col gap-4">
         <Card v-for="device in devices" :key="device.id" class="overflow-hidden">
-          <CardHeader class="bg-muted/20">
-            <CardTitle>
-              <Link :href="route('devices.show', device.id)" class="hover:underline text-primary">
-                {{ device.name }}
-              </Link>
-            </CardTitle>
-            <CardDescription>{{ device.type }}</CardDescription>
-          </CardHeader>
-          <CardContent class="pt-6">
-            <div class="flex flex-col gap-4">
-              <div class="flex justify-between">
-                <span class="text-sm text-muted-foreground">UUID</span>
-                <span>{{ device.uuid }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-sm text-muted-foreground">Status</span>
-                <span :class="statusClass(device.status)">{{ device.status }}</span>
-              </div>
-              <div class="flex gap-2 mt-4">
-                <Link :href="route('devices.show', device.id)" class="flex-1">
-                  <Button variant="outline" class="w-full">View Details</Button>
-                </Link>
-              </div>
+          <CardHeader class="bg-muted/20 flex flex-row items-center justify-between gap-4">
+            <div class="flex flex-col gap-1 min-w-[180px]">
+              <span class="text-xs text-muted-foreground">UUID</span>
+              <span class="font-mono text-sm">{{ device.uuid }}</span>
+              <span class="text-xs text-muted-foreground mt-1">Type</span>
+              <span class="text-sm">{{ device.type }}</span>
             </div>
-          </CardContent>
+            <div class="flex-1 flex flex-col items-start justify-center">
+              <CardDescription class="text-lg font-semibold">{{ device.name }}</CardDescription>
+            </div>
+            <div class="flex flex-col items-end gap-2 min-w-[120px]">
+              <span :class="statusClass(device.status)">{{ device.status }}</span>
+              <Link :href="route('devices.show', device.id)">
+                <Button variant="outline">View Details</Button>
+              </Link>
+            </div>
+          </CardHeader>
         </Card>
       </div>
       <!-- Empty State -->
