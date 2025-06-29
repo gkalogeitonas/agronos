@@ -39,7 +39,7 @@ const footerNavItems: NavItem[] = [
     // },
     {
         title: 'Device QR Generator',
-        href: 'http://127.0.0.1:8000/tools/device-qr',
+        href: '/tools/device-qr',
         icon: QrCode,
     },
 ];
