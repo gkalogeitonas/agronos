@@ -4,8 +4,9 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { QrcodeStream } from 'vue-qrcode-reader';
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -22,16 +23,37 @@ const form = useForm({
 
 const page = usePage();
 const deviceTypes = computed(() => page.props.deviceTypes ?? []);
+const showScanner = ref(false);
 
 function submit() {
   form.post(route('devices.store'));
+}
+
+function onDecode(result: string) {
+  try {
+    const data = JSON.parse(result);
+    if (data.uuid) form.uuid = data.uuid;
+    if (data.secret) form.secret = data.secret;
+    if (data.type) form.type = data.type;
+    showScanner.value = false;
+  } catch (e) {
+    alert('Invalid QR code format.');
+  }
 }
 </script>
 
 <template>
   <Head title="Register Device" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col h-full gap-6 p-4 w-full max-w-7xl mx-auto">
+    <div class="flex flex-col h-full gap-6 p-4 w-full max-w-4xl mx-auto">
+      <div class="flex justify-center mb-4">
+        <Button type="button" variant="default" class="text-lg px-6 py-3" @click="showScanner = true">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 5a2 2 0 012-2h2a1 1 0 110 2H5v2a1 1 0 11-2 0V5zm12-2a2 2 0 012 2v2a1 1 0 11-2 0V5h-2a1 1 0 110-2h2zm2 12a2 2 0 01-2 2h-2a1 1 0 110-2h2v-2a1 1 0 112 0v2zm-14 2a2 2 0 01-2-2v-2a1 1 0 112 0v2h2a1 1 0 110 2H5zm3-7a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+          </svg>
+          Scan Device QR
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Register New Device</CardTitle>
@@ -68,6 +90,7 @@ function submit() {
               <Button type="submit" :disabled="form.processing">Register Device</Button>
             </div>
           </form>
+          <QrcodeStream v-if="showScanner" @decode="onDecode" @init="() => {}" class="mb-4" />
         </CardContent>
       </Card>
     </div>
