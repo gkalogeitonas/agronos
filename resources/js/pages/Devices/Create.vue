@@ -29,16 +29,22 @@ function submit() {
   form.post(route('devices.store'));
 }
 
-function onDecode(result: string) {
-  try {
-    const data = JSON.parse(result);
-    if (data.uuid) form.uuid = data.uuid;
-    if (data.secret) form.secret = data.secret;
-    if (data.type) form.type = data.type;
-    showScanner.value = false;
-  } catch (e) {
-    alert('Invalid QR code format.');
+function onDetect(detectedCodes) {
+  if (detectedCodes && detectedCodes.length > 0) {
+    try {
+      const data = JSON.parse(detectedCodes[0].rawValue);
+      if (data.uuid) form.uuid = data.uuid;
+      if (data.secret) form.secret = data.secret;
+      if (data.type) form.type = data.type;
+      showScanner.value = false;
+    } catch (e) {
+      alert('Invalid QR code format.');
+    }
   }
+}
+
+function onQrError(error) {
+  alert('QR Scanner Error: ' + error.message);
 }
 </script>
 
@@ -90,7 +96,7 @@ function onDecode(result: string) {
               <Button type="submit" :disabled="form.processing">Register Device</Button>
             </div>
           </form>
-          <QrcodeStream v-if="showScanner" @decode="onDecode" @init="() => {}" class="mb-4" />
+          <QrcodeStream v-if="showScanner" @detect="onDetect" @error="onQrError" class="mb-4" />
         </CardContent>
       </Card>
     </div>
