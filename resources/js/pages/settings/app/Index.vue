@@ -6,9 +6,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 
 <template>
   <AppLayout>
-    <div class="space-y-6">
+    <div class="space-y-6 p-4">
       <h2 class="text-2xl font-bold mb-4">App Settings</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1  md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Device List</CardTitle>

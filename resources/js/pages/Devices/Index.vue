@@ -39,9 +39,6 @@
                 <Link :href="route('devices.show', device.id)" class="flex-1">
                   <Button variant="outline" class="w-full">View Details</Button>
                 </Link>
-                <Link :href="route('devices.edit', device.id)" class="flex-1">
-                  <Button variant="outline" class="w-full">Edit</Button>
-                </Link>
               </div>
             </div>
           </CardContent>

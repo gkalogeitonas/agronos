@@ -40,7 +40,7 @@ function submit() {
           <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div>
               <label class="block mb-1 font-medium" for="name">Device Name</label>
-              <input v-model="form.name" id="name" type="text" class="input w-full" required />
+              <input v-model="form.name" id="name" type="text" class="input w-full"  />
               <div v-if="form.errors.name" class="text-red-500 text-sm mt-1">{{ form.errors.name }}</div>
             </div>
             <div>
