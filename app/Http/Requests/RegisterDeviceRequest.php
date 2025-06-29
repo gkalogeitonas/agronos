@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use App\Enums\DeviceType;
 
 class RegisterDeviceRequest extends FormRequest
 {
@@ -27,7 +28,7 @@ class RegisterDeviceRequest extends FormRequest
             'uuid' => 'required|string|unique:devices,uuid',
             'secret' => 'required|string',
             'name' => 'nullable|string|max:255',
-            'type' => 'required|string|in:wifi,lora,other',
+            'type' => 'required|string|in:' . implode(',', DeviceType::values()),
         ];
     }
 

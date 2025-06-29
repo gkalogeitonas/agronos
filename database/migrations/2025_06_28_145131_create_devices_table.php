@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DeviceType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,7 +18,7 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->string('uuid')->unique();
             $table->string('secret');
-            $table->enum('type', ['wifi', 'lora', 'other'])->default('wifi');
+            $table->enum('type', DeviceType::values())->default(DeviceType::WIFI->value);
             $table->enum('status', ['registered', 'online', 'offline', 'error'])->default('registered');
             $table->timestamp('last_seen_at')->nullable();
             $table->integer('battery_level')->nullable();

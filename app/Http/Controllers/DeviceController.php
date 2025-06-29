@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Requests\RegisterDeviceRequest;
+use App\Enums\DeviceType;
 
 class DeviceController extends Controller
 {
