@@ -6,6 +6,7 @@ use App\Models\Device;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Http\Requests\RegisterDeviceRequest;
 
 class DeviceController extends Controller
 {
@@ -15,7 +16,7 @@ class DeviceController extends Controller
      */
     public function index()
     {
-        $devices = Device::where('user_id', auth()->id())->get();
+        $devices = Device::all();
         return Inertia::render('Devices/Index', [
             'devices' => $devices,
         ]);
@@ -32,9 +33,23 @@ class DeviceController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(RegisterDeviceRequest $request)
     {
-        //
+        $validated = $request->validated();
+
+        $device = Device::create([
+            'user_id' => $request->user()->id,
+            'uuid' => $validated['uuid'],
+            'secret' => $validated['secret'],
+            'name' => $validated['name'],
+            'type' => $validated['type'],
+            'status' => 'registered',
+        ]);
+
+        return response()->json([
+            'message' => 'Device registered successfully',
+            'device' => $device,
+        ], 201);
     }
 
     /**

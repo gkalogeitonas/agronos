@@ -20,7 +20,7 @@ test('authenticated user can register a device with valid data', function () {
 
     $response = $this
         ->actingAs($this->user, 'web')
-        ->post(route('devices.register-by-user'), $deviceData);
+        ->post(route('devices.store'), $deviceData);
 
     $response->assertStatus(201)
         ->assertJson([
@@ -43,7 +43,7 @@ test('guest cannot register a device', function () {
         'type' => 'wifi'
     ];
 
-    $response = $this->post(route('devices.register-by-user'), $deviceData);
+    $response = $this->post(route('devices.store'), $deviceData);
 
     $response->assertRedirect(route('login'));
 });
@@ -59,7 +59,7 @@ test('device registration requires valid data', function () {
     $response = $this
         ->actingAs($this->user, 'web')
         ->withHeaders(['Accept' => 'application/json'])
-        ->postJson(route('devices.register-by-user'), $deviceData);
+        ->postJson(route('devices.store'), $deviceData);
 
     //$response->dump();
 

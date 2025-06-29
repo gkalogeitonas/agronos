@@ -42,10 +42,6 @@ Route::middleware('auth')->group(function () {
 
 // Device registration and management routes
 Route::middleware(['auth', 'verified'])->group(function () {
-    // User scans QR code and registers device
-    Route::post('/devices/register-by-user', [DeviceRegistrationController::class, 'registerByUser'])
-        ->name('devices.register-by-user');
-
     // Device management page
     Route::get('/devices', [DeviceController::class, 'index'])
         ->name('devices.index');
@@ -53,6 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // View specific device details
     Route::get('/devices/{device}', [DeviceController::class, 'show'])
         ->name('devices.show');
+
+    // Register device (store)
+    Route::post('/devices', [DeviceController::class, 'store'])
+        ->name('devices.store');
 
     Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])
         ->name('devices.destroy');
