@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 </script>
 
 <template>
-  <SettingsLayout>
+  <AppLayout>
     <div class="space-y-6">
       <h2 class="text-2xl font-bold mb-4">App Settings</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -21,5 +21,5 @@ import SettingsLayout from '@/layouts/settings/Layout.vue';
         <!-- Add more settings sections/cards here as needed -->
       </div>
     </div>
-  </SettingsLayout>
+  </AppLayout>
 </template>
