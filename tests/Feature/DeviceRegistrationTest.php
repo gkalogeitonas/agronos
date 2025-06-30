@@ -22,10 +22,8 @@ test('authenticated user can register a device with valid data', function () {
         ->actingAs($this->user, 'web')
         ->post(route('devices.store'), $deviceData);
 
-    $response->assertStatus(201)
-        ->assertJson([
-            'message' => 'Device registered successfully',
-        ]);
+    $response->assertRedirect(route('devices.index'));
+    $response->assertSessionHas('success', 'Device registered successfully');
 
     $this->assertDatabaseHas('devices', [
         'uuid' => $deviceData['uuid'],
