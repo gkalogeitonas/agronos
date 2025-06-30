@@ -16,7 +16,7 @@ beforeEach(function () {
 });
 
 test('device can login with valid uuid and secret', function () {
-    $response = $this->postJson('/api/device/login', [
+    $response = $this->postJson('/api/v1/device/login', [
         'uuid' => 'test-device-uuid-123',
         'secret' => 'super-secret-key',
     ]);
@@ -26,7 +26,7 @@ test('device can login with valid uuid and secret', function () {
 });
 
 test('device cannot login with invalid uuid', function () {
-    $response = $this->postJson('/api/device/login', [
+    $response = $this->postJson('/api/v1/device/login', [
         'uuid' => 'invalid-uuid',
         'secret' => 'super-secret-key',
     ]);
@@ -36,7 +36,7 @@ test('device cannot login with invalid uuid', function () {
 });
 
 test('device cannot login with invalid secret', function () {
-    $response = $this->postJson('/api/device/login', [
+    $response = $this->postJson('/api/v1/device/login', [
         'uuid' => 'test-device-uuid-123',
         'secret' => 'wrong-secret',
     ]);
@@ -46,7 +46,7 @@ test('device cannot login with invalid secret', function () {
 });
 
 test('device login requires uuid and secret', function () {
-    $response = $this->postJson('/api/device/login', []);
+    $response = $this->postJson('/api/v1/device/login', []);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['uuid', 'secret']);
