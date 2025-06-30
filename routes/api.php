@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DeviceAuthController;
-use App\Http\Controllers\DeviceDataController;
-use App\Http\Controllers\DeviceStatusController;
+use App\Http\Controllers\Api\DeviceAuthController;
+// use App\Http\Controllers\DeviceDataController;
+// use App\Http\Controllers\DeviceStatusController;
 
 Route::get('/test', function () {
     return response()->json(['message' => 'API is working']);
@@ -20,14 +20,17 @@ Route::prefix('devices')->group(function () {
     Route::post('/auth', [DeviceAuthController::class, 'authenticate'])
         ->name('api.devices.authenticate');
 
-    // Protected routes requiring device authentication
-    Route::middleware('auth:sanctum')->group(function () {
-        // Submit sensor readings
-        Route::post('/data', [DeviceDataController::class, 'store'])
-            ->name('api.devices.data.store');
+    // // Protected routes requiring device authentication
+    // Route::middleware('auth:sanctum')->group(function () {
+    //     // Submit sensor readings
+    //     Route::post('/data', [DeviceDataController::class, 'store'])
+    //         ->name('api.devices.data.store');
 
-        // Update device status
-        Route::post('/status', [DeviceStatusController::class, 'update'])
-            ->name('api.devices.status.update');
-    });
+    //     // Update device status
+    //     Route::post('/status', [DeviceStatusController::class, 'update'])
+    //         ->name('api.devices.status.update');
+    // });
 });
+
+// Device login route
+Route::post('/device/login', [DeviceAuthController::class, 'login']);
