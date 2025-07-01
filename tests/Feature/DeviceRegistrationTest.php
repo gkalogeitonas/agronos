@@ -3,6 +3,8 @@
 use App\Models\User;
 use App\Models\Farm;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Device;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
@@ -62,4 +64,28 @@ test('device registration requires valid data', function () {
     //$response->dump();
 
     $response->assertStatus(422);
+});
+
+
+
+test('device secret is hashed when device is registered', function () {
+    $plainSecret = 'plain-secret-test';
+    $deviceData = [
+        'uuid' => 'test-hash-uuid-001',
+        'secret' => $plainSecret,
+        'name' => 'Test Device',
+        'type' => 'wifi',
+    ];
+
+    $response = $this
+        ->actingAs($this->user, 'web')
+        ->post(route('devices.store'), $deviceData);
+
+        //dump($response->getContent());
+
+    $device = Device::where('uuid', $deviceData['uuid'])->first();
+    //dd($device);
+    expect($device)->not->toBeNull();
+    expect($device->secret)->not->toBe($plainSecret);
+    expect(\Illuminate\Support\Facades\Hash::check($plainSecret, $device->secret))->toBeTrue();
 });

@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Requests\RegisterDeviceRequest;
 use App\Enums\DeviceType;
+use Illuminate\Support\Facades\Hash;
 
 class DeviceController extends Controller
 {
@@ -46,7 +47,7 @@ class DeviceController extends Controller
         $device = Device::create([
             'user_id' => $request->user()->id,
             'uuid' => $validated['uuid'],
-            'secret' => $validated['secret'],
+            'secret' => Hash::make($validated['secret']), // Hashing here is correct
             'name' => $validated['name'],
             'type' => $validated['type'],
             'status' => 'registered',
