@@ -22,6 +22,8 @@ COPY docker/php/production.ini /usr/local/etc/php/conf.d/production.ini
 
 WORKDIR /var/www
 
+COPY . /var/www
+
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
