@@ -22,6 +22,10 @@ COPY docker/php/production.ini /usr/local/etc/php/conf.d/production.ini
 
 WORKDIR /var/www
 
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+
 # Create a script to fix permissions and build assets
 RUN echo '#!/bin/bash\n\
 mkdir -p /var/www/storage/logs\n\
