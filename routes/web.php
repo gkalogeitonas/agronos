@@ -64,5 +64,8 @@ Route::get('/tools/device-qr', function () {
 // Sensor scan route (for web-based frontend with Inertia)
 Route::middleware(['auth', 'verified'])->post('/sensors/scan', [SensorController::class, 'scan'])->name('sensors.scan');
 
+// Sensor resource routes
+Route::middleware(['auth', 'verified'])->resource('sensors', SensorController::class);
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->enum('type', SensorType::values())->nullable();
             $table->timestamp('last_reading_at')->nullable();
+            $table->decimal('last_reading', 10, 2)->nullable();
             $table->timestamps();
         });
     }
