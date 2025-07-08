@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Enums\SensorType;
 
 return new class extends Migration
 {
@@ -13,11 +14,14 @@ return new class extends Migration
     {
         Schema::create('sensors', function (Blueprint $table) {
             $table->id();
+            $table->string('uuid')->unique();
             $table->foreignId('device_id')->constrained()->onDelete('cascade');
-            $table->string('code')->unique();
-            $table->string('name');
-            $table->enum('type', ['moisture', 'temperature', 'humidity', 'light', 'other'])->default('other');
-            $table->enum('status', ['active', 'inactive', 'error'])->default('active');
+            $table->foreignId('farm_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('lat', 10, 7);
+            $table->decimal('lon', 10, 7);
+            $table->string('name')->nullable();
+            $table->enum('type', SensorType::values())->nullable();
             $table->timestamp('last_reading_at')->nullable();
             $table->timestamps();
         });
