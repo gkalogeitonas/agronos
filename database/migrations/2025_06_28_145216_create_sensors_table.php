@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignId('device_id')->constrained()->onDelete('cascade');
             $table->foreignId('farm_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->decimal('lat', 10, 7);
-            $table->decimal('lon', 10, 7);
+            $table->decimal('lat', 10, 7)->nullable();
+            $table->decimal('lon', 10, 7)->nullable();
             $table->string('name')->nullable();
             $table->enum('type', SensorType::values())->nullable();
             $table->timestamp('last_reading_at')->nullable();
