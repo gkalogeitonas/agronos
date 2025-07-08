@@ -107,3 +107,47 @@ it('cannot update a sensor belonging to another user', function () {
     $response->assertNotFound();
     $this->assertDatabaseMissing('sensors', ['id' => $sensor->id, 'lat' => 55.55, 'lon' => 44.44]);
 });
+
+it('cannot create a sensor without device_id', function () {
+    $payload = [
+        'uuid' => 'no-device-id',
+        'user_id' => $this->user->id,
+        'lat' => 1.23,
+        'lon' => 4.56,
+    ];
+    $response = post('/sensors', $payload);
+    $response->assertSessionHasErrors('device_id');
+    $this->assertDatabaseMissing('sensors', ['uuid' => 'no-device-id']);
+});
+
+it('cannot create a sensor with non-existing device_id', function () {
+    $payload = [
+        'uuid' => 'bad-device-id',
+        'device_id' => 999999,
+        'user_id' => $this->user->id,
+        'lat' => 1.23,
+        'lon' => 4.56,
+    ];
+    $response = post('/sensors', $payload);
+    $response->assertSessionHasErrors('device_id');
+    $this->assertDatabaseMissing('sensors', ['uuid' => 'bad-device-id']);
+});
+
+it('cannot create a sensor with a device_id that does not belong to the user', function () {
+    $otherUser = User::factory()->create();
+    $otherDevice = Device::factory(['user_id' => $otherUser->id])->create();
+    $payload = [
+        'uuid' => 'wrong-owner-device',
+        'device_id' => $otherDevice->id,
+        'user_id' => $this->user->id,
+        'lat' => 1.23,
+        'lon' => 4.56,
+    ];
+    $response = post('/sensors', $payload);
+    // You may want to add a custom validation rule for this in your controller
+    $response->assertForbidden();
+    $this->assertDatabaseMissing('sensors', ['uuid' => 'wrong-owner-device']);
+});
+
+
+

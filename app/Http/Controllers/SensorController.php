@@ -44,8 +44,10 @@ class SensorController extends Controller
             'name' => 'nullable|string'
         ]);
 
-        $sensor = Sensor::create($validated + ['user_id' => $request->user()->id]);
+        $device = \App\Models\Device::find($validated['device_id']);
+        $this->authorize('view', $device); // This uses DevicePolicy
 
+        $sensor = Sensor::create($validated + ['user_id' => $request->user()->id]);
         return redirect()->route('sensors.index');
     }
 
@@ -111,6 +113,7 @@ class SensorController extends Controller
         $device = \App\Models\Device::where('uuid', $validated['device_uuid'])
                    ->firstOrFail();
         $sensor = Sensor::where('uuid', $validated['uuid'])->first();
+        $this->authorize('view', $device); // This uses DevicePolicy
 
         if ($sensor) {
             return $this->update($request, $sensor);

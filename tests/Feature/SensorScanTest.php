@@ -111,3 +111,22 @@ it('sensor created by scanning is only visible to the creator', function () {
     $response->assertOk();
     $response->assertDontSee('Scan Created Sensor');
 });
+
+it('cannot create a sensor by scanning with a device that does not belong to the user', function () {
+    $otherUser = User::factory()->create();
+    $otherDevice = Device::factory(['user_id' => $otherUser->id])->create();
+    actingAs($this->user);
+    $payload = [
+        'device_uuid' => $otherDevice->uuid,
+        'uuid' => 'scan-wrong-owner-device',
+        'lat' => 1.23,
+        'lon' => 4.56,
+        'name' => 'Should Not Be Created',
+    ];
+    $response = postJson(route('sensors.scan'), $payload);
+    $this->assertTrue(
+        in_array($response->status(), [403, 404]),
+        'Expected 403 Forbidden or 404 Not Found, got ' . $response->status()
+    );
+    $this->assertDatabaseMissing('sensors', ['uuid' => 'scan-wrong-owner-device']);
+});
