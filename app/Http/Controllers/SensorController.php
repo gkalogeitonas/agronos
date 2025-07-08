@@ -99,7 +99,6 @@ class SensorController extends Controller
      */
     public function scan(Request $request)
     {
-        $this->authorize('create', Sensor::class);
         $validated = $request->validate([
             'uuid'        => 'required|string',
             'device_uuid' => 'required|exists:devices,uuid',
@@ -109,31 +108,17 @@ class SensorController extends Controller
             'name'        => 'nullable|string',
         ]);
 
-        // Find the device by its UUID
         $device = \App\Models\Device::where('uuid', $validated['device_uuid'])
                    ->firstOrFail();
+        $sensor = Sensor::where('uuid', $validated['uuid'])->first();
 
-        // Create or update the sensor
-        $sensor = Sensor::updateOrCreate(
-            ['uuid' => $validated['uuid']],
-            [
+        if ($sensor) {
+            return $this->update($request, $sensor);
+        } else {
+            return $this->store($request->merge([
                 'device_id' => $device->id,
-                'user_id'   => $request->user()->id,
-                'lat'       => $validated['lat'] ?? null,
-                'lon'       => $validated['lon'] ?? null,
-                'type'      => $validated['type'] ?? null,
-                'name'      => $validated['name'] ?? null,
-            ]
-        );
-
-        // Prepare response message and status code
-        $created = $sensor->wasRecentlyCreated;
-        $message = $created ? 'Sensor created successfully' : 'Sensor updated successfully';
-        $status = $created ? 201 : 200;
-
-        return response()->json([
-            'message' => $message,
-            'sensor'  => $sensor,
-        ], $status);
+                'user_id' => $request->user()->id,
+            ]));
+        }
     }
 }
