@@ -24,4 +24,11 @@ describe('User model', function () {
         expect($user->devices)->toHaveCount(1);
         expect($user->devices->first())->toBeInstanceOf(\App\Models\Device::class);
     });
+
+    it('a user can have many sensors', function () {
+        $user = \App\Models\User::factory()->create();
+        $sensors = \App\Models\Sensor::factory()->count(3)->create(['user_id' => $user->id]);
+        expect($user->sensors)->toHaveCount(3);
+        expect($user->sensors->first())->toBeInstanceOf(\App\Models\Sensor::class);
+    });
 });
