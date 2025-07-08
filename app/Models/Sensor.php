@@ -12,6 +12,18 @@ class Sensor extends Model
     /** @use HasFactory<\Database\Factories\SensorFactory> */
     use HasFactory, BelongsToTenant;
 
+    protected $fillable = [
+        'user_id',
+        'device_id',
+        'farm_id',
+        'crop_id',
+        'name',
+        'uuid',
+        'type',
+        'lat',
+        'lon',
+    ];
+
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);

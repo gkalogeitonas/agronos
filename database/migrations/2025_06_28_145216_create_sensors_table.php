@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('uuid')->unique();
             $table->foreignId('device_id')->constrained()->onDelete('cascade');
-            $table->foreignId('farm_id')->constrained()->onDelete('cascade');
+            $table->foreignId('farm_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->decimal('lat', 10, 7)->nullable();
             $table->decimal('lon', 10, 7)->nullable();

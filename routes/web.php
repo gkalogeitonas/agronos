@@ -3,6 +3,7 @@
 use App\Http\Controllers\FarmController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -59,6 +60,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('/tools/device-qr', function () {
     return Inertia::render('Tools/DeviceQr');
 })->name('tools.device-qr');
+
+// Sensor scan route (for web-based frontend with Inertia)
+Route::middleware(['auth', 'verified'])->post('/sensors/scan', [SensorController::class, 'scan'])->name('sensors.scan');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
