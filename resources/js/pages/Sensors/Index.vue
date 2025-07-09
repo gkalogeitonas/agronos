@@ -27,11 +27,11 @@
         </div>
         <h3 class="text-lg font-medium mb-2">No sensors found</h3>
         <p class="text-sm text-muted-foreground mb-4">Get started by adding your first sensor.</p>
-        <!--
+
         <Link :href="route('sensors.create')">
           <Button>Add Your First Sensor</Button>
         </Link>
-        -->
+
       </div>
     </div>
   </AppLayout>
@@ -40,7 +40,8 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import SensorCard from '@/components/SensorCard.vue';
