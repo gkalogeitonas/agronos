@@ -3,7 +3,7 @@
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex flex-col h-full gap-6 p-4">
       <!-- Header -->
-      <div class="flex justify-between items-center">
+      <div class="flex justify-between items-center gap-4">
         <h1 class="text-2xl font-bold">Sensors Management</h1>
         <Link :href="route('sensors.create')">
           <Button>
@@ -14,9 +14,17 @@
           </Button>
         </Link>
       </div>
+      <!-- Farm Filter -->
+      <div class="flex items-center gap-2 mb-2">
+        <label for="farm-filter" class="text-sm font-medium">Farm:</label>
+        <select id="farm-filter" v-model="selectedFarmId" class="border rounded px-2 py-1 text-sm">
+          <option value="">All Farms</option>
+          <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
+        </select>
+      </div>
       <!-- Sensor List -->
-      <div v-if="sensors.length > 0" class="flex flex-col gap-4">
-        <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
+      <div v-if="filteredSensors.length > 0" class="flex flex-col gap-4">
+        <SensorCard v-for="sensor in filteredSensors" :key="sensor.id" :sensor="sensor" />
       </div>
       <!-- Empty State -->
       <div v-else class="flex flex-col items-center justify-center p-8 border rounded-lg border-dashed text-center">
@@ -42,7 +50,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import SensorCard from '@/components/SensorCard.vue';
 
@@ -56,10 +64,18 @@ interface Sensor {
   lon: number;
   last_reading_at: string | null;
   last_reading: number | null;
+  farm_id: number;
 }
 
 const page = usePage();
 const sensors = computed(() => page.props.sensors as Sensor[] ?? []);
+const farms = computed(() => page.props.farms ?? []);
+const selectedFarmId = ref('');
+
+const filteredSensors = computed(() => {
+  if (!selectedFarmId.value) return sensors.value;
+  return sensors.value.filter(sensor => String(sensor.farm_id) === String(selectedFarmId.value));
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
   {

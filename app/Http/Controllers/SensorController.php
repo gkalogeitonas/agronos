@@ -18,7 +18,11 @@ class SensorController extends Controller
     {
         $this->authorize('viewAny', Sensor::class);
         $sensors = request()->user()->sensors;
-        return Inertia::render('Sensors/Index', ['sensors' => $sensors]);
+        $farms = request()->user()->farms;
+        return Inertia::render('Sensors/Index', [
+            'sensors' => $sensors,
+            'farms' => $farms,
+        ]);
     }
 
     /**
