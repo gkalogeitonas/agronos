@@ -16,24 +16,7 @@
       </div>
       <!-- Sensor List -->
       <div v-if="sensors.length > 0" class="flex flex-col gap-4">
-        <Card v-for="sensor in sensors" :key="sensor.id" class="overflow-hidden">
-          <CardHeader class="bg-muted/20 flex flex-row items-center justify-between gap-4">
-            <div class="flex flex-col gap-1 min-w-[180px]">
-              <CardDescription class="text-lg font-semibold">{{ sensor.name || 'Unnamed Sensor' }}</CardDescription>
-              <span class="text-xs text-muted-foreground">UUID</span>
-              <span class="font-mono text-sm">{{ sensor.uuid }}</span>
-            </div>
-            <div class="flex-1 flex flex-col items-start justify-center">
-              <!-- (Optional) Additional info here -->
-            </div>
-            <div class="flex flex-col items-end gap-2 min-w-[120px]">
-              <span class="text-sm text-muted-foreground">Type: {{ sensor.type }}</span>
-              <span class="text-xs text-muted-foreground">Lat: {{ sensor.lat }}, Lon: {{ sensor.lon }}</span>
-              <span class="text-xs text-muted-foreground mt-2">Last seen: {{ sensor.last_reading_at ? sensor.last_reading_at : 'Never' }}</span>
-              <span class="text-xs text-muted-foreground">Last value: {{ sensor.last_reading !== undefined && sensor.last_reading !== null ? sensor.last_reading : '—' }}</span>
-            </div>
-          </CardHeader>
-        </Card>
+        <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
       </div>
       <!-- Empty State -->
       <div v-else class="flex flex-col items-center justify-center p-8 border rounded-lg border-dashed text-center">
@@ -57,11 +40,10 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import SensorCard from '@/components/SensorCard.vue';
 
 interface Sensor {
   id: number;
