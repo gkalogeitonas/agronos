@@ -53,7 +53,7 @@ interface Sensor {
   device_id: number;
   lat: number;
   lon: number;
-  last_reading_at:timestamp | null;
+  last_reading_at: string | null;
   last_reading: number | null;
 }
 
