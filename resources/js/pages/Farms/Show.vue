@@ -39,7 +39,6 @@ const breadcrumbs: BreadcrumbItem[] = [
   {
     title: props.farm.name,
     href: route('farms.show', props.farm.id),
-    current: true,
   },
 ]
 

@@ -28,7 +28,6 @@ const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'Farms',
     href: '/farms',
-    current: true,
   },
 ];
 

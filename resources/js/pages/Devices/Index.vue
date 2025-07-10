@@ -81,7 +81,6 @@ const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'Devices',
     href: '/devices',
-    current: true,
   },
 ];
 
