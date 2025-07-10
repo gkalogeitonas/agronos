@@ -30,7 +30,11 @@ class SensorController extends Controller
      */
     public function create()
     {
-        //
+        $this->authorize('create', Sensor::class);
+        $farms = request()->user()->farms;
+        return Inertia::render('Sensors/Create', [
+            'farms' => $farms,
+        ]);
     }
 
     /**
