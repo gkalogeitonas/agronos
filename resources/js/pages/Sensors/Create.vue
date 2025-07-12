@@ -12,7 +12,18 @@
         </Button>
       </div>
       <QrcodeStream v-if="showScanner" @detect="onDetect" @error="onQrError" class="mb-4" />
-      <MapboxMap v-if="form.lat && form.lon" :lat="parseFloat(form.lat)" :lng="parseFloat(form.lon)" :zoom="15" />
+      <MapboxMap
+        v-if="form.lat && form.lon"
+        style="width: 100%; height: 400px; border-radius: 0.5rem; "
+        :access-token="mapboxToken"
+        map-style="mapbox://styles/mapbox/satellite-streets-v12"
+        :center="[parseFloat(form.lon), parseFloat(form.lat)]"
+        :zoom="15"
+      >
+        <MapboxMarker :lng-lat="[parseFloat(form.lon), parseFloat(form.lat)]" color="#2563eb" />
+      </MapboxMap>
+
+
       <form @submit.prevent="submit">
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="name">Name</label>
@@ -63,9 +74,12 @@ import { Button } from '@/components/ui/button';
 import { computed, reactive, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { QrcodeStream } from 'vue-qrcode-reader';
-import MapboxMap from '@/components/MapboxMap.vue';
+import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 const page = usePage();
+
+
 
 // Type for farms to fix TS errors
 interface Farm { id: number; name: string; }
@@ -88,6 +102,9 @@ const form = reactive({
 });
 
 const showScanner = ref(false);
+const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+
+const mapCenter = ref([0, 0]);
 
 function submit() {
   router.post(route('sensors.store'), form);
@@ -140,4 +157,7 @@ getLocation();
 .input:focus {
   box-shadow: 0 0 0 2px var(--color-primary, #2563eb);
 }
+
+
+
 </style>
