@@ -18,9 +18,20 @@ const deviceTypes = [
   { label: 'Other', value: 'other' },
 ];
 
+const sensorTypes = [
+  { label: 'Soil Moisture', value: 'soil_moisture' },
+  { label: 'Soil Moisture', value: 'soil_moisture' },
+  { label: 'Soil Moisture', value: 'soil_moisture' },
+];
+
 const type = ref('wifi');
 const uuid = ref('');
 const secret = ref('');
+const sensors = ref([
+  { uuid: '', type: 'soil_moisture' },
+  { uuid: '', type: 'soil_moisture' },
+  { uuid: '', type: 'soil_moisture' },
+]);
 
 function randomString(length = 32) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -34,6 +45,10 @@ function randomString(length = 32) {
 function generate() {
   uuid.value = crypto.randomUUID();
   secret.value = randomString(32);
+  sensors.value = sensors.value.map(() => ({
+    uuid: crypto.randomUUID(),
+    type: 'soil_moisture',
+  }));
 }
 
 // Watch for type changes and regenerate QR data
@@ -45,7 +60,26 @@ watch(type, () => {
 type.value = deviceTypes[0].value;
 generate(); // Generate on mount
 
-const qrData = computed(() => JSON.stringify({ uuid: uuid.value, secret: secret.value, type: type.value }));
+const deviceQrData = computed(() => JSON.stringify({
+  uuid: uuid.value,
+  secret: secret.value,
+  type: type.value,
+}));
+
+const sensorQrData = computed(() => sensors.value.map(sensor => JSON.stringify({
+  uuid: sensor.uuid,
+  device_uuid: uuid.value,
+  type: sensor.type,
+})));
+
+
+function pretty(json: string) {
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2);
+  } catch {
+    return json;
+  }
+}
 </script>
 
 <template>
@@ -69,8 +103,21 @@ const qrData = computed(() => JSON.stringify({ uuid: uuid.value, secret: secret.
             </div>
           </form>
           <div class="flex flex-col items-center mt-8">
-            <QRCodeVue :value="qrData" :size="220" />
-            <div class="mt-2 text-xs text-muted-foreground break-all max-w-full">{{ qrData }}</div>
+            <QRCodeVue :value="deviceQrData" :size="220" />
+            <div class="mt-2 text-xs text-muted-foreground break-all max-w-full">
+                <pre class="mt-2 text-xs text-muted-foreground break-all max-w-full bg-muted p-2 rounded">
+                  {{ pretty(deviceQrData) }}
+                </pre>
+            </div>
+          </div>
+          <div class="mt-8">
+            <h3 class="text-lg font-medium mb-4">Sensor QR Codes</h3>
+            <div v-for="(sensor, index) in sensors" :key="sensor.uuid" class="flex flex-col items-center mb-4">
+              <QRCodeVue :value="sensorQrData[index]" :size="180" />
+              <pre class="mt-2 text-xs text-muted-foreground break-all max-w-full bg-muted p-2 rounded">
+                {{pretty( sensorQrData[index]) }}
+              </pre>
+            </div>
           </div>
         </CardContent>
       </Card>
