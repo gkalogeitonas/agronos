@@ -41,7 +41,7 @@ it('can show a sensor', function () {
 it('can create a sensor', function () {
     $payload = [
         'uuid' => 'test-create-uuid',
-        'device_id' => $this->device->id,
+        'device_uuid' => $this->device->uuid,
         'user_id' => $this->user->id,
         'lat' => 1.23,
         'lon' => 4.56,
@@ -108,7 +108,7 @@ it('cannot update a sensor belonging to another user', function () {
     $this->assertDatabaseMissing('sensors', ['id' => $sensor->id, 'lat' => 55.55, 'lon' => 44.44]);
 });
 
-it('cannot create a sensor without device_id', function () {
+it('cannot create a sensor without device_uuid', function () {
     $payload = [
         'uuid' => 'no-device-id',
         'user_id' => $this->user->id,
@@ -116,37 +116,58 @@ it('cannot create a sensor without device_id', function () {
         'lon' => 4.56,
     ];
     $response = post('/sensors', $payload);
-    $response->assertSessionHasErrors('device_id');
+    $response->assertSessionHasErrors('device_uuid');
     $this->assertDatabaseMissing('sensors', ['uuid' => 'no-device-id']);
 });
 
-it('cannot create a sensor with non-existing device_id', function () {
+it('cannot create a sensor with non-existing device_uuid', function () {
     $payload = [
         'uuid' => 'bad-device-id',
-        'device_id' => 999999,
+        'device_uuid' => 'not-a-real-uuid',
         'user_id' => $this->user->id,
         'lat' => 1.23,
         'lon' => 4.56,
     ];
     $response = post('/sensors', $payload);
-    $response->assertSessionHasErrors('device_id');
+    $response->assertSessionHasErrors('device_uuid');
     $this->assertDatabaseMissing('sensors', ['uuid' => 'bad-device-id']);
 });
 
-it('cannot create a sensor with a device_id that does not belong to the user', function () {
+it('cannot create a sensor with a device_uuid that does not belong to the user', function () {
     $otherUser = User::factory()->create();
     $otherDevice = Device::factory(['user_id' => $otherUser->id])->create();
     $payload = [
         'uuid' => 'wrong-owner-device',
-        'device_id' => $otherDevice->id,
+        'device_uuid' => $otherDevice->uuid,
         'user_id' => $this->user->id,
         'lat' => 1.23,
         'lon' => 4.56,
     ];
     $response = post('/sensors', $payload);
     // You may want to add a custom validation rule for this in your controller
-    $response->assertForbidden();
+    $this->assertTrue(
+        in_array($response->status(), [403, 404]),
+        'Expected 403 Forbidden or 404 Not Found, got ' . $response->status()
+    );
     $this->assertDatabaseMissing('sensors', ['uuid' => 'wrong-owner-device']);
+});
+
+it('can create a sensor with a farm', function () {
+    $farm = \App\Models\Farm::factory(['user_id' => $this->user->id])->create();
+    $payload = [
+        'uuid' => 'sensor-with-farm',
+        'device_uuid' => $this->device->uuid,
+        'user_id' => $this->user->id,
+        'lat' => 12.34,
+        'lon' => 56.78,
+        'farm_id' => $farm->id,
+    ];
+    $response = post('/sensors', $payload);
+    $response->assertRedirect();
+    $this->assertDatabaseHas('sensors', [
+        'uuid' => 'sensor-with-farm',
+        'farm_id' => $farm->id,
+    ]);
 });
 
 

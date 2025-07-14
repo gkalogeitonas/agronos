@@ -19,18 +19,18 @@ const deviceTypes = [
 ];
 
 const sensorTypes = [
-  { label: 'Soil Moisture', value: 'soil_moisture' },
-  { label: 'Soil Moisture', value: 'soil_moisture' },
-  { label: 'Soil Moisture', value: 'soil_moisture' },
+  { label: 'Soil Moisture', value: 'moisture' },
+  { label: 'Soil Moisture', value: 'moisture' },
+  { label: 'Soil Moisture', value: 'moisture' },
 ];
 
 const type = ref('wifi');
 const uuid = ref('');
 const secret = ref('');
 const sensors = ref([
-  { uuid: '', type: 'soil_moisture' },
-  { uuid: '', type: 'soil_moisture' },
-  { uuid: '', type: 'soil_moisture' },
+  { uuid: '', type: 'moisture' },
+  { uuid: '', type: 'moisture' },
+  { uuid: '', type: 'moisture' },
 ]);
 
 function randomString(length = 32) {
@@ -47,7 +47,7 @@ function generate() {
   secret.value = randomString(32);
   sensors.value = sensors.value.map(() => ({
     uuid: crypto.randomUUID(),
-    type: 'soil_moisture',
+    type: 'moisture',
   }));
 }
 

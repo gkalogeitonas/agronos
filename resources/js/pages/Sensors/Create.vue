@@ -27,7 +27,7 @@
       <form @submit.prevent="submit">
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="name">Name</label>
-          <input v-model="form.name" id="name" type="text" class="input w-full" required />
+          <input v-model="form.name" id="name" type="text" class="input w-full"  />
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="farm_id">Farm</label>
@@ -107,7 +107,8 @@ const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 const mapCenter = ref([0, 0]);
 
 function submit() {
-  router.post(route('sensors.store'), form);
+  //router.post(route('sensors.store'), form);
+  router.post(route('sensors.scan'), form);
 }
 
 function onDetect(detectedCodes: any[]) {

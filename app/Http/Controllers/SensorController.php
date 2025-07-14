@@ -44,18 +44,29 @@ class SensorController extends Controller
     {
         $this->authorize('create', Sensor::class);
         $validated = $request->validate([
-            'device_id' => 'required|exists:devices,id',
+            'device_uuid' => 'required|exists:devices,uuid',
             'uuid' => 'required|string|unique:sensors,uuid',
+            'farm_id' => 'nullable|exists:farms,id',
             'lat' => 'nullable|numeric',
             'lon' => 'nullable|numeric',
             'type' => 'nullable|string',
             'name' => 'nullable|string'
         ]);
 
-        $device = \App\Models\Device::find($validated['device_id']);
+
+        $device = \App\Models\Device::where('uuid', $validated['device_uuid'])
+                   ->firstOrFail();
         $this->authorize('view', $device); // This uses DevicePolicy
 
-        $sensor = Sensor::create($validated + ['user_id' => $request->user()->id]);
+        $sensor = Sensor::create(
+            collect($validated)
+                ->except('device_uuid')
+                ->toArray()
+            + [
+                'user_id' => $request->user()->id,
+                'device_id' => $device->id,
+            ]
+        );
         return redirect()->route('sensors.index');
     }
 
@@ -118,18 +129,17 @@ class SensorController extends Controller
             'name'        => 'nullable|string',
         ]);
 
-        $device = \App\Models\Device::where('uuid', $validated['device_uuid'])
-                   ->firstOrFail();
+        $device = \App\Models\Device::where('uuid', $validated['device_uuid'])->firstOrFail();
         $sensor = Sensor::where('uuid', $validated['uuid'])->first();
         $this->authorize('view', $device); // This uses DevicePolicy
 
         if ($sensor) {
-            return $this->update($request, $sensor);
+            // Update sensor, but never update device_id or user_id from scan
+            $sensor->update(collect($validated)->except(['device_uuid', 'uuid'])->toArray());
+            return redirect()->route('sensors.index');
         } else {
-            return $this->store($request->merge([
-                'device_id' => $device->id,
-                'user_id' => $request->user()->id,
-            ]));
+            // Create sensor, pass device_id and user_id
+            return $this->store($request);
         }
     }
 }
