@@ -54,6 +54,8 @@ import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
 import { usePage } from '@inertiajs/vue3';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
 
 const page = usePage();
 const sensor = computed(() => page.props.sensor);

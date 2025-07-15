@@ -76,6 +76,7 @@ class SensorController extends Controller
     public function show(Sensor $sensor)
     {
         $this->authorize('view', $sensor);
+        $sensor->load(['farm', 'device']);
         return Inertia::render('Sensors/Show', ['sensor' => $sensor]);
     }
 

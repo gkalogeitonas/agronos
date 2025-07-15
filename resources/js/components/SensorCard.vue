@@ -26,5 +26,6 @@ import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { Link, router } from '@inertiajs/vue3';
 import type { Sensor } from '@/types/sensor';
 
+
 defineProps<{ sensor: Sensor }>();
 </script>
