@@ -36,17 +36,21 @@
             <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
           </select>
         </div>
+        <div class="flex items-center mb-4 gap-2">
+          <Switch v-model="allowEdit" id="allow-edit-switch" />
+          <label for="allow-edit-switch" class="text-sm font-medium select-none cursor-pointer">Allow manual edit of QR & Location fields</label>
+        </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="type">Type</label>
-          <input v-model="form.type" id="type" type="text" class="input w-full" required />
+          <input v-model="form.type" id="type" type="text" class="input w-full" :disabled="!allowEdit" required />
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="uuid">Sensor UUID</label>
-          <input v-model="form.uuid" id="uuid" type="text" class="input w-full" required />
+          <input v-model="form.uuid" id="uuid" type="text" class="input w-full" :disabled="!allowEdit" required />
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="device_uuid">Device UUID</label>
-          <input v-model="form.device_uuid" id="device_uuid" type="text" class="input w-full" required />
+          <input v-model="form.device_uuid" id="device_uuid" type="text" class="input w-full" :disabled="!allowEdit" required />
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="lat">Latitude</label>
@@ -66,7 +70,7 @@
     </div>
   </AppLayout>
 </template>
-
+npx shadcn-vue@latest add switch
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
@@ -75,6 +79,7 @@ import { computed, reactive, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { QrcodeStream } from 'vue-qrcode-reader';
 import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
+import Switch from '@/components/ui/switch/Switch.vue'
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const page = usePage();
@@ -105,6 +110,7 @@ const showScanner = ref(false);
 const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const mapCenter = ref([0, 0]);
+const allowEdit = ref(false);
 
 function submit() {
   //router.post(route('sensors.store'), form);
