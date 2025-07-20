@@ -83,9 +83,15 @@ class SensorController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Sensor $sensor)
     {
-        //
+        $this->authorize('update', $sensor);
+        $sensor->load(['farm']);
+        $farms = request()->user()->farms;
+        return Inertia::render('Sensors/Edit', [
+            'sensor' => $sensor,
+            'farms' => $farms,
+        ]);
     }
 
     /**
@@ -95,15 +101,15 @@ class SensorController extends Controller
     {
         $this->authorize('update', $sensor);
         $validated = $request->validate([
+            'name' => 'nullable|string',
+            'farm_id' => 'nullable|exists:farms,id',
             'lat' => 'nullable|numeric',
             'lon' => 'nullable|numeric',
-            'type' => 'nullable|string',
-            'name' => 'nullable|string'
         ]);
 
         $sensor->update($validated);
 
-        return redirect()->route('sensors.index');
+        return redirect()->route('sensors.show', $sensor->id);
     }
 
     /**
