@@ -1,35 +1,62 @@
 <template>
   <Head :title="`Edit Sensor`" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col h-full gap-6 p-4 w-full max-w-3xl mx-auto">
-      <h1 class="text-2xl font-bold mb-6">Edit Sensor</h1>
-      <form @submit.prevent="submit">
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1" for="name">Name</label>
-          <input v-model="form.name" id="name" type="text" class="input w-full" />
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1" for="farm_id">Farm</label>
-          <select v-model="form.farm_id" id="farm_id" class="input w-full">
-            <option value="" disabled>Select a farm</option>
-            <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1" for="lat">Latitude</label>
-          <input v-model="form.lat" id="lat" type="number" step="any" class="input w-full" required />
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1" for="lon">Longitude</label>
-          <input v-model="form.lon" id="lon" type="number" step="any" class="input w-full" required />
-        </div>
-        <div class="flex justify-end gap-2">
-          <Link :href="route('sensors.show', sensor.id)">
-            <Button type="button" variant="secondary">Cancel</Button>
-          </Link>
-          <Button type="submit">Save Changes</Button>
-        </div>
-      </form>
+    <div class="container py-8">
+      <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>Edit Sensor</CardTitle>
+          <CardDescription>Update sensor details. Non-editable fields are shown for reference.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Sensor UUID</h3>
+              <p class="font-mono break-all bg-gray-100 rounded px-2 py-1">{{ sensor.uuid }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Device UUID</h3>
+              <p class="font-mono break-all bg-gray-100 rounded px-2 py-1">{{ sensor.device?.uuid || '—' }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Type</h3>
+              <p class="bg-gray-100 rounded px-2 py-1">{{ sensor.type || '—' }}</p>
+            </div>
+          </div>
+        </CardContent>
+        <CardContent>
+          <div class="flex flex-col h-full gap-6 p-4 w-full max-w-3xl mx-auto">
+            <form @submit.prevent="submit">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="name">Name</label>
+                  <input v-model="form.name" id="name" type="text" class="input w-full" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="farm_id">Farm</label>
+                  <select v-model="form.farm_id" id="farm_id" class="input w-full">
+                    <option value="" disabled>Select a farm</option>
+                    <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="lat">Latitude</label>
+                  <input v-model="form.lat" id="lat" type="number" step="any" class="input w-full" required />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="lon">Longitude</label>
+                  <input v-model="form.lon" id="lon" type="number" step="any" class="input w-full" required />
+                </div>
+              </div>
+              <div class="flex justify-end gap-2">
+                <Link :href="route('sensors.show', sensor.id)">
+                  <Button type="button" variant="secondary">Cancel</Button>
+                </Link>
+                <Button type="submit">Save Changes</Button>
+              </div>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   </AppLayout>
 </template>
@@ -38,29 +65,30 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 
 const page = usePage();
-const sensor = computed(() => page.props.sensor);
+const sensor = page.props.sensor as any;
 const farms = computed(() => page.props.farms ?? []);
 
 const breadcrumbs = [
   { title: 'Dashboard', href: '/dashboard' },
   { title: 'Sensors', href: '/sensors' },
-  { title: sensor.value.name || 'Sensor Details', href: route('sensors.show', sensor.value.id) },
+  { title: sensor.name || 'Sensor Details', href: route('sensors.show', sensor.id) },
   { title: 'Edit', href: null },
 ];
 
 const form = useForm({
-  name: sensor.value.name || '',
-  farm_id: sensor.value.farm_id || '',
-  lat: sensor.value.lat || '',
-  lon: sensor.value.lon || '',
+  name: sensor.name || '',
+  farm_id: sensor.farm_id || '',
+  lat: sensor.lat || '',
+  lon: sensor.lon || '',
 });
 
 function submit() {
-  router.put(route('sensors.update', sensor.value.id), form);
+  router.put(route('sensors.update', sensor.id), form);
 }
 </script>
 

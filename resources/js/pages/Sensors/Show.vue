@@ -10,7 +10,7 @@
         </h1>
         <div class="space-x-2 flex items-center">
           <Link :href="route('sensors.edit', sensor.id)">
-            <Button variant="outline" size="sm" class="flex items-center border border-gray-300">
+            <Button variant="outline" size="sm" class="flex flex-row items-center border p-2">
               <Pencil class="h-4 w-4 mr-2" />
               <span>Edit</span>
             </Button>
@@ -18,7 +18,7 @@
           <Button
             variant="destructive"
             size="sm"
-            class="flex items-center border border-red-600 text-red-700 bg-white hover:bg-red-50 hover:text-red-900"
+            class="flex flex-row items-center"
             @click="deleteSensor"
           >
             <Trash2 class="h-4 w-4 mr-2" />
