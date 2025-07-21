@@ -69,7 +69,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { usePage } from '@inertiajs/vue3';
@@ -97,6 +97,54 @@ function submit() {
   router.put(route('sensors.update', sensor.id), form);
 }
 
+function addFarmPolygon(farm: any) {
+  if (!map || !farm.coordinates) return;
+
+  // Remove existing farm polygon if it exists
+  if (map.getSource('farm-area')) {
+    map.removeLayer('farm-fill');
+    map.removeLayer('farm-outline');
+    map.removeSource('farm-area');
+  }
+
+  // Add farm polygon
+  map.addSource('farm-area', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      properties: {},
+      geometry: farm.coordinates,
+    },
+  });
+
+  map.addLayer({
+    id: 'farm-fill',
+    type: 'fill',
+    source: 'farm-area',
+    layout: {},
+    paint: {
+      'fill-color': '#0080ff',
+      'fill-opacity': 0.2,
+    },
+  });
+
+  map.addLayer({
+    id: 'farm-outline',
+    type: 'line',
+    source: 'farm-area',
+    layout: {},
+    paint: {
+      'line-color': '#0080ff',
+      'line-width': 2,
+    },
+  });
+
+  // Fit the map to show the farm polygon
+  const bounds = new mapboxgl.LngLatBounds();
+  farm.coordinates.coordinates[0].forEach((coord: [number, number]) => bounds.extend(coord));
+  map.fitBounds(bounds, { padding: 40, maxZoom: 17 });
+}
+
 const mapContainer = ref<HTMLElement | null>(null);
 let map: mapboxgl.Map | null = null;
 let marker: mapboxgl.Marker | null = null;
@@ -119,6 +167,15 @@ onMounted(() => {
   // Add navigation controls
   map.addControl(new mapboxgl.NavigationControl());
   map.addControl(new mapboxgl.FullscreenControl());
+
+  // Add farm polygon if available
+  map.on('load', () => {
+    const farmsArray = farms.value as any[];
+    const selectedFarm = farmsArray.find((f: any) => f.id == form.farm_id);
+    if (selectedFarm && selectedFarm.coordinates && selectedFarm.coordinates.type === 'Polygon') {
+      addFarmPolygon(selectedFarm);
+    }
+  });
 
   // Add marker at sensor location
   if (form.lat && form.lon) {
@@ -159,6 +216,22 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (map) {
     map.remove();
+  }
+});
+
+// Watch for farm selection changes and update polygon
+watch(() => form.farm_id, (newFarmId) => {
+  if (map && map.loaded()) {
+    const farmsArray = farms.value as any[];
+    const selectedFarm = farmsArray.find((f: any) => f.id == newFarmId);
+    if (selectedFarm && selectedFarm.coordinates && selectedFarm.coordinates.type === 'Polygon') {
+      addFarmPolygon(selectedFarm);
+    } else if (map.getSource('farm-area')) {
+      // Remove farm polygon if no farm is selected or farm has no coordinates
+      map.removeLayer('farm-fill');
+      map.removeLayer('farm-outline');
+      map.removeSource('farm-area');
+    }
   }
 });
 
