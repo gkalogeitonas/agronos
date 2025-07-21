@@ -27,15 +27,7 @@
         </div>
       </div>
       <div v-if="sensor.lat && sensor.lon" class="mb-6">
-        <MapboxMap
-          style="width: 100%; height: 300px; border-radius: 0.5rem;"
-          :access-token="mapboxToken"
-          map-style="mapbox://styles/mapbox/satellite-streets-v12"
-          :center="[parseFloat(sensor.lon), parseFloat(sensor.lat)]"
-          :zoom="15"
-        >
-          <MapboxMarker :lng-lat="[parseFloat(sensor.lon), parseFloat(sensor.lat)]" color="#2563eb" />
-        </MapboxMap>
+        <div ref="mapContainer" class="map-container"></div>
       </div>
       <Card class="mb-6">
         <CardHeader>
@@ -78,17 +70,98 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head , Link, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
-import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 
 const page = usePage();
 const sensor = computed(() => page.props.sensor as any);
-const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+
+function addFarmPolygon(farm: any, map: mapboxgl.Map) {
+  if (!farm.coordinates) return;
+  
+  // Add farm polygon
+  map.addSource('farm-area', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      properties: {},
+      geometry: farm.coordinates,
+    },
+  });
+  
+  map.addLayer({
+    id: 'farm-fill',
+    type: 'fill',
+    source: 'farm-area',
+    layout: {},
+    paint: {
+      'fill-color': '#0080ff',
+      'fill-opacity': 0.2,
+    },
+  });
+  
+  map.addLayer({
+    id: 'farm-outline',
+    type: 'line',
+    source: 'farm-area',
+    layout: {},
+    paint: {
+      'line-color': '#0080ff',
+      'line-width': 2,
+    },
+  });
+  
+  // Fit the map to show the farm polygon
+  const bounds = new mapboxgl.LngLatBounds();
+  farm.coordinates.coordinates[0].forEach((coord: [number, number]) => bounds.extend(coord));
+  map.fitBounds(bounds, { padding: 40, maxZoom: 17 });
+}
+
+const mapContainer = ref<HTMLElement | null>(null);
+let map: mapboxgl.Map | null = null;
+
+onMounted(() => {
+  if (!mapContainer.value || !sensor.value.lat || !sensor.value.lon) {
+    return;
+  }
+
+  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
+
+  map = new mapboxgl.Map({
+    container: mapContainer.value,
+    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+    center: [parseFloat(sensor.value.lon), parseFloat(sensor.value.lat)],
+    zoom: 15
+  });
+
+  // Add navigation controls
+  map.addControl(new mapboxgl.NavigationControl());
+  map.addControl(new mapboxgl.FullscreenControl());
+
+  // Add marker at sensor location
+  new mapboxgl.Marker({ color: '#2563eb' })
+    .setLngLat([parseFloat(sensor.value.lon), parseFloat(sensor.value.lat)])
+    .addTo(map);
+
+  // Add farm polygon if available
+  map.on('load', () => {
+    if (sensor.value.farm && sensor.value.farm.coordinates && sensor.value.farm.coordinates.type === 'Polygon') {
+      addFarmPolygon(sensor.value.farm, map!);
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  if (map) {
+    map.remove();
+  }
+});
 
 const breadcrumbs = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -109,5 +182,13 @@ function deleteSensor() {
 }
 .bg-muted {
   background: #f3f4f6;
+}
+
+.map-container {
+  width: 100%;
+  height: 300px;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
 }
 </style>
