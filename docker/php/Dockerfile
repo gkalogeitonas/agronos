@@ -27,8 +27,10 @@ COPY . /var/www
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
+# Install Node dependencies and build frontend during image build
+RUN npm install && npm run build
 
-# Create a script to fix permissions and build assets
+# Create a script to fix permissions and run Laravel commands
 RUN echo '#!/bin/bash\n\
 mkdir -p /var/www/storage/logs\n\
 mkdir -p /var/www/storage/framework/views\n\
@@ -38,16 +40,6 @@ chmod -R 775 /var/www/storage\n\
 chmod -R 775 /var/www/bootstrap/cache\n\
 chown -R www-data:www-data /var/www/storage\n\
 chown -R www-data:www-data /var/www/bootstrap/cache\n\
-\n\
-# Install and build frontend if needed\n\
-if [ -f /var/www/package.json ] && [ ! -d /var/www/node_modules ]; then\n\
-  npm install\n\
-fi\n\
-\n\
-# Build frontend assets if package.json exists\n\
-if [ -f /var/www/package.json ]; then\n\
-  npm run build\n\
-fi\n\
 \n\
 # Run Laravel optimizations and migrations\n\
 if [ -f /var/www/artisan ]; then\n\
