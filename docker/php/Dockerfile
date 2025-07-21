@@ -24,6 +24,15 @@ WORKDIR /var/www
 
 COPY . /var/www
 
+# Create required directories for Laravel
+RUN mkdir -p /var/www/bootstrap/cache \
+    && mkdir -p /var/www/storage/logs \
+    && mkdir -p /var/www/storage/framework/views \
+    && mkdir -p /var/www/storage/framework/cache \
+    && mkdir -p /var/www/storage/framework/sessions \
+    && chmod -R 775 /var/www/storage \
+    && chmod -R 775 /var/www/bootstrap/cache
+
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
@@ -32,12 +41,7 @@ RUN npm install && npm run build
 
 # Create a script to fix permissions and run Laravel commands
 RUN echo '#!/bin/bash\n\
-mkdir -p /var/www/storage/logs\n\
-mkdir -p /var/www/storage/framework/views\n\
-mkdir -p /var/www/storage/framework/cache\n\
-mkdir -p /var/www/storage/framework/sessions\n\
-chmod -R 775 /var/www/storage\n\
-chmod -R 775 /var/www/bootstrap/cache\n\
+# Set proper ownership for runtime\n\
 chown -R www-data:www-data /var/www/storage\n\
 chown -R www-data:www-data /var/www/bootstrap/cache\n\
 \n\
