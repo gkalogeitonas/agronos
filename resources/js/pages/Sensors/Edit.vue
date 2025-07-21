@@ -22,6 +22,9 @@
               <p class="bg-gray-100 rounded px-2 py-1">{{ sensor.type || '—' }}</p>
             </div>
           </div>
+          <div class="mb-6">
+            <div ref="mapContainer" class="map-container"></div>
+          </div>
         </CardContent>
         <CardContent>
           <div class="flex flex-col h-full gap-6 p-4 w-full max-w-3xl mx-auto">
@@ -66,8 +69,11 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { computed } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { usePage } from '@inertiajs/vue3';
+
 
 const page = usePage();
 const sensor = page.props.sensor as any;
@@ -90,6 +96,43 @@ const form = useForm({
 function submit() {
   router.put(route('sensors.update', sensor.id), form);
 }
+
+const mapContainer = ref<HTMLElement | null>(null);
+let map: mapboxgl.Map | null = null;
+
+onMounted(() => {
+  if (!mapContainer.value) {
+    console.error('Map container not found');
+    return;
+  }
+
+  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
+
+  map = new mapboxgl.Map({
+    container: mapContainer.value,
+    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+    center: [parseFloat(form.lon) || 0, parseFloat(form.lat) || 0],
+    zoom: 15
+  });
+
+  // Add navigation controls
+  map.addControl(new mapboxgl.NavigationControl());
+  map.addControl(new mapboxgl.FullscreenControl());
+
+  // Add marker at sensor location
+  if (form.lat && form.lon) {
+    new mapboxgl.Marker()
+      .setLngLat([parseFloat(form.lon), parseFloat(form.lat)])
+      .addTo(map);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (map) {
+    map.remove();
+  }
+});
+
 </script>
 
 <style scoped>
@@ -103,5 +146,13 @@ function submit() {
 }
 .input:focus {
   box-shadow: 0 0 0 2px var(--color-primary, #2563eb);
+}
+
+.map-container {
+  width: 100%;
+  height: 300px;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
 }
 </style>
