@@ -86,7 +86,7 @@ class SensorController extends Controller
     public function edit(Sensor $sensor)
     {
         $this->authorize('update', $sensor);
-        $sensor->load(['farm']);
+        $sensor->load(['farm', 'device']);
         $farms = request()->user()->farms;
         return Inertia::render('Sensors/Edit', [
             'sensor' => $sensor,
