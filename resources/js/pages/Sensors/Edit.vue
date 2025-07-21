@@ -99,6 +99,7 @@ function submit() {
 
 const mapContainer = ref<HTMLElement | null>(null);
 let map: mapboxgl.Map | null = null;
+let marker: mapboxgl.Marker | null = null;
 
 onMounted(() => {
   if (!mapContainer.value) {
@@ -121,10 +122,38 @@ onMounted(() => {
 
   // Add marker at sensor location
   if (form.lat && form.lon) {
-    new mapboxgl.Marker()
+    marker = new mapboxgl.Marker({ draggable: true })
       .setLngLat([parseFloat(form.lon), parseFloat(form.lat)])
       .addTo(map);
+
+    // Update form when marker is dragged
+    marker.on('dragend', () => {
+      const lngLat = marker!.getLngLat();
+      form.lat = lngLat.lat.toString();
+      form.lon = lngLat.lng.toString();
+    });
   }
+
+  // Move marker when map is clicked
+  map.on('click', (e) => {
+    const { lng, lat } = e.lngLat;
+    form.lat = lat.toString();
+    form.lon = lng.toString();
+
+    if (marker) {
+      marker.setLngLat([lng, lat]);
+    } else {
+      marker = new mapboxgl.Marker({ draggable: true })
+        .setLngLat([lng, lat])
+        .addTo(map!);
+
+      marker.on('dragend', () => {
+        const lngLat = marker!.getLngLat();
+        form.lat = lngLat.lat.toString();
+        form.lon = lngLat.lng.toString();
+      });
+    }
+  });
 });
 
 onBeforeUnmount(() => {
