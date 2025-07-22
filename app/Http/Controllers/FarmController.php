@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\FarmRequest;
+use App\Http\Resources\SensorResource;
 use App\Models\Farm;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -58,8 +59,10 @@ class FarmController extends Controller
     public function show(Farm $farm)
     {
         $this->authorize('view', $farm);
+        $sensors = $farm->sensors()->get();
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
+            'sensors' => $sensors,
         ]);
     }
 

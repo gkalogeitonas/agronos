@@ -84,7 +84,7 @@ const sensor = computed(() => page.props.sensor as any);
 
 function addFarmPolygon(farm: any, map: mapboxgl.Map) {
   if (!farm.coordinates) return;
-  
+
   // Add farm polygon
   map.addSource('farm-area', {
     type: 'geojson',
@@ -94,7 +94,7 @@ function addFarmPolygon(farm: any, map: mapboxgl.Map) {
       geometry: farm.coordinates,
     },
   });
-  
+
   map.addLayer({
     id: 'farm-fill',
     type: 'fill',
@@ -105,7 +105,7 @@ function addFarmPolygon(farm: any, map: mapboxgl.Map) {
       'fill-opacity': 0.2,
     },
   });
-  
+
   map.addLayer({
     id: 'farm-outline',
     type: 'line',
@@ -116,7 +116,7 @@ function addFarmPolygon(farm: any, map: mapboxgl.Map) {
       'line-width': 2,
     },
   });
-  
+
   // Fit the map to show the farm polygon
   const bounds = new mapboxgl.LngLatBounds();
   farm.coordinates.coordinates[0].forEach((coord: [number, number]) => bounds.extend(coord));

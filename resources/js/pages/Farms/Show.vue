@@ -8,6 +8,7 @@ import { Download, Pencil, Trash2 } from 'lucide-vue-next'
 import MapboxMap from '@/components/MapboxMap.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Link } from '@inertiajs/vue3'
+import SensorCard from '@/components/SensorCard.vue'
 
 // Props
 const props = defineProps<{
@@ -24,7 +25,8 @@ const props = defineProps<{
       lng: number
       lat: number
     } | null
-  }
+  },
+  sensors: any[]
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -119,6 +121,19 @@ const lat = props.farm.center?.lat ?? 0;
             </Button>
           </Link>
         </CardFooter>
+      </Card>
+
+      <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>Sensors</CardTitle>
+          <CardDescription>All sensors registered to this farm</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div v-if="sensors.length === 0" class="text-muted-foreground">No sensors found for this farm.</div>
+          <div v-else class="grid grid-cols-1 gap-4">
+            <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
+          </div>
+        </CardContent>
       </Card>
     </div>
   </AppLayout>

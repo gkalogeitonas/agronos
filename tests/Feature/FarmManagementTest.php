@@ -136,6 +136,27 @@ describe('Show (Viewing a Single Farm)', function () {
             ->where('farm.description', 'Organic olive farm with over 100 trees')
         );
     });
+
+    test('farm details page includes sensors belonging to the farm', function () {
+        $farm = Farm::factory()->create([
+            'user_id' => $this->user->id,
+        ]);
+        $sensors = \App\Models\Sensor::factory()->count(2)->create([
+            'farm_id' => $farm->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        actingAs($this->user);
+        $response = get(route('farms.show', $farm));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Farms/Show')
+            ->has('sensors', 2)
+            ->where('sensors.0.id', $sensors[0]->id)
+            ->where('sensors.1.id', $sensors[1]->id)
+        );
+    });
 });
 
 describe('Create (Adding New Farms)', function () {

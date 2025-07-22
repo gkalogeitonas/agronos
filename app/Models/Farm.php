@@ -69,4 +69,9 @@ class Farm extends Model
         ];
     }
 
+    public function sensors()
+    {
+        return $this->hasMany(Sensor::class);
+    }
+
 }
