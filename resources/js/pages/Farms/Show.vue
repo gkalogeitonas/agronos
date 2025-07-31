@@ -81,6 +81,11 @@ const lat = props.farm.center?.lat ?? 0;
             <Trash2 class="h-4 w-4 mr-2" />
             Delete
           </Button>
+          <Link :href="route('farms.sensors.create', { farm: farm.id })">
+            <Button variant="default" size="sm">
+              Add Sensor
+            </Button>
+          </Link>
         </div>
       </div>
 

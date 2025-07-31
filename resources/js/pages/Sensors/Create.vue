@@ -29,12 +29,16 @@
           <label class="block text-sm font-medium mb-1" for="name">Name</label>
           <input v-model="form.name" id="name" type="text" class="input w-full"  />
         </div>
-        <div class="mb-4">
+        <div class="mb-4" v-if="!page.props.selectedFarm">
           <label class="block text-sm font-medium mb-1" for="farm_id">Farm</label>
           <select v-model="form.farm_id" id="farm_id" class="input w-full" required>
             <option value="" disabled>Select a farm</option>
             <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
           </select>
+        </div>
+        <div class="mb-4" v-else>
+          <label class="block text-sm font-medium mb-1" for="farm_id">Farm</label>
+          <input :value="page.props.selectedFarm.name" id="farm_id" class="input w-full bg-gray-100" readonly />
         </div>
         <div class="flex items-center mb-4 gap-2">
           <Switch v-model="allowEdit" id="allow-edit-switch" />

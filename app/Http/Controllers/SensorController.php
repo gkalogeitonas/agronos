@@ -6,6 +6,7 @@ use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Models\Farm;
 
 class SensorController extends Controller
 {
@@ -28,12 +29,13 @@ class SensorController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(?Farm $farm = null)
     {
         $this->authorize('create', Sensor::class);
         $farms = request()->user()->farms;
         return Inertia::render('Sensors/Create', [
             'farms' => $farms,
+            'selectedFarm' => $farm,
         ]);
     }
 

@@ -67,5 +67,8 @@ Route::middleware(['auth', 'verified'])->post('/sensors/scan', [SensorController
 // Sensor resource routes
 Route::middleware(['auth', 'verified'])->resource('sensors', SensorController::class);
 
+// Dedicated route for creating a sensor for a specific farm (uses the same create method)
+Route::middleware(['auth', 'verified'])->get('/farms/{farm}/sensors/create', [App\Http\Controllers\SensorController::class, 'create'])->name('farms.sensors.create');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
