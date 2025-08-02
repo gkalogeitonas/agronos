@@ -8,9 +8,7 @@ import { Pencil, Trash2 } from 'lucide-vue-next'
 import { type BreadcrumbItem } from '@/types'
 import { Link } from '@inertiajs/vue3'
 import SensorCard from '@/components/SensorCard.vue'
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import FarmMapbox from '@/components/FarmMapbox.vue'
 
 // Props
 const props = defineProps<{
@@ -52,96 +50,6 @@ const deleteFarm = () => {
     router.delete(route('farms.destroy', props.farm.id))
   }
 }
-
-// Map logic
-const mapContainer = ref<HTMLElement | null>(null)
-let map: mapboxgl.Map | null = null
-
-function addFarmPolygon(farm: any, map: mapboxgl.Map) {
-  if (!farm.coordinates) return
-
-  // Add farm polygon
-  map.addSource('farm-area', {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      properties: {},
-      geometry: farm.coordinates,
-    },
-  })
-
-  map.addLayer({
-    id: 'farm-fill',
-    type: 'fill',
-    source: 'farm-area',
-    layout: {},
-    paint: {
-      'fill-color': '#0080ff',
-      'fill-opacity': 0.2,
-    },
-  })
-
-  map.addLayer({
-    id: 'farm-outline',
-    type: 'line',
-    source: 'farm-area',
-    layout: {},
-    paint: {
-      'line-color': '#0080ff',
-      'line-width': 2,
-    },
-  })
-
-  // Fit the map to show the farm polygon
-  const bounds = new mapboxgl.LngLatBounds()
-  farm.coordinates.coordinates[0].forEach((coord: [number, number]) => bounds.extend(coord))
-  map.fitBounds(bounds, { padding: 40, maxZoom: 17 })
-}
-
-function addSensorMarkers(sensors: any[], map: mapboxgl.Map) {
-  sensors.forEach(sensor => {
-    if (sensor.lat && sensor.lon) {
-      new mapboxgl.Marker({ color: '#2563eb' })
-        .setLngLat([parseFloat(sensor.lon), parseFloat(sensor.lat)])
-        .setPopup(new mapboxgl.Popup().setText(sensor.name || 'Unnamed Sensor'))
-        .addTo(map)
-    }
-  })
-}
-
-onMounted(() => {
-  if (!mapContainer.value) return
-
-  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
-
-  // Default center: farm center or fallback
-  const center = props.farm.center
-    ? [props.farm.center.lng, props.farm.center.lat]
-    : [0, 0]
-
-  map = new mapboxgl.Map({
-    container: mapContainer.value,
-    style: 'mapbox://styles/mapbox/satellite-streets-v12',
-    center,
-    zoom: 12,
-  })
-
-  map.addControl(new mapboxgl.NavigationControl())
-  map.addControl(new mapboxgl.FullscreenControl())
-
-  map.on('load', () => {
-    if (props.farm.coordinates && props.farm.coordinates.type === 'Polygon') {
-      addFarmPolygon(props.farm, map!)
-    }
-    addSensorMarkers(props.sensors, map!)
-  })
-})
-
-onBeforeUnmount(() => {
-  if (map) {
-    map.remove()
-  }
-})
 </script>
 
 <template>
@@ -150,7 +58,9 @@ onBeforeUnmount(() => {
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="container py-8">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold pl-3">{{ farm.name }}</h1>
+        <Link :href="route('farms.show', farm.id)" class="text-3xl font-bold pl-3 hover:underline">
+          {{ farm.name }}
+        </Link>
         <div class="space-x-2">
           <Link :href="route('farms.edit', farm.id)">
             <Button
@@ -178,7 +88,11 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mb-6">
-        <div ref="mapContainer" class="map-container"></div>
+        <FarmMapbox
+          :center="farm.center ? [farm.center.lng, farm.center.lat] : [0, 0]"
+          :farmPolygon="farm.coordinates"
+          :sensors="sensors.map(s => ({ lat: parseFloat(s.lat), lon: parseFloat(s.lon), name: s.name }))"
+        />
       </div>
 
       <Card class="mb-6">
