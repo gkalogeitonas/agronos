@@ -20,7 +20,6 @@ class InfluxDBService
         ]);
         $this->bucket = config('services.influxdb.bucket');
         $this->org = config('services.influxdb.org');
-        echo "Using InfluxDBService with real client.\n";
     }
 
     /**

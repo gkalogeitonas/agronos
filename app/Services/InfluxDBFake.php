@@ -49,11 +49,14 @@ class InfluxDBFake extends InfluxDBService
     {
         $this->writes[] = [
             'type' => 'array',
-            'payload' => $data,
+            'tags' => $data['tags'] ?? [],
+            'fields' => $data['fields'] ?? [],
             'precision' => $precision,
             'bucket' => $this->bucket,
             'org' => $this->org,
         ];
+        //print the recorded writes
+        print_r($this->writes);
     }
 
     public function close()

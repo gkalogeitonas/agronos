@@ -12,25 +12,35 @@ class DeviceDataController extends Controller
 {
     public function store(DeviceDataRequest $request, InfluxDBService $influx)
     {
-        // Log the incoming device data
-        Log::info('Device data received', [
-            'device_id' => optional($request->user())->id,
-            'payload' => $request->all(),
-            'ip' => $request->ip(),
-        ]);
+        // // Log the incoming device data
+        // Log::info('Device data received', [
+        //     'device_id' => optional($request->user())->id,
+        //     'payload' => $request->all(),
+        //     'ip' => $request->ip(),
+        // ]);
 
-
-        $influx->writeArray([
-            'name' => 'sensor_measurement',
-            'tags' => [
-                'user_id'    => optional($request->user())->id,
-                'farm_id'    => $request->input('farm_id'),
-                'sensor_id'  => $request->input('sensor_id'),
-                'sensor_type'=> $request->input('sensor_type'),
-            ],
-            'fields' => $request->validated(), // sensor readings
-            'time'   => microtime(true), // use server time
-        ]);
+        // Write each sensor measurement separately
+        foreach ($request->validated()['sensors'] as $sensor) {
+            $sensorModel = \App\Models\Sensor::where('uuid', $sensor['uuid'])->first();
+            if (!$sensorModel) {
+                // Log missing sensor and skip
+                Log::warning('Sensor not found for uuid', ['uuid' => $sensor['uuid']]);
+                continue;
+            }
+            $influx->writeArray([
+                'name' => 'sensor_measurement',
+                'tags' => [
+                    'user_id'    => $sensorModel->user_id,
+                    'farm_id'    => $sensorModel->farm_id,
+                    'sensor_id'  => $sensorModel->id,
+                    'sensor_type'=> $sensorModel->type,
+                ],
+                'fields' => [
+                    'value' => $sensor['value'],
+                ],
+                'time' => microtime(true), // use server time
+            ]);
+        }
 
         return response()->json(['message' => 'Data received'], 200);
     }
