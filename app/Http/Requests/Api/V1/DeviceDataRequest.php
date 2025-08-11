@@ -16,13 +16,19 @@ class DeviceDataRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * Expected payload format:
+     * {
+     *   "sensors": [
+     *     { "uuid": "string", "value": numeric }
+     *   ]
+     * }
      */
     public function rules(): array
     {
-        // Accept any payload for now, add rules later as needed
-        return [];
+        return [
+            'sensors' => ['required', 'array', 'min:1'],
+            'sensors.*.uuid' => ['required', 'string', 'max:64'],
+            'sensors.*.value' => ['required', 'numeric'],
+        ];
     }
 }
