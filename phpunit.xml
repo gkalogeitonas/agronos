@@ -29,5 +29,10 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="INFLUXDB_FAKE" value="true"/>
+        <env name="INFLUXDB_URL" value="http://localhost"/>
+        <env name="INFLUXDB_TOKEN" value="fake-token"/>
+        <env name="INFLUXDB_ORG" value="test-org"/>
+        <env name="INFLUXDB_BUCKET" value="test-bucket"/>
     </php>
 </phpunit>

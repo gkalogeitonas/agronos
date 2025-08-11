@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -35,4 +34,12 @@ return [
         ],
     ],
 
+    'influxdb' => [
+        'url' => env('INFLUXDB_URL'),
+        'token' => env('INFLUXDB_TOKEN'),
+        'org' => env('INFLUXDB_ORG'),
+        'bucket' => env('INFLUXDB_BUCKET'),
+        // Enable fake client during tests or when explicitly requested
+        'fake' => env('INFLUXDB_FAKE', env('APP_ENV') === 'testing'),
+    ],
 ];
