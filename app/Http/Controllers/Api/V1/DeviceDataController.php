@@ -16,7 +16,7 @@ class DeviceDataController extends Controller
         $writtenCount = 0;
         $device = $request->user();
         foreach ($request->validated()['sensors'] as $sensor) {
-            $sensorModel = \App\Models\Sensor::where('uuid', $sensor['uuid'])->first();
+            $sensorModel = \App\Models\Sensor::allTenants()->where('uuid', $sensor['uuid'])->first();
             if (!$sensorModel || $sensorModel->device_id !== $device->id) {
                 $missingUuids[] = $sensor['uuid'];
                 continue;
