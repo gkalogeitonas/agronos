@@ -21,9 +21,9 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'), // Use bcrypt for password hashing
         ]);
 
-        // Create 10 farms for the test user, each with 10 devices, each device with 3 sensors
-        Farm::factory(10)->create(['user_id' => $user->id])->each(function ($farm) use ($user) {
-            $devices = \App\Models\Device::factory(10)->create([
+        // Create 2 farms for the test user, each with 1 device, each device with 3 sensors
+        Farm::factory(2)->create(['user_id' => $user->id])->each(function ($farm) use ($user) {
+            $devices = \App\Models\Device::factory(1)->create([
                 'user_id' => $user->id,
             ]);
             foreach ($devices as $device) {
