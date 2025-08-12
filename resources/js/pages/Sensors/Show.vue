@@ -51,7 +51,14 @@
             </div>
             <div>
               <h3 class="text-sm font-medium text-muted-foreground">Farm</h3>
-              <p><Link :href="route('farms.show', sensor.farm?.id)">{{ sensor.farm?.name || '—' }}</Link></p>
+              <p>
+                <template v-if="sensor.farm">
+                  <Link :href="route('farms.show', sensor.farm.id)">{{ sensor.farm.name }}</Link>
+                </template>
+                <template v-else>
+                  —
+                </template>
+              </p>
             </div>
             <div>
               <h3 class="text-sm font-medium text-muted-foreground">Location</h3>
