@@ -18,7 +18,7 @@ it('allows a device to post data with a valid token', function () {
         ]);
 
     $response->assertStatus(200)
-        ->assertJson(['message' => 'Data received']);
+        ->assertJsonFragment(['message' => 'Data received.']);
 });
 
 it('rejects a device posting data with an invalid token', function () {
@@ -70,7 +70,7 @@ it('device can login and then post data with the received token', function () {
         ]);
 
     $dataResponse->assertStatus(200)
-        ->assertJson(['message' => 'Data received']);
+        ->assertJsonFragment(['message' => 'Data received.']);
 });
 
 it('rejects a device posting data with invalid payload', function () {
@@ -103,7 +103,7 @@ it('rejects a device posting data with invalid payload', function () {
     $response->assertStatus(422);
 });
 
-it('skips writing data for sensors that are not registered', function () {
+it('skips writing data for sensors that are not registered and returns missing_uuids', function () {
     $user = \App\Models\User::factory()->create();
     $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
     $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
@@ -129,7 +129,10 @@ it('skips writing data for sensors that are not registered', function () {
         ->postJson('/api/v1/device/data', $payload);
 
     $response->assertStatus(200)
-        ->assertJson(['message' => 'Data received']);
+        ->assertJson([
+            'message' => 'Data received.',
+            'missing_uuids' => ['sensor-uuid-unregistered'],
+        ]);
 
     $influx = app(\App\Services\InfluxDBService::class);
     expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);
@@ -138,4 +141,77 @@ it('skips writing data for sensors that are not registered', function () {
     expect($writes)->toHaveCount(1);
     expect($writes[0]['tags']['sensor_id'])->toBe($registeredSensor->id);
     expect($writes[0]['fields']['value'])->toBe(22.5);
+});
+
+it('does not write data for sensors not belonging to the device', function () {
+    $user = \App\Models\User::factory()->create();
+    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
+    $otherDevice = \App\Models\Device::factory()->create(['user_id' => $user->id]);
+    $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
+
+    // Sensor belongs to otherDevice, not to $device
+    $sensor = \App\Models\Sensor::factory()->create([
+        'uuid' => 'sensor-uuid-other',
+        'user_id' => $user->id,
+        'device_id' => $otherDevice->id,
+        'farm_id' => $farm->id,
+        'type' => 'temperature',
+    ]);
+
+    $token = $device->createToken('device-token')->plainTextToken;
+
+    $payload = [
+        'sensors' => [
+            ['uuid' => 'sensor-uuid-other', 'value' => 22.5],
+        ],
+    ];
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/device/data', $payload);
+
+    $response->assertStatus(200)
+        ->assertJsonFragment(['message' => 'Data received.']);
+    $influx = app(\App\Services\InfluxDBService::class);
+    expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);
+    /** @var \App\Services\InfluxDBFake $influx */
+    $writes = $influx->writes();
+    expect($writes)->toHaveCount(0);
+});
+
+it('does not write data for sensors not belonging to the user who owns the device', function () {
+    $user = \App\Models\User::factory()->create();
+    $otherUser = \App\Models\User::factory()->create();
+    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
+    $otherDevice = \App\Models\Device::factory()->create(['user_id' => $otherUser->id]);
+    $farm = \App\Models\Farm::factory()->create(['user_id' => $otherUser->id]);
+
+    // Sensor belongs to otherUser and otherDevice
+    $sensor = \App\Models\Sensor::factory()->create([
+        'uuid' => 'sensor-uuid-other-user',
+        'user_id' => $otherUser->id,
+        'device_id' => $otherDevice->id,
+        'farm_id' => $farm->id,
+        'type' => 'humidity',
+    ]);
+
+    $token = $device->createToken('device-token')->plainTextToken;
+
+    $payload = [
+        'sensors' => [
+            ['uuid' => 'sensor-uuid-other-user', 'value' => 44.4],
+        ],
+    ];
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/device/data', $payload);
+
+
+    $response->assertStatus(200)
+        ->assertJsonFragment(['message' => 'Data received.'])
+        ->assertJsonFragment(['missing_uuids' => ['sensor-uuid-other-user']]);
+    $influx = app(\App\Services\InfluxDBService::class);
+    expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);
+    /** @var \App\Services\InfluxDBFake $influx */
+    $writes = $influx->writes();
+    expect($writes)->toHaveCount(0);
 });
