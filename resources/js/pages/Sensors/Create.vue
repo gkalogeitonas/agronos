@@ -38,7 +38,8 @@
         </div>
         <div class="mb-4" v-else>
           <label class="block text-sm font-medium mb-1" for="farm_id">Farm</label>
-          <input :value="page.props.selectedFarm.name" id="farm_id" class="input w-full bg-gray-100" readonly />
+          <input type="hidden" v-model="form.farm_id" id="farm_id" />
+          <input :value="page.props.selectedFarm.name" class="input w-full bg-gray-100" readonly />
         </div>
         <div class="flex items-center mb-4 gap-2">
           <Switch v-model="allowEdit" id="allow-edit-switch" />
@@ -79,7 +80,7 @@ npx shadcn-vue@latest add switch
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { QrcodeStream } from 'vue-qrcode-reader';
 import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
@@ -154,6 +155,18 @@ function getLocation() {
 
 // Optionally, get location on mount
 getLocation();
+
+onMounted(() => {
+  if (page.props.selectedFarm) {
+    form.farm_id = page.props.selectedFarm.id;
+  }
+});
+
+watch(() => page.props.selectedFarm, (selectedFarm) => {
+  if (selectedFarm) {
+    form.farm_id = selectedFarm.id;
+  }
+});
 </script>
 
 <style scoped>
