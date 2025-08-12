@@ -23,7 +23,7 @@ test('writeArray writes correct data to InfluxDBFake', function () {
         ->postJson('/api/v1/device/data', $payload);
 
     $response->assertStatus(200)
-        ->assertJson(['message' => 'Data received']);
+        ->assertJsonFragment(['message' => 'Data received.']);
 
     $influx = app(\App\Services\InfluxDBService::class);
     expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);

@@ -102,3 +102,40 @@ it('rejects a device posting data with invalid payload', function () {
         ]);
     $response->assertStatus(422);
 });
+
+it('skips writing data for sensors that are not registered', function () {
+    $user = \App\Models\User::factory()->create();
+    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
+    $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
+
+    $registeredSensor = \App\Models\Sensor::factory()->create([
+        'uuid' => 'sensor-uuid-registered',
+        'user_id' => $user->id,
+        'device_id' => $device->id,
+        'farm_id' => $farm->id,
+        'type' => 'temperature',
+    ]);
+
+    $token = $device->createToken('device-token')->plainTextToken;
+
+    $payload = [
+        'sensors' => [
+            ['uuid' => 'sensor-uuid-registered', 'value' => 22.5],
+            ['uuid' => 'sensor-uuid-unregistered', 'value' => 99.9], // not registered
+        ],
+    ];
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/device/data', $payload);
+
+    $response->assertStatus(200)
+        ->assertJson(['message' => 'Data received']);
+
+    $influx = app(\App\Services\InfluxDBService::class);
+    expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);
+    /** @var \App\Services\InfluxDBFake $influx */
+    $writes = $influx->writes();
+    expect($writes)->toHaveCount(1);
+    expect($writes[0]['tags']['sensor_id'])->toBe($registeredSensor->id);
+    expect($writes[0]['fields']['value'])->toBe(22.5);
+});

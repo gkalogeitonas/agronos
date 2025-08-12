@@ -12,19 +12,12 @@ class DeviceDataController extends Controller
 {
     public function store(DeviceDataRequest $request, InfluxDBService $influx)
     {
-        // // Log the incoming device data
-        // Log::info('Device data received', [
-        //     'device_id' => optional($request->user())->id,
-        //     'payload' => $request->all(),
-        //     'ip' => $request->ip(),
-        // ]);
-
-        // Write each sensor measurement separately
+        $missingUuids = [];
+        $writtenCount = 0;
         foreach ($request->validated()['sensors'] as $sensor) {
             $sensorModel = \App\Models\Sensor::where('uuid', $sensor['uuid'])->first();
             if (!$sensorModel) {
-                // Log missing sensor and skip
-                Log::warning('Sensor not found for uuid', ['uuid' => $sensor['uuid']]);
+                $missingUuids[] = $sensor['uuid'];
                 continue;
             }
             $influx->writeArray([
@@ -40,8 +33,13 @@ class DeviceDataController extends Controller
                 ],
                 'time' => microtime(true), // use server time
             ]);
+            $writtenCount++;
         }
 
-        return response()->json(['message' => 'Data received'], 200);
+        $response = ['message' => 'Data received.'];
+        if (count($missingUuids) > 0) {
+            $response['missing_uuids'] = $missingUuids;
+        }
+        return response()->json($response, 200);
     }
 }
