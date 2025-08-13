@@ -215,3 +215,29 @@ it('does not write data for sensors not belonging to the user who owns the devic
     $writes = $influx->writes();
     expect($writes)->toHaveCount(0);
 });
+
+it('updates last_reading and last_reading_at on sensors after posting data', function () {
+    $device = \App\Models\Device::factory()->create();
+    $sensor = \App\Models\Sensor::factory()->create([
+        'device_id' => $device->id,
+        'uuid' => 'sensor-uuid-1',
+        'last_reading' => null,
+        'last_reading_at' => null,
+    ]);
+    $token = $device->createToken('device-token')->plainTextToken;
+
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/device/data', [
+            'sensors' => [
+                ['uuid' => 'sensor-uuid-1', 'value' => 42.42],
+            ],
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonFragment(['message' => 'Data received.']);
+
+    $sensor->refresh();
+    expect($sensor->last_reading)->toBe(42.42);
+    expect($sensor->last_reading_at)->not->toBeNull();
+});

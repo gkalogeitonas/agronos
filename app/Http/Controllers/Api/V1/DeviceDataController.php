@@ -13,17 +13,29 @@ class DeviceDataController extends Controller
 {
     public function store(DeviceDataRequest $request, InfluxDBService $influx)
     {
+        $device = $request->user();
+        $sensorPayloads = $request->validated()['sensors'];
+
+        // Fetch all sensors for these UUIDs in a single query
+        $sensors = \App\Models\Sensor::allTenants()
+            ->where('device_id', $device->id)
+            ->get()
+            ->keyBy('uuid');
         $missingUuids = [];
         $writtenCount = 0;
-        $device = $request->user();
-        foreach ($request->validated()['sensors'] as $sensor) {
-            $sensorModel = \App\Models\Sensor::allTenants()->where('uuid', $sensor['uuid'])->first();
-            if (!$sensorModel || $sensorModel->device_id !== $device->id) {
+
+        foreach ($sensorPayloads as $sensor) {
+            $sensorModel = $sensors->get($sensor['uuid']);
+            if (!$sensorModel) {
                 $missingUuids[] = $sensor['uuid'];
                 continue;
             }
             $payload = SensorMeasurementPayloadFactory::make($sensorModel, $sensor['value']);
             $influx->writeArray($payload);
+            // Update last_reading and last_reading_at
+            $sensorModel->last_reading = $sensor['value'];
+            $sensorModel->last_reading_at = now();
+            $sensorModel->save();
             $writtenCount++;
         }
 
