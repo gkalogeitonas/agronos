@@ -6,6 +6,6 @@ export interface Sensor {
   device_id: number;
   lat: number;
   lon: number;
-  last_seen_at?: string | null;
+  last_reading_at?: string | null;
   last_reading?: string | number | null;
 }
