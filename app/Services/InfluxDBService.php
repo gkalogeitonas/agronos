@@ -88,18 +88,13 @@ class InfluxDBService
 
 
 
-    // Query all results from the measurement after writing
-
-    // $flux = <<<FLUX
-    // from(bucket: "Agronos")
-    // |> range(start: -1h)
-    // |> filter(fn: (r) => r._measurement == "sensor_measurement")
-    // FLUX;
-
-    // $queryResults = $influx->query($flux);
-    // echo '<pre>';
-    //  print_r($queryResults); // Print the query results for debugging
-    //  echo '</pre>';
+    /**
+     * Run a Flux query and return the result.
+     * Use this for queries that return data.
+     */
+    // Note: Flux queries should be properly formatted with `from(bucket: ...)` included.
+    // If you need to prepend the bucket, use queryPipeline() instead.
+    // This method is for direct queries that already include the bucket.
     public function query(string $flux)
     {
         $queryApi = $this->client->createQueryApi();
@@ -113,11 +108,11 @@ class InfluxDBService
     {
         $sensorIdStr = (string)$sensorId;
         $pipeline = <<<FLUX
-|> range(start: {$range})
-|> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
-|> sort(columns: ["_time"], desc: true)
-|> limit(n: {$limit})
-FLUX;
+        |> range(start: {$range})
+        |> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: {$limit})
+        FLUX;
         try {
             $result = $this->queryPipeline($pipeline);
         } catch (\Throwable $e) {
@@ -148,9 +143,9 @@ FLUX;
     {
         $sensorIdStr = (string)$sensorId;
         $base = <<<FLUX
-|> range(start: {$range})
-|> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
-FLUX;
+        |> range(start: {$range})
+        |> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
+        FLUX;
 
         $stats = ['min' => null, 'max' => null, 'avg' => null, 'count' => 0];
 
