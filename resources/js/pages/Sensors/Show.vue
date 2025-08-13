@@ -72,6 +72,39 @@
               <h3 class="text-sm font-medium text-muted-foreground">Last Seen</h3>
               <p>{{ sensor.last_reading_at ?? '—' }}</p>
             </div>
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">24h Min/Max/Avg (InfluxDB)</h3>
+              <p>
+                Min: {{ stats?.min ?? '—' }},
+                Max: {{ stats?.max ?? '—' }},
+                Avg: {{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="mb-6" v-if="recentReadings && recentReadings.length">
+        <CardHeader>
+          <CardTitle>Recent Readings</CardTitle>
+          <CardDescription>Last 10 measurements from InfluxDB</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr>
+                  <th class="px-2 py-1 text-left">Timestamp</th>
+                  <th class="px-2 py-1 text-left">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in recentReadings" :key="row.time">
+                  <td class="px-2 py-1">{{ row.time }}</td>
+                  <td class="px-2 py-1">{{ row.value }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
@@ -82,7 +115,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head , Link, router } from '@inertiajs/vue3';
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -104,6 +137,9 @@ function deleteSensor() {
     router.delete(route('sensors.destroy', sensor.value.id));
   }
 }
+
+const recentReadings = computed(() => (page.props.recentReadings as Array<{time:string,value:number}>) || []);
+const stats = computed(() => page.props.stats as {min:number|null,max:number|null,avg:number|null,count:number});
 </script>
 
 <style scoped>
