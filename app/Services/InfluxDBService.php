@@ -56,4 +56,24 @@ class InfluxDBService
     {
         $this->client->close();
     }
+
+
+
+    // Query all results from the measurement after writing
+
+    // $flux = <<<FLUX
+    // from(bucket: "Agronos")
+    // |> range(start: -1h)
+    // |> filter(fn: (r) => r._measurement == "sensor_measurement")
+    // FLUX;
+
+    // $queryResults = $influx->query($flux);
+    // echo '<pre>';
+    //  print_r($queryResults); // Print the query results for debugging
+    //  echo '</pre>';
+    public function query(string $flux)
+    {
+        $queryApi = $this->client->createQueryApi();
+        return $queryApi->query($flux, $this->org);
+    }
 }
