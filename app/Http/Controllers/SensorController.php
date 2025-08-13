@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Models\Farm;
-use App\Services\InfluxDBService;
+use App\Services\TimeSeries\SensorTimeSeriesService;
 
 class SensorController extends Controller
 {
@@ -81,10 +81,11 @@ class SensorController extends Controller
         $this->authorize('view', $sensor);
         $sensor->load(['farm', 'device']);
 
-        // InfluxDB queries via service helpers
-        $influx = app(InfluxDBService::class);
-        $recent = $influx->recentSensorReadings($sensor->id, '-7d', 10);
-        $statsArr = $influx->sensorStats($sensor->id, '-24h');
+        // Time-series queries via dedicated service
+        $ts = app(SensorTimeSeriesService::class);
+        $recent = $ts->recentReadings($sensor->id, '-7d', 20);
+        $statsArr = $ts->stats($sensor->id, '-24h');
+
         return Inertia::render('Sensors/Show', [
             'sensor' => $sensor,
             'recentReadings' => $recent,
