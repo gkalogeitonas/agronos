@@ -64,25 +64,53 @@
               <h3 class="text-sm font-medium text-muted-foreground">Location</h3>
               <p>Lat: {{ sensor.lat ?? '—' }}, Lon: {{ sensor.lon ?? '—' }}</p>
             </div>
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">Last Reading</h3>
-              <p>{{ sensor.last_reading ?? '—' }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">Last Seen</h3>
-              <p>{{ sensor.last_reading_at ?? '—' }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">24h Min/Max/Avg (InfluxDB)</h3>
-              <p>
-                Min: {{ stats?.min ?? '—' }},
-                Max: {{ stats?.max ?? '—' }},
-                Avg: {{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Latest Reading</CardTitle>
+            <CardDescription>Most recent data from this sensor</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-2">
+              <div>
+                <h3 class="text-sm font-medium text-muted-foreground">Value</h3>
+                <p class="text-2xl font-bold">{{ sensor.last_reading ?? '—' }}</p>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-muted-foreground">Last Seen</h3>
+                <p class="text-sm">{{ sensor.last_reading_at ?? '—' }}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>24h Statistics</CardTitle>
+            <CardDescription>Min/Max/Average</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <h3 class="text-sm font-medium text-muted-foreground">Min</h3>
+                <p class="text-lg font-semibold">{{ stats?.min ?? '—' }}</p>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-muted-foreground">Max</h3>
+                <p class="text-lg font-semibold">{{ stats?.max ?? '—' }}</p>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-muted-foreground">Avg</h3>
+                <p class="text-lg font-semibold">{{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card class="mb-6" v-if="recentReadings && recentReadings.length">
         <CardHeader>
