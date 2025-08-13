@@ -111,9 +111,10 @@ class InfluxDBService
      */
     public function recentSensorReadings(int $sensorId, string $range = '-7d', int $limit = 10): array
     {
+        $sensorIdStr = (string)$sensorId;
         $pipeline = <<<FLUX
 |> range(start: {$range})
-|> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorId}")
+|> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
 |> sort(columns: ["_time"], desc: true)
 |> limit(n: {$limit})
 FLUX;
@@ -126,7 +127,6 @@ FLUX;
         foreach ($result as $table) {
             $records = $table->records ?? [];
             foreach ($records as $rec) {
-                // Try to extract time/value in a client-agnostic way
                 $time = method_exists($rec, 'getTime') ? $rec->getTime() : ($rec->_time ?? ($rec['time'] ?? null));
                 if ($time instanceof \DateTimeInterface) {
                     $time = $time->format(DATE_ATOM);
@@ -146,43 +146,59 @@ FLUX;
      */
     public function sensorStats(int $sensorId, string $range = '-24h'): array
     {
-        $pipeline = <<<FLUX
+        $sensorIdStr = (string)$sensorId;
+        $base = <<<FLUX
 |> range(start: {$range})
-|> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorId}")
-|> keep(columns: ["_value"])
-|> group()
-|> reduce(
-    identity: {min: 999999.0, max: -999999.0, sum: 0.0, count: 0.0},
-    fn: (r, accumulator) => ({
-      min: if r._value < accumulator.min then r._value else accumulator.min,
-      max: if r._value > accumulator.max then r._value else accumulator.max,
-      sum: accumulator.sum + r._value,
-      count: accumulator.count + 1.0
-    })
-  )
+|> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
 FLUX;
+
+        $stats = ['min' => null, 'max' => null, 'avg' => null, 'count' => 0];
+
         try {
-            $result = $this->queryPipeline($pipeline);
-        } catch (\Throwable $e) {
-            return ['min' => null, 'max' => null, 'avg' => null, 'count' => 0];
-        }
-        $min = $max = $sum = $count = null;
-        foreach ($result as $table) {
-            $records = $table->records ?? [];
-            foreach ($records as $rec) {
-                $vals = method_exists($rec, 'getValues') ? $rec->getValues() : (array) $rec;
-                $min = $vals['min'] ?? $min;
-                $max = $vals['max'] ?? $max;
-                $sum = $vals['sum'] ?? $sum;
-                $count = $vals['count'] ?? $count;
+            // min
+            $minRes = $this->queryPipeline($base . "\n|> min()");
+            foreach ($minRes as $t) {
+                foreach (($t->records ?? []) as $rec) {
+                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                    if ($val !== null) { $stats['min'] = (float)$val; break 2; }
+                }
             }
+            // max
+            $maxRes = $this->queryPipeline($base . "\n|> max()");
+            foreach ($maxRes as $t) {
+                foreach (($t->records ?? []) as $rec) {
+                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                    if ($val !== null) { $stats['max'] = (float)$val; break 2; }
+                }
+            }
+            // mean
+            $meanRes = $this->queryPipeline($base . "\n|> mean()");
+            foreach ($meanRes as $t) {
+                foreach (($t->records ?? []) as $rec) {
+                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                    if ($val !== null) { $stats['avg'] = (float)$val; break 2; }
+                }
+            }
+            // count
+            $countRes = $this->queryPipeline($base . "\n|> count()");
+            foreach ($countRes as $t) {
+                foreach (($t->records ?? []) as $rec) {
+                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                    if ($val !== null) { $stats['count'] = (int)$val; break 2; }
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignore and return defaults
         }
-        $avg = ($count && $sum !== null) ? (float)$sum / (float)$count : null;
-        return [
-            'min' => $min !== null ? (float)$min : null,
-            'max' => $max !== null ? (float)$max : null,
-            'avg' => $avg,
-            'count' => $count !== null ? (int)round((float)$count) : 0,
-        ];
+
+        // If still no data and using -24h, widen the window progressively
+        if (($stats['count'] ?? 0) === 0 && $range === '-24h') {
+            return $this->sensorStats($sensorId, '-7d');
+        }
+        if (($stats['count'] ?? 0) === 0 && $range === '-7d') {
+            return $this->sensorStats($sensorId, '-30d');
+        }
+
+        return $stats;
     }
 }

@@ -85,7 +85,6 @@ class SensorController extends Controller
         $influx = app(InfluxDBService::class);
         $recent = $influx->recentSensorReadings($sensor->id, '-7d', 10);
         $statsArr = $influx->sensorStats($sensor->id, '-24h');
-
         return Inertia::render('Sensors/Show', [
             'sensor' => $sensor,
             'recentReadings' => $recent,
