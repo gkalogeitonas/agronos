@@ -14,7 +14,9 @@
           <span class="text-sm text-muted-foreground">Type: {{ sensor.type }}</span>
           <span class="text-xs text-muted-foreground">Lat: {{ sensor.lat }}, Lon: {{ sensor.lon }}</span>
           <span class="text-xs text-muted-foreground mt-2">Last seen: {{ sensor.last_reading_at ? sensor.last_reading_at : 'Never' }}</span>
-          <span class="text-xs text-muted-foreground">Last value: {{ sensor.last_reading !== undefined && sensor.last_reading !== null ? sensor.last_reading : '—' }}</span>
+          <span class="text-base font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded shadow-sm mt-1">
+            Last value: {{ sensor.last_reading !== undefined && sensor.last_reading !== null ? sensor.last_reading : '—' }}
+          </span>
         </div>
       </CardHeader>
     </Card>
