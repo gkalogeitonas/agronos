@@ -53,19 +53,7 @@ import { Button } from '@/components/ui/button';
 import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import SensorCard from '@/components/SensorCard.vue';
-
-interface Sensor {
-  id: number;
-  name: string;
-  uuid: string;
-  type: string;
-  device_id: number;
-  lat: number;
-  lon: number;
-  last_reading_at: string | null;
-  last_reading: number | null;
-  farm_id: number;
-}
+import type { Sensor } from '@/types/sensor';
 
 const page = usePage();
 const sensors = computed(() => page.props.sensors as Sensor[] ?? []);

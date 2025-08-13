@@ -9,6 +9,7 @@ import { type BreadcrumbItem } from '@/types'
 import { Link } from '@inertiajs/vue3'
 import SensorCard from '@/components/SensorCard.vue'
 import FarmMapbox from '@/components/FarmMapbox.vue'
+import type { Sensor } from '@/types/sensor'
 
 // Props
 const props = defineProps<{
@@ -26,7 +27,7 @@ const props = defineProps<{
       lat: number
     } | null
   },
-  sensors: any[]
+  sensors: Sensor[]
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
