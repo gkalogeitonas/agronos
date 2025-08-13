@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Api\V1\DeviceDataRequest;
 use App\Services\InfluxDBService;
-use App\Services\SensorMeasurementPayloadFactory;
 use App\Services\SensorDataService;
 
 class DeviceDataController extends Controller
