@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Api\V1\DeviceDataRequest;
 use App\Services\InfluxDBService;
+use App\Services\SensorMeasurementPayloadFactory;
 
 class DeviceDataController extends Controller
 {
@@ -21,19 +22,8 @@ class DeviceDataController extends Controller
                 $missingUuids[] = $sensor['uuid'];
                 continue;
             }
-            $influx->writeArray([
-                'name' => 'sensor_measurement',
-                'tags' => [
-                    'user_id'    => $sensorModel->user_id,
-                    'farm_id'    => $sensorModel->farm_id,
-                    'sensor_id'  => $sensorModel->id,
-                    'sensor_type'=> $sensorModel->type,
-                ],
-                'fields' => [
-                    'value' => $sensor['value'],
-                ],
-                'time' => microtime(true), // use server time
-            ]);
+            $payload = SensorMeasurementPayloadFactory::make($sensorModel, $sensor['value']);
+            $influx->writeArray($payload);
             $writtenCount++;
         }
 
