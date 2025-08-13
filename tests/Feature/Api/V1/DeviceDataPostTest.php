@@ -105,7 +105,7 @@ it('rejects a device posting data with invalid payload', function () {
 
 it('skips writing data for sensors that are not registered and returns missing_uuids', function () {
     $user = \App\Models\User::factory()->create();
-    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
+    $device = \App\Models\Device::factory()->create(['user_id' => $user->id, 'id' => 99]);
     $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
 
     $registeredSensor = \App\Models\Sensor::factory()->create([
