@@ -4,6 +4,7 @@ use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
+use App\Enums\DeviceStatus;
 
 uses(RefreshDatabase::class);
 
@@ -50,4 +51,23 @@ test('device login requires uuid and secret', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['uuid', 'secret']);
+});
+
+
+it('updates device status to ONLINE on successful authentication', function () {
+    $device = Device::factory()->create([
+        'uuid' => 'test-uuid',
+        'secret' => Hash::make('test-secret'),
+        'status' => DeviceStatus::REGISTERED,
+    ]);
+
+    $response = $this->postJson('/api/v1/device/login', [
+        'uuid' => 'test-uuid',
+        'secret' => 'test-secret',
+    ]);
+
+    $response->assertStatus(200);
+
+    $device->refresh();
+    expect($device->status)->toBe(DeviceStatus::ONLINE);
 });

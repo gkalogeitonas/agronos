@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Device;
 use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\Hash;
+use App\Enums\DeviceStatus;
+use Carbon\Carbon;
 
 it('allows a device to post data with a valid token', function () {
     $device = Device::factory()->create();
@@ -240,4 +242,38 @@ it('updates last_reading and last_reading_at on sensors after posting data', fun
     $sensor->refresh();
     expect($sensor->last_reading)->toBe(42.42);
     expect($sensor->last_reading_at)->not->toBeNull();
+});
+
+
+it('updates device status to ONLINE and last_seen_at when device sends data', function () {
+    $device = Device::factory()->create([
+        'uuid' => 'test-uuid-data',
+        'secret' => Hash::make('test-secret'),
+        'status' => DeviceStatus::REGISTERED,
+        'last_seen_at' => now()->subHour(),
+    ]);
+
+    // Simulate device authentication
+    $token = $device->createToken('device-token')->plainTextToken;
+
+    $payload = [
+        'sensors' => [
+            [
+                'uuid' => 'sensor-uuid-1',
+                'value' => 22.5,
+            ],
+        ],
+    ];
+
+    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        ->postJson('/api/v1/device/data', $payload);
+
+    $response->assertStatus(200);
+
+    $device->refresh();
+    expect($device->status)->toBe(DeviceStatus::ONLINE);
+    expect($device->last_seen_at)->not->toBeNull();
+    // Parse last_seen_at as Carbon for comparison
+    $lastSeen = Carbon::parse($device->last_seen_at);
+    expect($lastSeen->greaterThan(now()->subMinute()))->toBeTrue();
 });

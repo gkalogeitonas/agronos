@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\BelongsToTenant;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Enums\DeviceStatus;
 
 class Device extends Authenticatable
 {
@@ -22,6 +23,10 @@ class Device extends Authenticatable
         'last_seen_at',
         'battery_level',
         'signal_strength',
+    ];
+
+    protected $casts = [
+        'status' => DeviceStatus::class,
     ];
 
     public function user()
