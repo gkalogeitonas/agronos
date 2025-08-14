@@ -25,4 +25,15 @@ enum SensorType: string
             self::OTHER->value => 'Other',
         ];
     }
+
+    public function unit(): string
+    {
+        return match($this) {
+            self::MOISTURE => '%',
+            self::TEMPERATURE => '°C',
+            self::HUMIDITY => '%',
+            self::LIGHT => 'lux',
+            self::OTHER => '',
+        };
+    }
 }
