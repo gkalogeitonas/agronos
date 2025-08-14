@@ -20,7 +20,7 @@ class InfluxDBFake extends InfluxDBService
         $this->bucket = config('services.influxdb.bucket');
         $this->org = config('services.influxdb.org');
         $this->client = null; // no real client
-        echo "Using InfluxDBFake for testing purposes.\n";
+        //echo "Using InfluxDBFake for testing purposes.\n";
     }
 
     public function writeLineProtocol(string $data, $precision = WritePrecision::S)
@@ -56,7 +56,7 @@ class InfluxDBFake extends InfluxDBService
             'org' => $this->org,
         ];
         //print the recorded writes
-        print_r($this->writes);
+        //print_r($this->writes);
     }
 
     public function close()
