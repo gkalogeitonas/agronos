@@ -8,6 +8,8 @@ use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Models\Farm;
 use App\Services\TimeSeries\SensorTimeSeriesService;
+use App\Http\Resources\SensorResource;
+
 
 class SensorController extends Controller
 {
@@ -85,9 +87,9 @@ class SensorController extends Controller
         $ts = app(SensorTimeSeriesService::class);
         $recent = $ts->recentReadings($sensor->id, '-7d', 20);
         $statsArr = $ts->stats($sensor->id, '-24h');
-
+        //dd($sensor, new SensorResource($sensor));
         return Inertia::render('Sensors/Show', [
-            'sensor' => $sensor,
+            'sensor' => (new SensorResource($sensor))->flat(request()),
             'recentReadings' => $recent,
             'stats' => $statsArr,
         ]);
