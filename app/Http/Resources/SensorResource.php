@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\SensorType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,6 +26,7 @@ class SensorResource extends JsonResource
             'lon' => $this->lon,
             'last_reading' => $this->last_reading,
             'last_reading_at' => $this->last_reading_at,
+            'unit' => $this->type && SensorType::tryFrom($this->type) ? SensorType::tryFrom($this->type)->unit() : '',
         ];
     }
 

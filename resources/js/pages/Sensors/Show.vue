@@ -50,6 +50,10 @@
               <p class="font-mono break-all">{{ sensor.device?.uuid || '—' }}</p>
             </div>
             <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Sensor type</h3>
+              <p class="font-mono break-all">{{ sensor.type || '—' }}</p>
+            </div>
+            <div>
               <h3 class="text-sm font-medium text-muted-foreground">Farm</h3>
               <p>
                 <template v-if="sensor.farm">
@@ -78,7 +82,10 @@
             <div class="space-y-2">
               <div>
                 <h3 class="text-sm font-medium text-muted-foreground">Value</h3>
-                <p class="text-2xl font-bold">{{ sensor.last_reading ?? '—' }}</p>
+                <p class="text-2xl font-bold">
+                  {{ sensor.last_reading ?? '—' }}
+                  <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{ sensor.unit }}</span>
+                </p>
               </div>
               <div>
                 <h3 class="text-sm font-medium text-muted-foreground">Last Seen</h3>
@@ -97,15 +104,24 @@
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <h3 class="text-sm font-medium text-muted-foreground">Min</h3>
-                <p class="text-lg font-semibold">{{ stats?.min ?? '—' }}</p>
+                <p class="text-lg font-semibold">
+                  {{ stats?.min ?? '—' }}
+                  <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{ sensor.unit }}</span>
+                </p>
               </div>
               <div>
                 <h3 class="text-sm font-medium text-muted-foreground">Max</h3>
-                <p class="text-lg font-semibold">{{ stats?.max ?? '—' }}</p>
+                <p class="text-lg font-semibold">
+                  {{ stats?.max ?? '—' }}
+                  <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{ sensor.unit }}</span>
+                </p>
               </div>
               <div>
                 <h3 class="text-sm font-medium text-muted-foreground">Avg</h3>
-                <p class="text-lg font-semibold">{{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}</p>
+                <p class="text-lg font-semibold">
+                  {{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}
+                  <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{ sensor.unit }}</span>
+                </p>
               </div>
             </div>
           </CardContent>
@@ -129,7 +145,10 @@
               <tbody>
                 <tr v-for="row in recentReadings" :key="row.time">
                   <td class="px-2 py-1">{{ row.time }}</td>
-                  <td class="px-2 py-1">{{ row.value }}</td>
+                  <td class="px-2 py-1">
+                    {{ row.value }}
+                    <span v-if="sensor.unit" class="text-xs text-muted-foreground">{{ sensor.unit }}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
