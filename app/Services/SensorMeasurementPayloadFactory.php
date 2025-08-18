@@ -24,9 +24,11 @@ class SensorMeasurementPayloadFactory
                 'sensor_type'=> $sensorModel->type,
             ],
             'fields' => [
-                'value' => $value,
+                // cast to float to avoid integer/float column type conflicts in InfluxDB
+                'value' => (float) $value,
             ],
-            'time' => microtime(true), // use server time
+            // use integer seconds to match precision=s
+            'time' => time(), // use server time
         ];
     }
 }
