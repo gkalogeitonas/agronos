@@ -31,9 +31,17 @@ class SensorTimeSeriesService
         foreach ($result as $table) {
             $records = $table->records ?? [];
             foreach ($records as $rec) {
+                // Normalize time to match DB format: "Y-m-d H:i:s"
                 $time = method_exists($rec, 'getTime') ? $rec->getTime() : ($rec->_time ?? ($rec['time'] ?? null));
                 if ($time instanceof \DateTimeInterface) {
-                    $time = $time->format(DATE_ATOM);
+                    $time = $time->format('Y-m-d H:i:s');
+                } elseif (is_string($time)) {
+                    try {
+                        $dt = new \DateTime($time);
+                        $time = $dt->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        // leave original string if parsing fails
+                    }
                 }
                 $value = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
                 $out[] = [
@@ -41,9 +49,9 @@ class SensorTimeSeriesService
                     'value' => $value,
                 ];
             }
-        }
-        return $out;
-    }
+         }
+         return $out;
+     }
 
     /**
      * Compute min/max/avg/count for a sensor over a range.
