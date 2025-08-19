@@ -89,7 +89,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-medium text-muted-foreground">Last Seen</h3>
-                <p class="text-sm">{{ sensor.last_reading_at ?? '—' }}</p>
+                <p class="text-sm">{{ formatTimestamp(sensor.last_reading_at) }}</p>
               </div>
             </div>
           </CardContent>
@@ -131,7 +131,6 @@
       <Card class="mb-6" v-if="recentReadings && recentReadings.length">
         <CardHeader>
           <CardTitle>Recent Readings</CardTitle>
-          <CardDescription>Last 10 measurements from InfluxDB</CardDescription>
         </CardHeader>
         <CardContent>
           <div class="overflow-x-auto">
@@ -144,7 +143,7 @@
               </thead>
               <tbody>
                 <tr v-for="row in recentReadings" :key="row.time">
-                  <td class="px-2 py-1">{{ row.time }}</td>
+                  <td class="px-2 py-1">{{ formatTimestamp(row.time) }}</td>
                   <td class="px-2 py-1">
                     {{ row.value }}
                     <span v-if="sensor.unit" class="text-xs text-muted-foreground">{{ sensor.unit }}</span>
@@ -168,10 +167,13 @@ import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import FarmMapbox from '@/components/FarmMapbox.vue'
+import useTimestamp from '@/composables/useTimestamp';
 
 
 const page = usePage();
 const sensor = computed(() => page.props.sensor as any);
+
+const { formatTimestamp, parseAsUTCDate } = useTimestamp();
 
 const breadcrumbs = [
   { title: 'Dashboard', href: '/dashboard' },
