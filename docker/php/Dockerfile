@@ -36,14 +36,24 @@ RUN mkdir -p /var/www/bootstrap/cache \
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Install Node dependencies and build frontend during image build
-RUN npm install && npm run build
+# Install Node dependencies and build frontend at container start (not during image build)
+# (removed the previous "RUN npm install && npm run build" to avoid hidden artifacts when using bind-mounts)
 
 # Create a script to fix permissions and run Laravel commands
 RUN echo '#!/bin/bash\n\
 # Set proper ownership for runtime\n\
 chown -R www-data:www-data /var/www/storage\n\
 chown -R www-data:www-data /var/www/bootstrap/cache\n\
+\n\
+# Build frontend if package.json exists (run after host bind-mount is applied)\n\
+if [ -f /var/www/package.json ]; then\n\
+  cd /var/www\n\
+  if command -v npm >/dev/null 2>&1; then\n\
+    npm ci --silent || npm install --silent\n\
+    npm run build --silent || true\n\
+    chown -R www-data:www-data /var/www/public || true\n\
+  fi\n\
+fi\n\
 \n\
 # Run Laravel optimizations and migrations\n\
 if [ -f /var/www/artisan ]; then\n\
