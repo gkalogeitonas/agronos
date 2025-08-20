@@ -65,6 +65,8 @@ Authentication (device login)
     "token": "plain-text-token"
   }
 
+  See `docs/Device_registration.md`.
+
 Sending sensor measurements (HTTP)
 
 - Auth: use the Sanctum token as a Bearer token in Authorization header for subsequent requests to the data endpoint.
@@ -86,6 +88,20 @@ Sending sensor measurements (HTTP)
   }
 - If any sensor UUIDs are unknown for the device, response will include `missing_uuids` with the list of those UUIDs.
 
+Sensor onboarding (QR scan and manual)
+
+- Per-sensor UUIDs: each physical sensor attached to a device has its own UUID (in addition to the device UUID). Sensors can expose their UUIDs separately (labels or QR codes) so they can be registered individually.
+- QR workflow (recommended for ease):
+  1. The operator or vendor pre-provisions the Device and Sensor records server-side (each Sensor has a UUID). A QR code containing the sensor UUID (and optionally device_uuid, type) is printed or displayed on the sensor.
+  2. In the frontend the user opens the Add Sensor screen and taps "Scan Sensor QR" (see `resources/js/pages/Sensors/Create.vue`). The app uses the phone camera to read the QR payload.
+  3. The front-end will populate the sensor form (uuid, device_uuid, type) and can optionally capture GPS coordinates from the phone to set `lat`/`lon`.
+  4. The UI submits to `sensors.scan` which calls `App\Http\Controllers\SensorController@scan`. That action will link the sensor to the selected device and user, update fields if the sensor exists, or create a new Sensor when missing.
+- Manual entry: the user may also add a sensor manually using the same Add Sensor form by entering the sensor UUID and other metadata (farm, name, location).
+- Backend validation and authorization: `SensorController@scan` validates input (device exists, uuid string) and uses `DevicePolicy` to confirm the user is allowed to link the sensor to the device. New sensors are created with `user_id` and `device_id` set to the current user and device respectively (see `app/Http/Controllers/SensorController.php`).
+- Result: after registration the sensor is linked to the user's tenant and will be discoverable in the UI and eligible to receive data from the parent device. When the device sends measurements, `SensorDataService` will resolve sensors by UUID and update `last_reading` / `last_reading_at` on the Sensor models.
+
+See `app/Models/Sensor.php`, `app/Http/Controllers/SensorController.php` and `resources/js/pages/Sensors/Create.vue` for the implementation details and validation rules.
+
 InfluxDB payload details
 
 Payloads written to InfluxDB use the following structure (see `SensorMeasurementPayloadFactory`):
@@ -95,10 +111,4 @@ Payloads written to InfluxDB use the following structure (see `SensorMeasurement
 - time: server timestamp (seconds precision)
 
 
-Best practices
-- Provision device UUIDs and secrets securely; avoid embedding secrets in firmware without a secure element.
-- Clock drift: server timestamp is used for measurements. If the device must provide timestamps, ensure they are validated and timezone-aware.
-- Monitor `missing_uuids` responses to detect sensors that were removed or not yet provisioned.
-
-See `docs/Device_registration.md` and `docs/technical_reference.md` for more details and examples.
 
