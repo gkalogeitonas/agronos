@@ -10,6 +10,18 @@ class SensorTimeSeriesService
     {
     }
 
+    // Round numeric values consistently for timeseries output
+    private function roundValue(mixed $val, int $decimals = 2): mixed
+    {
+        if ($val === null) {
+            return null;
+        }
+        if (is_numeric($val)) {
+            return round((float) $val, $decimals);
+        }
+        return $val;
+    }
+
     /**
      * Get recent readings for a sensor, flattened to [{time, value}]
      */
@@ -43,7 +55,9 @@ class SensorTimeSeriesService
                         // leave original string if parsing fails
                     }
                 }
-                $value = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                $rawValue = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                $value = $this->roundValue($rawValue, 2);
+
                 $out[] = [
                     'time' => $time,
                     'value' => $value,
@@ -72,7 +86,7 @@ class SensorTimeSeriesService
             foreach ($minRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['min'] = (float)$val; break 2; }
+                    if ($val !== null) { $stats['min'] = $this->roundValue($val, 2); break 2; }
                 }
             }
             // max
@@ -80,7 +94,7 @@ class SensorTimeSeriesService
             foreach ($maxRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['max'] = (float)$val; break 2; }
+                    if ($val !== null) { $stats['max'] = $this->roundValue($val, 2); break 2; }
                 }
             }
             // mean
@@ -88,7 +102,7 @@ class SensorTimeSeriesService
             foreach ($meanRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['avg'] = (float)$val; break 2; }
+                    if ($val !== null) { $stats['avg'] = $this->roundValue($val, 2); break 2; }
                 }
             }
             // count
