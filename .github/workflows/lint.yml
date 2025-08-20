@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   quality:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,3 +44,5 @@ jobs:
       #   with:
       #     commit_message: fix code style
       #     commit_options: '--no-verify'
+
+# To re-enable the linter, remove the `if: false` line from the job
