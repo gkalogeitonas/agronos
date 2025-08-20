@@ -123,5 +123,30 @@ Payloads written to InfluxDB use the following structure (see `SensorMeasurement
 - fields: value (float)
 - time: server timestamp (seconds precision)
 
+Database schema (summary)
+
+A short overview of the main tables and key columns. See `database/migrations` and `docs/technical_reference.md` for the full schema and migrations.
+
+- users
+  - id (PK), name, email, password, email_verified_at, created_at, updated_at
+  - relations: hasMany farms, devices, sensors
+
+- farms
+  - id (PK), user_id (FK), name, location, size, coordinates (GeoJSON), description, created_at, updated_at
+  - relations: belongsTo user, hasMany sensors and are tenant-scoped via the `BelongsToTenant` trait.
+
+- devices
+  - id (PK), user_id (FK), name, uuid (unique), secret (hashed), type, status (enum), last_seen_at, battery_level, signal_strength, created_at, updated_at
+  - notes: Devices are Authenticatable (Laravel Sanctum tokens).
+  - relations: belongsTo user, hasMany sensors
+
+- sensors
+  - id (PK), user_id (FK), device_id (FK), farm_id (FK, nullable), crop_id (nullable), name, uuid (unique), type, lat, lon, last_reading (float), last_reading_at (timestamp), created_at, updated_at
+  - notes: Sensors are resolved by UUID when ingesting measurements. See `app/Models/Sensor.php` and `app/Http/Controllers/SensorController.php` for registration logic
+
+Notes
+- Multi-tenancy: models use a `BelongsToTenant` trait and `TenantScope` to ensure tenant separation; see `app/Traits/BelongsToTenant.php` and `app/Scopes/TenantScope.php`.
+- For exact column types, indexes and constraints, consult the migration files in `database/migrations` and the technical reference in `docs/technical_reference.md`.
+
 
 
