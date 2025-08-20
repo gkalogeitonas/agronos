@@ -55,15 +55,21 @@ Authentication (device login)
 
 - Endpoint: POST /api/v1/device/login
 - Payload:
-  {
-    "uuid": "device-uuid-string",
-    "secret": "device-secret"
-  }
+
+```json
+{
+  "uuid": "Test-Device-1",
+  "secret": "Test-Device-1"
+}
+```
 - Behavior: the server verifies credentials (see `App\Http\Controllers\Api\V1\DeviceAuthController`). On success the device status is set to ONLINE, `last_seen_at` is updated and a Laravel Sanctum personal access token is issued to the device for future requests.
 - Response example:
-  {
-    "token": "plain-text-token"
-  }
+
+```json
+{
+  "token": "plain-text-token"
+}
+```
 
   See `docs/Device_registration.md`.
 
@@ -72,20 +78,27 @@ Sending sensor measurements (HTTP)
 - Auth: use the Sanctum token as a Bearer token in Authorization header for subsequent requests to the data endpoint.
 - Endpoint: POST /api/v1/device/data
 - Payload shape:
-  {
-    "sensors": [
-      { "uuid": "sensor-uuid-1", "value": 23.5 },
-      { "uuid": "sensor-uuid-2", "value": 1012 }
-    ]
-  }
+
+```json
+{
+  "sensors": [
+    { "uuid": "Test-Device-1-sensor-1", "value": 22.6 },
+    { "uuid": "Test-Device-1-sensor-2", "value": 99.9 },
+    { "uuid": "Test-Device-1-sensor-3", "value": 99.9 }
+  ]
+}
+```
 - Behavior: the `DeviceDataController` validates the payload, updates the device `status` and `last_seen_at`, then delegates to `SensorDataService::processSensorData` which:
   - Resolves sensors for the device and tenant
   - Writes measurements to InfluxDB using `SensorMeasurementPayloadFactory` (fields: value, tags: user/farm/sensor ids and type, time)
   - Updates `last_reading` and `last_reading_at` on the Sensor models
 - Example success response:
-  {
-    "message": "Data received."
-  }
+
+```json
+{
+  "message": "Data received."
+}
+```
 - If any sensor UUIDs are unknown for the device, response will include `missing_uuids` with the list of those UUIDs.
 
 Sensor onboarding (QR scan and manual)
