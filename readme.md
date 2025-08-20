@@ -73,6 +73,10 @@ Authentication (device login)
 
   See `docs/Device_registration.md`.
 
+Device firmware repository
+
+The device firmware and related embedded code are maintained in a separate repository: https://github.com/gkalogeitonas/Agronos-iot-device
+
 Sending sensor measurements (HTTP)
 
 - Auth: use the Sanctum token as a Bearer token in Authorization header for subsequent requests to the data endpoint.
