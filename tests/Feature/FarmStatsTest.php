@@ -27,15 +27,9 @@ it('farm time series service returns expected data structure', function () {
     $stats = $service->farmStats($farm, '-24h');
 
     expect($stats)->toHaveKeys([
-        'totalSensors',
-        'activeSensors',
-        'totalReadings',
-        'sensorTypeStats',
         'readingStatsByType',
     ]);
 
-    expect($stats['totalSensors'])->toBe($farm->sensors()->count());
-    expect($stats['sensorTypeStats'])->toBeArray();
     expect($stats['readingStatsByType'])->toBeArray();
 });
 
@@ -49,16 +43,19 @@ it('farm service correctly calculates sensor type statistics', function () {
     Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'humidity']);
     Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'moisture']);
 
-    $service = app(FarmTimeSeriesService::class);
-    $stats = $service->farmStats($farm, '-24h');
+    // Test controller response which now includes database statistics
+    $response = $this->actingAs($user)
+        ->get(route('farms.show', $farm));
 
-    expect($stats['totalSensors'])->toBe(4);
-    expect($stats['sensorTypeStats'])->toHaveKey('temperature');
-    expect($stats['sensorTypeStats'])->toHaveKey('humidity');
-    expect($stats['sensorTypeStats'])->toHaveKey('moisture');
-    expect($stats['sensorTypeStats']['temperature'])->toBe(2);
-    expect($stats['sensorTypeStats']['humidity'])->toBe(1);
-    expect($stats['sensorTypeStats']['moisture'])->toBe(1);
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page->component('Farms/Show')
+        ->has('farmStats')
+        ->where('farmStats.totalSensors', 4)
+        ->has('farmStats.sensorTypeStats')
+        ->where('farmStats.sensorTypeStats.temperature', 2)
+        ->where('farmStats.sensorTypeStats.humidity', 1)
+        ->where('farmStats.sensorTypeStats.moisture', 1)
+    );
 });
 
 it('farm service provides reading statistics per sensor type', function () {
@@ -77,13 +74,9 @@ it('farm service provides reading statistics per sensor type', function () {
     // Each type should have its own statistics
     foreach ($stats['readingStatsByType'] as $type => $typeStats) {
         expect($typeStats)->toHaveKeys([
-            'count',
-            'activeSensors',
             'avgReading',
             'minReading',
             'maxReading',
-            'totalReadings',
         ]);
-        expect($typeStats['count'])->toBeGreaterThan(0);
     }
 });

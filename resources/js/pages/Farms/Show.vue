@@ -30,16 +30,11 @@ const props = defineProps<{
   sensors: Sensor[],
   farmStats?: {
     totalSensors: number
-    activeSensors: number
-    totalReadings: number
     sensorTypeStats: Record<string, number>
     readingStatsByType: Record<string, {
-      count: number
-      activeSensors: number
       avgReading: number | null
       minReading: number | null
       maxReading: number | null
-      totalReadings: number
     }>
   }
 }>()
@@ -150,41 +145,28 @@ const deleteFarm = () => {
 
       <!-- Farm Statistics -->
       <div v-if="farmStats" class="mb-6">
-        <!-- Overview Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Sensor Overview Card -->
+        <div class="mb-6">
           <Card>
             <CardHeader>
               <CardTitle>Sensor Overview</CardTitle>
-              <CardDescription>24h activity summary</CardDescription>
+              <CardDescription>Total sensors and distribution by type</CardDescription>
             </CardHeader>
             <CardContent>
-              <div class="space-y-3">
+              <div class="space-y-4">
                 <div class="flex justify-between">
                   <span class="text-sm text-muted-foreground">Total Sensors</span>
                   <span class="font-semibold">{{ farmStats.totalSensors }}</span>
                 </div>
-                <div class="flex justify-between">
-                  <span class="text-sm text-muted-foreground">Active Sensors</span>
-                  <span class="font-semibold">{{ farmStats.activeSensors }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-sm text-muted-foreground">Total Readings</span>
-                  <span class="font-semibold">{{ farmStats.totalReadings.toLocaleString() }}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card v-if="farmStats.sensorTypeStats && Object.keys(farmStats.sensorTypeStats).length > 0">
-            <CardHeader>
-              <CardTitle>Sensor Types</CardTitle>
-              <CardDescription>Distribution by type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div class="space-y-2">
-                <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between">
-                  <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
-                  <span class="font-medium">{{ count }}</span>
+                <div v-if="farmStats.sensorTypeStats && Object.keys(farmStats.sensorTypeStats).length > 0" class="border-t pt-4">
+                  <h4 class="text-sm font-medium text-muted-foreground mb-3">By Type</h4>
+                  <div class="space-y-2">
+                    <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between">
+                      <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
+                      <span class="font-medium">{{ count }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -198,7 +180,7 @@ const deleteFarm = () => {
             <Card v-for="(stats, type) in farmStats.readingStatsByType" :key="type">
               <CardHeader>
                 <CardTitle class="capitalize text-base">{{ type }} Sensors</CardTitle>
-                <CardDescription>{{ stats.activeSensors }}/{{ stats.count }} active • {{ stats.totalReadings }} readings</CardDescription>
+                <CardDescription>Sensor readings statistics</CardDescription>
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-3 gap-3">

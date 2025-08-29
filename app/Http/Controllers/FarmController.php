@@ -58,9 +58,25 @@ class FarmController extends Controller
         $this->authorize('view', $farm);
         $sensors = $farm->sensors()->get();
 
-        // Get farm-level statistics from InfluxDB
+        // Calculate sensor statistics from database
+        $totalSensors = $farm->sensors()->count();
+        $sensorTypeStats = $farm->sensors()
+            ->selectRaw('type, COUNT(*) as count')
+            ->whereNotNull('type')
+            ->groupBy('type')
+            ->pluck('count', 'type')
+            ->toArray();
+
+        // Get farm-level time series statistics from InfluxDB
         $ts = app(FarmTimeSeriesService::class);
-        $farmStats = $ts->farmStats($farm, '-24h');
+        $timeSeriesStats = $ts->farmStats($farm, '-24h');
+
+        // Combine database and time series statistics
+        $farmStats = [
+            'totalSensors' => $totalSensors,
+            'sensorTypeStats' => $sensorTypeStats,
+            'readingStatsByType' => $timeSeriesStats['readingStatsByType'],
+        ];
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,

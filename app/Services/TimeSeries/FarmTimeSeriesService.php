@@ -27,29 +27,14 @@ class FarmTimeSeriesService
      */
     public function farmStats(Farm $farm, string $range = '-24h'): array
     {
-        // Get sensor counts and types from database - much more efficient
-        $totalSensors = $farm->sensors()->count();
-        $sensorTypeStats = $farm->sensors()
-            ->selectRaw('type, COUNT(*) as count')
-            ->whereNotNull('type')
-            ->groupBy('type')
-            ->pluck('count', 'type')
-            ->toArray();
+        $sensorsByType = $farm->sensors()->get()->groupBy('type');
+        $readingStatsByType = [];
 
-        if ($totalSensors === 0) {
+        if ($sensorsByType->isEmpty()) {
             return [
-                'totalSensors' => 0,
-                'activeSensors' => 0,
-                'totalReadings' => 0,
-                'sensorTypeStats' => [],
                 'readingStatsByType' => [],
             ];
         }
-
-        $sensorsByType = $farm->sensors()->get()->groupBy('type');
-        $readingStatsByType = [];
-        $totalReadings = 0;
-        $activeSensors = 0;
 
         // Calculate stats per sensor type
         foreach ($sensorsByType as $type => $sensors) {
@@ -66,12 +51,9 @@ class FarmTimeSeriesService
                     FLUX;
 
             $typeStats = [
-                'count' => count($sensorIds),
-                'activeSensors' => 0,
                 'avgReading' => null,
                 'minReading' => null,
                 'maxReading' => null,
-                'totalReadings' => 0,
             ];
 
             try {
@@ -114,42 +96,20 @@ class FarmTimeSeriesService
                     foreach (($t->records ?? []) as $rec) {
                         $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
                         if ($val !== null) {
-                            $typeStats['totalReadings'] = (int) $val;
+                            // We no longer store totalReadings
                             break 2;
                         }
                     }
                 }
-
-                // Count active sensors for this type
-                $activeSensorRes = $this->influx->queryPipeline($base."\n|> group(columns: [\"sensor_id\"])\n|> count()\n|> group()");
-                $activeSensorCount = 0;
-                foreach ($activeSensorRes as $t) {
-                    $activeSensorCount += count($t->records ?? []);
-                }
-                $typeStats['activeSensors'] = $activeSensorCount;
 
             } catch (\Throwable $e) {
                 // ignore and keep defaults for this type
             }
 
             $readingStatsByType[$type] = $typeStats;
-            $totalReadings += $typeStats['totalReadings'];
-            $activeSensors += $typeStats['activeSensors'];
-        }
-
-        // Progressive widening if no data found and range is too narrow
-        if ($totalReadings === 0 && $range === '-24h') {
-            return $this->farmStats($farm, '-7d');
-        }
-        if ($totalReadings === 0 && $range === '-7d') {
-            return $this->farmStats($farm, '-30d');
         }
 
         return [
-            'totalSensors' => $totalSensors,
-            'activeSensors' => $activeSensors,
-            'totalReadings' => $totalReadings,
-            'sensorTypeStats' => $sensorTypeStats,
             'readingStatsByType' => $readingStatsByType,
         ];
     }
