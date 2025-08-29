@@ -41,8 +41,7 @@ const props = defineProps<{
       maxReading: number | null
       totalReadings: number
     }>
-  },
-  recentReadings?: Array<{time: string, value: number}>
+  }
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -114,7 +113,7 @@ const deleteFarm = () => {
       <!-- Farm Statistics -->
       <div v-if="farmStats" class="mb-6">
         <!-- Overview Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
               <CardTitle>Sensor Overview</CardTitle>
@@ -148,21 +147,6 @@ const deleteFarm = () => {
                 <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between">
                   <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
                   <span class="font-medium">{{ count }}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card v-if="recentReadings && recentReadings.length > 0">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest readings across all sensors</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div class="space-y-2 max-h-32 overflow-y-auto">
-                <div v-for="reading in recentReadings.slice(0, 5)" :key="reading.time" class="flex justify-between text-sm">
-                  <span class="text-muted-foreground">{{ new Date(reading.time).toLocaleTimeString() }}</span>
-                  <span class="font-medium">{{ reading.value }}</span>
                 </div>
               </div>
             </CardContent>

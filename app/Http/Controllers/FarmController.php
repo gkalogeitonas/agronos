@@ -61,13 +61,11 @@ class FarmController extends Controller
         // Get farm-level statistics from InfluxDB
         $ts = app(FarmTimeSeriesService::class);
         $farmStats = $ts->farmStats($farm, '-24h');
-        $recentReadings = $ts->farmRecentReadings($farm, '-24h', 15);
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
             'farmStats' => $farmStats,
-            'recentReadings' => $recentReadings,
         ]);
     }
 

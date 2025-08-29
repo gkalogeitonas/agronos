@@ -15,7 +15,6 @@ it('provides farm statistics data on show page', function () {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page->component('Farms/Show')
         ->has('farmStats')
-        ->has('recentReadings')
         ->where('farmStats.totalSensors', $farm->sensors()->count())
     );
 });
@@ -38,21 +37,6 @@ it('farm time series service returns expected data structure', function () {
     expect($stats['totalSensors'])->toBe($farm->sensors()->count());
     expect($stats['sensorTypeStats'])->toBeArray();
     expect($stats['readingStatsByType'])->toBeArray();
-});
-
-it('farm recent readings returns array format', function () {
-    $user = User::factory()->create();
-    $farm = Farm::factory()->create(['user_id' => $user->id]);
-
-    $service = app(FarmTimeSeriesService::class);
-    $readings = $service->farmRecentReadings($farm, '-24h', 10);
-
-    expect($readings)->toBeArray();
-
-    // If there are readings, they should have the correct structure
-    if (! empty($readings)) {
-        expect($readings[0])->toHaveKeys(['time', 'value']);
-    }
 });
 
 it('farm service correctly calculates sensor type statistics', function () {
