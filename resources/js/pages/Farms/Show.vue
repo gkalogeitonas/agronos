@@ -110,6 +110,44 @@ const deleteFarm = () => {
         />
       </div>
 
+            <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>Farm Details</CardTitle>
+          <CardDescription>Information about this farm</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Location</h3>
+              <p>{{ farm.location }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Size</h3>
+              <p>{{ farm.size }} m²</p>
+            </div>
+            <div class="col-span-1 md:col-span-2">
+              <h3 class="text-sm font-medium text-muted-foreground">Description</h3>
+              <p>{{ farm.description || 'No description available' }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Created</h3>
+              <p>{{ new Date(farm.created_at).toLocaleDateString() }}</p>
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-muted-foreground">Last Updated</h3>
+              <p>{{ new Date(farm.updated_at).toLocaleDateString() }}</p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter class="flex justify-between">
+          <Link :href="route('farms.index')">
+            <Button variant="outline">
+              Back to Farms
+            </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+
       <!-- Farm Statistics -->
       <div v-if="farmStats" class="mb-6">
         <!-- Overview Cards -->
@@ -182,44 +220,6 @@ const deleteFarm = () => {
           </div>
         </div>
       </div>
-
-      <Card class="mb-6">
-        <CardHeader>
-          <CardTitle>Farm Details</CardTitle>
-          <CardDescription>Information about this farm</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">Location</h3>
-              <p>{{ farm.location }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">Size</h3>
-              <p>{{ farm.size }} m²</p>
-            </div>
-            <div class="col-span-1 md:col-span-2">
-              <h3 class="text-sm font-medium text-muted-foreground">Description</h3>
-              <p>{{ farm.description || 'No description available' }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">Created</h3>
-              <p>{{ new Date(farm.created_at).toLocaleDateString() }}</p>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-muted-foreground">Last Updated</h3>
-              <p>{{ new Date(farm.updated_at).toLocaleDateString() }}</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter class="flex justify-between">
-          <Link :href="route('farms.index')">
-            <Button variant="outline">
-              Back to Farms
-            </Button>
-          </Link>
-        </CardFooter>
-      </Card>
 
       <Card class="mb-6">
         <CardHeader>
