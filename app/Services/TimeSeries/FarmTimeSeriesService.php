@@ -56,6 +56,9 @@ class FarmTimeSeriesService
                 'maxReading' => null,
             ];
 
+            //log base
+           //dd("InfluxDB Query: {$base}");
+
             try {
                 // Overall stats for this type
                 $meanRes = $this->influx->queryPipeline($base."\n|> mean()");
@@ -86,17 +89,6 @@ class FarmTimeSeriesService
                         $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
                         if ($val !== null) {
                             $typeStats['maxReading'] = $this->roundValue($val, 2);
-                            break 2;
-                        }
-                    }
-                }
-
-                $countRes = $this->influx->queryPipeline($base."\n|> count()");
-                foreach ($countRes as $t) {
-                    foreach (($t->records ?? []) as $rec) {
-                        $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                        if ($val !== null) {
-                            // We no longer store totalReadings
                             break 2;
                         }
                     }
