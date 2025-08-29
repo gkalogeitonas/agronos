@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\FarmRequest;
-use App\Http\Resources\SensorResource;
 use App\Models\Farm;
+use App\Services\TimeSeries\FarmTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -13,10 +13,7 @@ class FarmController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct()
-    {
-
-    }
+    public function __construct() {}
 
     /**
      * Display a listing of the resource.
@@ -60,9 +57,17 @@ class FarmController extends Controller
     {
         $this->authorize('view', $farm);
         $sensors = $farm->sensors()->get();
+
+        // Get farm-level statistics from InfluxDB
+        $ts = app(FarmTimeSeriesService::class);
+        $farmStats = $ts->farmStats($farm, '-24h');
+        $recentReadings = $ts->farmRecentReadings($farm, '-24h', 15);
+
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
+            'farmStats' => $farmStats,
+            'recentReadings' => $recentReadings,
         ]);
     }
 
@@ -72,6 +77,7 @@ class FarmController extends Controller
     public function edit(Farm $farm)
     {
         $this->authorize('update', $farm);
+
         return Inertia::render('Farms/Edit', [
             'farm' => $farm,
         ]);
