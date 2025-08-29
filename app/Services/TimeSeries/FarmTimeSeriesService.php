@@ -40,99 +40,118 @@ class FarmTimeSeriesService
             return [
                 'totalSensors' => 0,
                 'activeSensors' => 0,
+                'totalReadings' => 0,
+                'sensorTypeStats' => [],
+                'readingStatsByType' => [],
+            ];
+        }
+
+        $sensorsByType = $farm->sensors()->get()->groupBy('type');
+        $readingStatsByType = [];
+        $totalReadings = 0;
+        $activeSensors = 0;
+
+        // Calculate stats per sensor type
+        foreach ($sensorsByType as $type => $sensors) {
+            if (! $type) {
+                continue;
+            } // Skip sensors without type
+
+            $sensorIds = $sensors->pluck('id')->map(fn ($id) => (string) $id)->toArray();
+            $sensorFilter = implode(' or ', array_map(fn ($id) => "r.sensor_id == \"{$id}\"", $sensorIds));
+
+            $base = <<<FLUX
+                    |> range(start: {$range})
+                    |> filter(fn: (r) => r._measurement == "sensor_measurement" and ({$sensorFilter}) and r._field == "value")
+                    FLUX;
+
+            $typeStats = [
+                'count' => count($sensorIds),
+                'activeSensors' => 0,
                 'avgReading' => null,
                 'minReading' => null,
                 'maxReading' => null,
                 'totalReadings' => 0,
-                'sensorTypeStats' => [],
             ];
+
+            try {
+                // Overall stats for this type
+                $meanRes = $this->influx->queryPipeline($base."\n|> mean()");
+                foreach ($meanRes as $t) {
+                    foreach (($t->records ?? []) as $rec) {
+                        $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                        if ($val !== null) {
+                            $typeStats['avgReading'] = $this->roundValue($val, 2);
+                            break 2;
+                        }
+                    }
+                }
+
+                $minRes = $this->influx->queryPipeline($base."\n|> min()");
+                foreach ($minRes as $t) {
+                    foreach (($t->records ?? []) as $rec) {
+                        $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                        if ($val !== null) {
+                            $typeStats['minReading'] = $this->roundValue($val, 2);
+                            break 2;
+                        }
+                    }
+                }
+
+                $maxRes = $this->influx->queryPipeline($base."\n|> max()");
+                foreach ($maxRes as $t) {
+                    foreach (($t->records ?? []) as $rec) {
+                        $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                        if ($val !== null) {
+                            $typeStats['maxReading'] = $this->roundValue($val, 2);
+                            break 2;
+                        }
+                    }
+                }
+
+                $countRes = $this->influx->queryPipeline($base."\n|> count()");
+                foreach ($countRes as $t) {
+                    foreach (($t->records ?? []) as $rec) {
+                        $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                        if ($val !== null) {
+                            $typeStats['totalReadings'] = (int) $val;
+                            break 2;
+                        }
+                    }
+                }
+
+                // Count active sensors for this type
+                $activeSensorRes = $this->influx->queryPipeline($base."\n|> group(columns: [\"sensor_id\"])\n|> count()\n|> group()");
+                $activeSensorCount = 0;
+                foreach ($activeSensorRes as $t) {
+                    $activeSensorCount += count($t->records ?? []);
+                }
+                $typeStats['activeSensors'] = $activeSensorCount;
+
+            } catch (\Throwable $e) {
+                // ignore and keep defaults for this type
+            }
+
+            $readingStatsByType[$type] = $typeStats;
+            $totalReadings += $typeStats['totalReadings'];
+            $activeSensors += $typeStats['activeSensors'];
         }
 
-        $sensorIds = $farm->sensors()->pluck('id')->map(fn ($id) => (string) $id)->toArray();
-        $sensorFilter = implode(' or ', array_map(fn ($id) => "r.sensor_id == \"{$id}\"", $sensorIds));
-
-        $base = <<<FLUX
-                |> range(start: {$range})
-                |> filter(fn: (r) => r._measurement == "sensor_measurement" and ({$sensorFilter}) and r._field == "value")
-                FLUX;
-
-        $stats = [
-            'totalSensors' => $totalSensors,
-            'activeSensors' => 0,
-            'avgReading' => null,
-            'minReading' => null,
-            'maxReading' => null,
-            'totalReadings' => 0,
-            'sensorTypeStats' => $sensorTypeStats,
-        ];
-
-        try {
-            // Overall stats from InfluxDB
-            $meanRes = $this->influx->queryPipeline($base."\n|> mean()");
-            foreach ($meanRes as $t) {
-                foreach (($t->records ?? []) as $rec) {
-                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) {
-                        $stats['avgReading'] = $this->roundValue($val, 2);
-                        break 2;
-                    }
-                }
-            }
-
-            $minRes = $this->influx->queryPipeline($base."\n|> min()");
-            foreach ($minRes as $t) {
-                foreach (($t->records ?? []) as $rec) {
-                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) {
-                        $stats['minReading'] = $this->roundValue($val, 2);
-                        break 2;
-                    }
-                }
-            }
-
-            $maxRes = $this->influx->queryPipeline($base."\n|> max()");
-            foreach ($maxRes as $t) {
-                foreach (($t->records ?? []) as $rec) {
-                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) {
-                        $stats['maxReading'] = $this->roundValue($val, 2);
-                        break 2;
-                    }
-                }
-            }
-
-            $countRes = $this->influx->queryPipeline($base."\n|> count()");
-            foreach ($countRes as $t) {
-                foreach (($t->records ?? []) as $rec) {
-                    $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) {
-                        $stats['totalReadings'] = (int) $val;
-                        break 2;
-                    }
-                }
-            }
-
-            // Count active sensors (sensors with data in the range)
-            $activeSensorRes = $this->influx->queryPipeline($base."\n|> group(columns: [\"sensor_id\"])\n|> count()\n|> group()");
-            $activeSensorCount = 0;
-            foreach ($activeSensorRes as $t) {
-                $activeSensorCount += count($t->records ?? []);
-            }
-            $stats['activeSensors'] = $activeSensorCount;
-
-        } catch (\Throwable $e) {
-            // ignore and return defaults for InfluxDB stats
-        }
-
-        // Progressive widening if no data found
-        if ($stats['totalReadings'] === 0 && $range === '-24h') {
+        // Progressive widening if no data found and range is too narrow
+        if ($totalReadings === 0 && $range === '-24h') {
             return $this->farmStats($farm, '-7d');
         }
-        if ($stats['totalReadings'] === 0 && $range === '-7d') {
+        if ($totalReadings === 0 && $range === '-7d') {
             return $this->farmStats($farm, '-30d');
         }
 
-        return $stats;
+        return [
+            'totalSensors' => $totalSensors,
+            'activeSensors' => $activeSensors,
+            'totalReadings' => $totalReadings,
+            'sensorTypeStats' => $sensorTypeStats,
+            'readingStatsByType' => $readingStatsByType,
+        ];
     }
 
     /**

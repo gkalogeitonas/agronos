@@ -30,15 +30,14 @@ it('farm time series service returns expected data structure', function () {
     expect($stats)->toHaveKeys([
         'totalSensors',
         'activeSensors',
-        'avgReading',
-        'minReading',
-        'maxReading',
         'totalReadings',
         'sensorTypeStats',
+        'readingStatsByType',
     ]);
 
     expect($stats['totalSensors'])->toBe($farm->sensors()->count());
     expect($stats['sensorTypeStats'])->toBeArray();
+    expect($stats['readingStatsByType'])->toBeArray();
 });
 
 it('farm recent readings returns array format', function () {
@@ -76,4 +75,31 @@ it('farm service correctly calculates sensor type statistics', function () {
     expect($stats['sensorTypeStats']['temperature'])->toBe(2);
     expect($stats['sensorTypeStats']['humidity'])->toBe(1);
     expect($stats['sensorTypeStats']['moisture'])->toBe(1);
+});
+
+it('farm service provides reading statistics per sensor type', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+
+    // Create sensors with different types
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'temperature']);
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'humidity']);
+
+    $service = app(FarmTimeSeriesService::class);
+    $stats = $service->farmStats($farm, '-24h');
+
+    expect($stats['readingStatsByType'])->toBeArray();
+
+    // Each type should have its own statistics
+    foreach ($stats['readingStatsByType'] as $type => $typeStats) {
+        expect($typeStats)->toHaveKeys([
+            'count',
+            'activeSensors',
+            'avgReading',
+            'minReading',
+            'maxReading',
+            'totalReadings',
+        ]);
+        expect($typeStats['count'])->toBeGreaterThan(0);
+    }
 });

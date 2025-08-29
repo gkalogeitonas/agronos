@@ -31,11 +31,16 @@ const props = defineProps<{
   farmStats?: {
     totalSensors: number
     activeSensors: number
-    avgReading: number | null
-    minReading: number | null
-    maxReading: number | null
     totalReadings: number
     sensorTypeStats: Record<string, number>
+    readingStatsByType: Record<string, {
+      count: number
+      activeSensors: number
+      avgReading: number | null
+      minReading: number | null
+      maxReading: number | null
+      totalReadings: number
+    }>
   },
   recentReadings?: Array<{time: string, value: number}>
 }>()
@@ -107,82 +112,91 @@ const deleteFarm = () => {
       </div>
 
       <!-- Farm Statistics -->
-      <div v-if="farmStats" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sensor Overview</CardTitle>
-            <CardDescription>24h activity summary</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="space-y-3">
-              <div class="flex justify-between">
-                <span class="text-sm text-muted-foreground">Total Sensors</span>
-                <span class="font-semibold">{{ farmStats.totalSensors }}</span>
+      <div v-if="farmStats" class="mb-6">
+        <!-- Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sensor Overview</CardTitle>
+              <CardDescription>24h activity summary</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-3">
+                <div class="flex justify-between">
+                  <span class="text-sm text-muted-foreground">Total Sensors</span>
+                  <span class="font-semibold">{{ farmStats.totalSensors }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-sm text-muted-foreground">Active Sensors</span>
+                  <span class="font-semibold">{{ farmStats.activeSensors }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-sm text-muted-foreground">Total Readings</span>
+                  <span class="font-semibold">{{ farmStats.totalReadings.toLocaleString() }}</span>
+                </div>
               </div>
-              <div class="flex justify-between">
-                <span class="text-sm text-muted-foreground">Active Sensors</span>
-                <span class="font-semibold">{{ farmStats.activeSensors }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-sm text-muted-foreground">Total Readings</span>
-                <span class="font-semibold">{{ farmStats.totalReadings.toLocaleString() }}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Reading Statistics</CardTitle>
-            <CardDescription>Min/Max/Average values</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="grid grid-cols-3 gap-3">
-              <div>
-                <h3 class="text-xs font-medium text-muted-foreground">Min</h3>
-                <p class="text-lg font-semibold">{{ farmStats.minReading ?? '—' }}</p>
+          <Card v-if="farmStats.sensorTypeStats && Object.keys(farmStats.sensorTypeStats).length > 0">
+            <CardHeader>
+              <CardTitle>Sensor Types</CardTitle>
+              <CardDescription>Distribution by type</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-2">
+                <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between">
+                  <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
+                  <span class="font-medium">{{ count }}</span>
+                </div>
               </div>
-              <div>
-                <h3 class="text-xs font-medium text-muted-foreground">Max</h3>
-                <p class="text-lg font-semibold">{{ farmStats.maxReading ?? '—' }}</p>
-              </div>
-              <div>
-                <h3 class="text-xs font-medium text-muted-foreground">Avg</h3>
-                <p class="text-lg font-semibold">{{ farmStats.avgReading != null ? farmStats.avgReading.toFixed(2) : '—' }}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card v-if="farmStats.sensorTypeStats && Object.keys(farmStats.sensorTypeStats).length > 0">
-          <CardHeader>
-            <CardTitle>Sensor Types</CardTitle>
-            <CardDescription>Distribution by type</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="space-y-2">
-              <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between">
-                <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
-                <span class="font-medium">{{ count }}</span>
+          <Card v-if="recentReadings && recentReadings.length > 0">
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest readings across all sensors</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-2 max-h-32 overflow-y-auto">
+                <div v-for="reading in recentReadings.slice(0, 5)" :key="reading.time" class="flex justify-between text-sm">
+                  <span class="text-muted-foreground">{{ new Date(reading.time).toLocaleTimeString() }}</span>
+                  <span class="font-medium">{{ reading.value }}</span>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card v-if="recentReadings && recentReadings.length > 0">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest readings across all sensors</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="space-y-2 max-h-32 overflow-y-auto">
-              <div v-for="reading in recentReadings.slice(0, 5)" :key="reading.time" class="flex justify-between text-sm">
-                <span class="text-muted-foreground">{{ new Date(reading.time).toLocaleTimeString() }}</span>
-                <span class="font-medium">{{ reading.value }}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <!-- Reading Statistics by Type -->
+        <div v-if="farmStats.readingStatsByType && Object.keys(farmStats.readingStatsByType).length > 0" class="mb-6">
+          <h3 class="text-lg font-semibold mb-4">Reading Statistics by Sensor Type</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card v-for="(stats, type) in farmStats.readingStatsByType" :key="type">
+              <CardHeader>
+                <CardTitle class="capitalize text-base">{{ type }} Sensors</CardTitle>
+                <CardDescription>{{ stats.activeSensors }}/{{ stats.count }} active • {{ stats.totalReadings }} readings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <h4 class="text-xs font-medium text-muted-foreground">Min</h4>
+                    <p class="text-sm font-semibold">{{ stats.minReading ?? '—' }}</p>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-medium text-muted-foreground">Max</h4>
+                    <p class="text-sm font-semibold">{{ stats.maxReading ?? '—' }}</p>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-medium text-muted-foreground">Avg</h4>
+                    <p class="text-sm font-semibold">{{ stats.avgReading != null ? stats.avgReading.toFixed(2) : '—' }}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       <Card class="mb-6">
