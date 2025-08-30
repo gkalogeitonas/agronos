@@ -58,6 +58,28 @@ it('farm service correctly calculates sensor type statistics', function () {
     );
 });
 
+it('provides last reading average per sensor type from sensors table', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+
+    // Create temperature sensors with explicit last_reading values
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'temperature', 'last_reading' => 10.0]);
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'temperature', 'last_reading' => 14.0]);
+    // Create a humidity sensor
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'humidity', 'last_reading' => 55.5]);
+
+    $response = $this->actingAs($user)
+        ->get(route('farms.show', $farm));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page->component('Farms/Show')
+        ->has('farmStats')
+        ->has('farmStats.lastAvgByType')
+    ->where('farmStats.lastAvgByType.temperature', 12)
+        ->where('farmStats.lastAvgByType.humidity', 55.5)
+    );
+});
+
 it('farm service provides reading statistics per sensor type', function () {
     $user = User::factory()->create();
     $farm = Farm::factory()->create(['user_id' => $user->id]);

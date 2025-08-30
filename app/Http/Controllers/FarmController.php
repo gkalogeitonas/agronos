@@ -67,6 +67,18 @@ class FarmController extends Controller
             ->pluck('count', 'type')
             ->toArray();
 
+        // Calculate average of last reading per sensor type (using sensors.last_reading)
+        $lastAvgByType = $farm->sensors()
+            ->selectRaw('type, AVG(last_reading) as avg_last_reading')
+            ->whereNotNull('type')
+            ->whereNotNull('last_reading')
+            ->groupBy('type')
+            ->pluck('avg_last_reading', 'type')
+            ->mapWithKeys(function ($v, $k) {
+                // cast to float and keep keys as type
+                return [$k => $v !== null ? (float) $v : null];
+            })->toArray();
+
         // Get farm-level time series statistics from InfluxDB
         $ts = app(FarmTimeSeriesService::class);
         $timeSeriesStats = $ts->farmStats($farm, '-24h');
@@ -76,6 +88,7 @@ class FarmController extends Controller
             'totalSensors' => $totalSensors,
             'sensorTypeStats' => $sensorTypeStats,
             'readingStatsByType' => $timeSeriesStats['readingStatsByType'],
+            'lastAvgByType' => $lastAvgByType,
         ];
 
         return Inertia::render('Farms/Show', [

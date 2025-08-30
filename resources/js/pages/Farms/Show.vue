@@ -31,11 +31,12 @@ const props = defineProps<{
   farmStats?: {
     totalSensors: number
     sensorTypeStats: Record<string, number>
-    readingStatsByType: Record<string, {
+  readingStatsByType: Record<string, {
       avgReading: number | null
       minReading: number | null
       maxReading: number | null
     }>
+  lastAvgByType?: Record<string, number | null>
   }
 }>()
 
@@ -145,8 +146,9 @@ const deleteFarm = () => {
 
       <!-- Farm Statistics -->
       <div v-if="farmStats" class="mb-6">
-        <!-- Sensor Overview Card -->
-        <div class="mb-6">
+        <!-- Sensor Overview: split into Counts and Last Avg Reading cards -->
+        <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Counts Card -->
           <Card>
             <CardHeader>
               <CardTitle>Sensor Overview</CardTitle>
@@ -162,12 +164,31 @@ const deleteFarm = () => {
                 <div v-if="farmStats.sensorTypeStats && Object.keys(farmStats.sensorTypeStats).length > 0" class="border-t pt-4">
                   <h4 class="text-sm font-medium text-muted-foreground mb-3">By Type</h4>
                   <div class="space-y-2">
-                    <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between">
+                    <div v-for="(count, type) in farmStats.sensorTypeStats" :key="type" class="flex justify-between items-center">
                       <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
                       <span class="font-medium">{{ count }}</span>
                     </div>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Last Average Readings Card -->
+          <Card>
+            <CardHeader>
+              <CardTitle>Last Avg Readings</CardTitle>
+              <CardDescription>Average of sensors' last readings by type</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-2">
+                <div v-if="farmStats.lastAvgByType && Object.keys(farmStats.lastAvgByType).length > 0" class="space-y-2">
+                  <div v-for="(avg, type) in farmStats.lastAvgByType" :key="type" class="flex justify-between items-center">
+                    <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
+                    <span class="font-medium">{{ avg != null ? Number(avg).toFixed(2) : '—' }}</span>
+                  </div>
+                </div>
+                <div v-else class="text-sm text-muted-foreground">No last readings available</div>
               </div>
             </CardContent>
           </Card>
