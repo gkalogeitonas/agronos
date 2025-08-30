@@ -14,8 +14,8 @@ it('provides farm statistics data on show page', function () {
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page->component('Farms/Show')
-        ->has('farmStats')
-        ->where('farmStats.totalSensors', $farm->sensors()->count())
+        ->has('sensorDbStats')
+        ->where('sensorDbStats.totalSensors', $farm->sensors()->count())
     );
 });
 
@@ -49,12 +49,12 @@ it('farm service correctly calculates sensor type statistics', function () {
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page->component('Farms/Show')
-        ->has('farmStats')
-        ->where('farmStats.totalSensors', 4)
-        ->has('farmStats.sensorTypeStats')
-        ->where('farmStats.sensorTypeStats.temperature', 2)
-        ->where('farmStats.sensorTypeStats.humidity', 1)
-        ->where('farmStats.sensorTypeStats.moisture', 1)
+        ->has('sensorDbStats')
+        ->where('sensorDbStats.totalSensors', 4)
+        ->has('sensorDbStats.sensorTypeStats')
+        ->where('sensorDbStats.sensorTypeStats.temperature', 2)
+        ->where('sensorDbStats.sensorTypeStats.humidity', 1)
+        ->where('sensorDbStats.sensorTypeStats.moisture', 1)
     );
 });
 
@@ -78,10 +78,10 @@ it('provides last reading average per sensor type from sensors table', function 
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page->component('Farms/Show')
-        ->has('farmStats')
-        ->has('farmStats.lastAvgByType')
-    ->where('farmStats.lastAvgByType.temperature', 12)
-        ->where('farmStats.lastAvgByType.humidity', 55.5)
+        ->has('sensorDbStats')
+        ->has('sensorDbStats.lastAvgByType')
+    ->where('sensorDbStats.lastAvgByType.temperature', 12)
+        ->where('sensorDbStats.lastAvgByType.humidity', 55.5)
     );
 });
 

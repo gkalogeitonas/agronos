@@ -81,22 +81,22 @@ class FarmController extends Controller
                 return [$k => $v !== null ? (float) $v : null];
             })->toArray();
 
-        // Get farm-level time series statistics from InfluxDB
+        // Prepare time series service for deferred evaluation (do not call it now)
         $ts = app(FarmTimeSeriesService::class);
-        $timeSeriesStats = $ts->farmStats($farm, '-24h');
 
-        // Combine database and time series statistics
-        $farmStats = [
+        // Split statistics so frontend can defer / lazy-load / poll them independently.
+        $sensorDbStats = [
             'totalSensors' => $totalSensors,
             'sensorTypeStats' => $sensorTypeStats,
-            'readingStatsByType' => $timeSeriesStats['readingStatsByType'],
             'lastAvgByType' => $lastAvgByType,
         ];
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
-            'farmStats' => $farmStats,
+            'sensorDbStats' => $sensorDbStats,
+            // defer heavy/time-series work to a follow-up request so initial page is fast
+            'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),
         ]);
     }
 
