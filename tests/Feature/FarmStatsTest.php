@@ -62,11 +62,16 @@ it('provides last reading average per sensor type from sensors table', function 
     $user = User::factory()->create();
     $farm = Farm::factory()->create(['user_id' => $user->id]);
 
-    // Create temperature sensors with explicit last_reading values
-    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'temperature', 'last_reading' => 10.0]);
-    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'temperature', 'last_reading' => 14.0]);
-    // Create a humidity sensor
-    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'type' => 'humidity', 'last_reading' => 55.5]);
+    // Create devices that are online and attach sensors to them
+    $device1 = \App\Models\Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
+    $device2 = \App\Models\Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
+    $device3 = \App\Models\Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
+
+    // Create temperature sensors with explicit last_reading values attached to online devices
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'device_id' => $device1->id, 'type' => 'temperature', 'last_reading' => 10.0]);
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'device_id' => $device2->id, 'type' => 'temperature', 'last_reading' => 14.0]);
+    // Create a humidity sensor attached to an online device
+    Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'device_id' => $device3->id, 'type' => 'humidity', 'last_reading' => 55.5]);
 
     $response = $this->actingAs($user)
         ->get(route('farms.show', $farm));

@@ -68,7 +68,9 @@ class FarmController extends Controller
             ->toArray();
 
         // Calculate average of last reading per sensor type (using sensors.last_reading)
+        // Only include sensors whose device is currently ONLINE
         $lastAvgByType = $farm->sensors()
+            ->deviceOnline()
             ->selectRaw('type, AVG(last_reading) as avg_last_reading')
             ->whereNotNull('type')
             ->whereNotNull('last_reading')

@@ -6,6 +6,8 @@ use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
+use App\Enums\DeviceStatus;
 
 class Sensor extends Model
 {
@@ -37,5 +39,15 @@ class Sensor extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Scope to filter sensors whose related device is ONLINE.
+     */
+    public function scopeDeviceOnline(Builder $query): Builder
+    {
+        return $query->whereHas('device', function (Builder $q) {
+            $q->where('status', DeviceStatus::ONLINE->value);
+        });
     }
 }
