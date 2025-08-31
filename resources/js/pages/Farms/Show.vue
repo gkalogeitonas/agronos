@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, Deferred } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -206,40 +206,47 @@ const deleteFarm = () => {
                 </div>
 
                 <!-- Reading Statistics by Type -->
-                <Card v-if="(timeSeriesStats?.readingStatsByType) && Object.keys(timeSeriesStats?.readingStatsByType ?? {}).length > 0"
-                    class="mb-6">
-                    <CardHeader>
-                        <CardTitle>Reading Statistics by Sensor Type</CardTitle>
-                        <CardDescription>Aggregated min / max / avg readings for the selected time range</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <Card v-for="(stats, type) in (timeSeriesStats?.readingStatsByType)" :key="type">
-                                <CardHeader>
-                                    <CardTitle class="capitalize text-base">{{ type }} Sensors</CardTitle>
-                                    <CardDescription>Sensor readings statistics</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div>
-                                            <h4 class="text-xs font-medium text-muted-foreground">Min</h4>
-                                            <p class="text-sm font-semibold">{{ stats.minReading ?? '—' }}</p>
-                                        </div>
-                                        <div>
-                                            <h4 class="text-xs font-medium text-muted-foreground">Max</h4>
-                                            <p class="text-sm font-semibold">{{ stats.maxReading ?? '—' }}</p>
-                                        </div>
-                                        <div>
-                                            <h4 class="text-xs font-medium text-muted-foreground">Avg</h4>
-                                            <p class="text-sm font-semibold">{{ stats.avgReading != null ?
-                                                stats.avgReading.toFixed(2) : '—' }}</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                <Deferred data="timeSeriesStats">
+                    <template #fallback>
+                        <div class="flex justify-center items-center text-sm text-muted-foreground h-24">
+                            <span>Loading statistics...</span>
                         </div>
-                    </CardContent>
-                </Card>
+                    </template>
+                    <Card v-if="(timeSeriesStats?.readingStatsByType) && Object.keys(timeSeriesStats?.readingStatsByType ?? {}).length > 0"
+                        class="mb-6">
+                        <CardHeader>
+                            <CardTitle>Reading Statistics by Sensor Type</CardTitle>
+                            <CardDescription>Aggregated min / max / avg readings for the selected time range</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <Card v-for="(stats, type) in (timeSeriesStats?.readingStatsByType)" :key="type">
+                                    <CardHeader>
+                                        <CardTitle class="capitalize text-base">{{ type }} Sensors</CardTitle>
+                                        <CardDescription>Sensor readings statistics</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div class="grid grid-cols-3 gap-3">
+                                            <div>
+                                                <h4 class="text-xs font-medium text-muted-foreground">Min</h4>
+                                                <p class="text-sm font-semibold">{{ stats.minReading ?? '—' }}</p>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-xs font-medium text-muted-foreground">Max</h4>
+                                                <p class="text-sm font-semibold">{{ stats.maxReading ?? '—' }}</p>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-xs font-medium text-muted-foreground">Avg</h4>
+                                                <p class="text-sm font-semibold">{{ stats.avgReading != null ?
+                                                    stats.avgReading.toFixed(2) : '—' }}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Deferred>
             </div>
 
             <Card class="mb-6">
