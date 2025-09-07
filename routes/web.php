@@ -31,6 +31,12 @@ Route::get('/test-first-event', function () {
     return 'event dispatched';
 });
 
+// Quick test route to dispatch a private sensor event (requires auth)
+Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', function (\App\Models\Sensor $sensor) {
+    event(new \App\Events\SensorPrivateEvent($sensor->id, ['message' => 'private test', 'time' => now()->toDateTimeString()]));
+    return 'sensor private event dispatched';
+})->name('test.sensor.event');
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

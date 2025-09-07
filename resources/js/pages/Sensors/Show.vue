@@ -162,7 +162,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head , Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { useEchoPublic } from '@laravel/echo-vue';
+import { useEcho, useEchoPublic } from '@laravel/echo-vue';
 import { usePage } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -192,8 +192,40 @@ const recentReadings = computed(() => (page.props.recentReadings as Array<{time:
 const stats = computed(() => page.props.stats as {min:number|null,max:number|null,avg:number|null,count:number});
 
 // Use the provided Vue hook which is already configured in `resources/js/app.ts`
+// Subscribe to public `first-event` channel (keep this channel as requested)
+// useEcho supports an explicit visibility argument — use that for public channels.
 useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
   console.log('FirstEvent received:', payload);
+  // If payload looks like a reading, optionally add to recent readings for demo
+  try {
+    if (payload.time && payload.value !== undefined) {
+      const arr = recentReadings.value.slice();
+      arr.unshift({ time: payload.time, value: payload.value });
+      if (arr.length > 50) arr.pop();
+      (page.props as any).recentReadings = arr;
+    }
+  } catch {
+    // ignore
+  }
+});
+
+// Subscribe to private sensor channel (only authorized users can listen)
+useEcho(`sensor.${sensor.value.id}`, 'SensorPrivateEvent', (payload: any) => {
+  console.log('SensorPrivateEvent received for sensor', sensor.value.id, payload);
+  // Optionally update recentReadings client-side for demo purposes
+  try {
+    if (payload.time && payload.value !== undefined) {
+      const arr = recentReadings.value.slice();
+      arr.unshift({ time: payload.time, value: payload.value });
+      // limit to 50
+      if (arr.length > 50) arr.pop();
+      // This directly mutates the page props derived array but is OK for a demo.
+      // For a cleaner approach, use a local reactive copy as earlier discussed.
+      (page.props as any).recentReadings = arr;
+    }
+  } catch {
+    // ignore
+  }
 });
 </script>
 
