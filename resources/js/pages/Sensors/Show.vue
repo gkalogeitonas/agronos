@@ -162,6 +162,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head , Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { useEchoPublic } from '@laravel/echo-vue';
 import { usePage } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -189,6 +190,11 @@ function deleteSensor() {
 
 const recentReadings = computed(() => (page.props.recentReadings as Array<{time:string,value:number}>) || []);
 const stats = computed(() => page.props.stats as {min:number|null,max:number|null,avg:number|null,count:number});
+
+// Use the provided Vue hook which is already configured in `resources/js/app.ts`
+useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
+  console.log('FirstEvent received:', payload);
+});
 </script>
 
 <style scoped>

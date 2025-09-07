@@ -25,6 +25,12 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Quick test route to dispatch FirstEvent (used to validate broadcasting)
+Route::get('/test-first-event', function () {
+    event(new \App\Events\FirstEvent('test from /test-first-event', ['time' => now()->toDateTimeString()]));
+    return 'event dispatched';
+});
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
