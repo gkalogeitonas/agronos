@@ -221,7 +221,13 @@ useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
       if (arr.length > 50) arr.pop();
       // This directly mutates the page props derived array but is OK for a demo.
       // For a cleaner approach, use a local reactive copy as earlier discussed.
-      (page.props as any).recentReadings = arr;
+  const p = (page.props as any);
+  p.recentReadings = arr;
+
+  // Also update the sensor's latest reading so the "Latest Reading" card reflects realtime data
+  p.sensor = p.sensor || {};
+  p.sensor.last_reading = payload.value;
+  p.sensor.last_reading_at = payload.time;
     }
   } catch {
     // ignore
