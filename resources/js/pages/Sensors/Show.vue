@@ -210,8 +210,8 @@ useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
 });
 
 // Subscribe to private sensor channel (only authorized users can listen)
-useEcho(`sensor.${sensor.value.id}`, 'SensorPrivateEvent', (payload: any) => {
-  console.log('SensorPrivateEvent received for sensor', sensor.value.id, payload);
+useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
+  console.log('SensorReadingEvent received for sensor', sensor.value.id, payload);
   // Optionally update recentReadings client-side for demo purposes
   try {
     if (payload.time && payload.value !== undefined) {

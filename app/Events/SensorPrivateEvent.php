@@ -2,27 +2,14 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
+/**
+ * Backwards-compat shim. The event was renamed to SensorReadingEvent.
+ * Keep this class so older code referencing the old name keeps working,
+ * but prefer using SensorReadingEvent in new code.
+ */
+trigger_error('App\\Events\\SensorPrivateEvent is deprecated; use App\\Events\\SensorReadingEvent instead', E_USER_DEPRECATED);
 
-class SensorPrivateEvent implements ShouldBroadcast
+class SensorPrivateEvent extends SensorReadingEvent
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
-
-    public function __construct(public int $sensorId, public array $payload = [])
-    {
-    }
-
-    public function broadcastOn(): PrivateChannel
-    {
-        return new PrivateChannel("sensor.{$this->sensorId}");
-    }
-
-    public function broadcastWith(): array
-    {
-        return $this->payload;
-    }
+    // empty shim - functionality lives in SensorReadingEvent
 }
