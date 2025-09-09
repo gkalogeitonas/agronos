@@ -31,6 +31,14 @@ class SensorDataService
             $sensorModel->last_reading = $sensor['value'];
             $sensorModel->last_reading_at = now();
             $sensorModel->save();
+            // Broadcast the new reading to any listeners (private per-sensor channel)
+            event(new \App\Events\SensorReadingEvent(
+                $sensorModel->id,
+                [
+                    'value' => $sensorModel->last_reading,
+                    'time' => optional($sensorModel->last_reading_at)->toDateTimeString() ?: (string) $sensorModel->last_reading_at ?: now()->toDateTimeString(),
+                ]
+            ));
             $writtenCount++;
         }
 
