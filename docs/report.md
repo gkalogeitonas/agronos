@@ -160,6 +160,7 @@ pre code {
 Σημειωση: Το QR code των αισθητηρων ειναι διαφορετικο απο το QR code που αναφεραμε προηγουμενος για τη συσκευη.
 
 Συμπεριφορά των φορμών εγγραφής
+
 - Όταν ο χρήστης ανοιγει την γενική φόρμα `sensors/create`, η φόρμα εμφανίζει πεδίο επιλογής **Farm** και ο χρήστης επιλέγει σε ποιον αγρό θα συσχετίσει τον αισθητήρα.
 - Αν η φόρμα ανοίγει από το context ενός συγκεκριμένου αγρού (`farms/{id}/sensors/create`), τότε το **Farm** συσχετίζεται αυτόματα με το συγκεκριμένο αγρό και το αντίστοιχο πεδίο δεν είναι πλέον ορατό/επεξεργάσιμο από τον χρήστη (hidden) για να αποφεύγονται λάθη συσχέτισης.
 - Σε όλες τις φόρμες υπάρχει η επιλογή "Scan Sensor QR" που συμπληρώνει `sensor_uuid`, `device_uuid` (αν υπάρχει) και `type` από το QR, καθώς και η πρόταση για αυτόματη συμπλήρωση `latitude`/`longitude` μέσω GPS.
@@ -200,6 +201,31 @@ Backend συμπεριφορά (τεχνικά σημεία):
 - [Sensor policy](https://github.com/gkalogeitonas/agronos/blob/main/app/Policies/SensorPolicy.php): Ορίζει τους κανόνες πρόσβασης (view, create, update, delete) ώστε κάθε χρήστης να διαχειρίζεται μόνο τους δικούς του αισθητήρες.
 - [Sensor resource](https://github.com/gkalogeitonas/agronos/blob/main/app/Http/Resources/SensorResource.php): Το API resource που μορφοποιεί τα δεδομένα αισθητήρα προς το frontend (περιλαμβάνει τα πεδία `uuid`, `type`, `lat`/`lon`, `last_reading`).
 - [SensorTimeSeriesService](https://github.com/gkalogeitonas/agronos/blob/main/app/Services/TimeSeries/SensorTimeSeriesService.php): Υπηρεσία για ερωτήματα προς την InfluxDB (recentReadings, stats) και για την παρουσίαση ιστορικών/στατιστικών μετρήσεων.
+
+### Websocket / Real-time ενημερώσεις στη σελίδα λεπτομερειών αισθητήρα  (report 2)
+
+Η εφαρμογή υποστηρίζει real-time ενημερώσεις για μετρήσεις αισθητήρων ώστε η σελίδα `Sensors/Show` να εμφανίζει αμέσως νέα δεδομένα χωρίς refresh.
+
+- Πλαίσιο (server): Η εφαρμογή χρησιμοποιεί το πακέτο **Reverb** ως broadcast driver (βλ. `config/reverb.php` και `config/broadcasting.php`) και ο server του Reverb τρέχει ξεχωριστά (π.χ. `vendor/bin/reverb serve --host=0.0.0.0 --port=8080`).
+- Κανάλι: κάθε αισθητήρας έχει ιδιωτικό κανάλι `sensor.{sensorId}`. Η πολιτική auth για το κανάλι βρίσκεται σε `routes/channels.php` και επιτρέπει μόνο εξουσιοδοτημένους χρήστες (π.χ. ιδιοκτήτη/μέλος tenant) να εγγραφούν.
+- Event: το backend εκπέμπει `App\Events\SensorReadingEvent` (υλοποιεί `ShouldBroadcast`). Το event broadcast κάνει `broadcastOn()` σε `new PrivateChannel("sensor.{$this->sensorId}")` και το `broadcastWith()` επιστρέφει ένα payload σχηματικά όπως:
+
+```
+{
+  "value": 23.4,
+  "time": "2025-09-09 12:00:00",
+  "message": "optional"
+}
+```
+
+- Πότε εκπέμπεται: το event αποστέλλεται όταν ο server επεξεργάζεται εισερχόμενα δεδομένα αισθητήρα — συγκεκριμένα μετά την ενημέρωση των πεδίων `last_reading` / `last_reading_at` (βλ. `app/Services/SensorDataService.php`). 
+
+- Frontend: η σελίδα `resources/js/pages/Sensors/Show.vue` εγγράφεται στο ιδιωτικό κανάλι με την helper `useEcho` (παραδείγματος χάριν `useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', handler)`), και ο handler ενημερώνει τοπικά:
+  - τον πίνακα `recentReadings` (demo ιστορικό)
+  - και το `page.props.sensor.last_reading` / `last_reading_at` ώστε το card "Latest Reading" να ανανεώνεται άμεσα.
+
+
+Αυτή η μικρή ροή δίνει μια γρήγορη, χρηστική εμπειρία χρήστη: όταν η συσκευή αποστέλλει νέες μετρήσεις, το backend τις καταγράφει, ενημερώνει το μοντέλο και δεσμεύει ένα broadcast — ο browser του ιδιοκτήτη βλέπει αμέσως τα νέα δεδομένα χωρίς reload.
 
 
 
