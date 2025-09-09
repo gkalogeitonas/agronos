@@ -14,6 +14,7 @@ A platform for collecting, storing and visualizing sensor data from agricultural
 - Time-series DB: InfluxDB
 - Relational DB: SQLite/MySQL/Postgres (configurable)
 - Frontend: Vite + Vue (ShadCN components preferred)
+- Realtime: Reverb (websockets)
 - Testing: Pest PHP
 - Containerization: Docker / docker-compose
 
@@ -32,8 +33,42 @@ A platform for collecting, storing and visualizing sensor data from agricultural
 5. Run (local)
    - php artisan serve 
    - or using Docker: docker-compose up -d --build
+   
+### Additional services for realtime (Reverb) & workers
+
+This project uses Reverb for websocket/real-time broadcasting and Laravel queues for broadcasting jobs and other background work. For a local development environment you should run the Reverb server and at least one queue worker.
+
+- Run the Reverb server (local):
+  - If you installed the Reverb binary via composer or globally, run its serve command. Example variations depending on setup:
+    - vendor/bin/reverb serve --host=0.0.0.0 --port=8080
+    - php artisan reverb:serve --host=0.0.0.0 --port=8080  # if package registers an artisan command
+  - Confirm `REVERB_SERVER_HOST`/`REVERB_SERVER_PORT` in `.env` match the command above.
+
+- Run a queue worker (to process broadcasts/jobs):
+  - For development, run a synchronous worker or the `queue:work` process in a terminal:
+
+```bash
+# single worker for default queue
+php artisan queue:work --queue=default --sleep=3 --tries=3
+
+# or run the queue in the foreground using sync driver for immediate execution
+php artisan queue:work --once
+```
+
+- Running both in Docker: add services to `docker-compose.yml` or run the commands inside the PHP container. Example (inside container):
+
+```bash
+# in one terminal (reverb)
 6. Run tests
+
+# in another terminal (queue)
    - php artisan test
+```
+
+Notes:
+- Broadcasting may be queued depending on `BROADCAST_DRIVER` and `QUEUE_CONNECTION` in your `.env`. For immediate delivery in development you can set `QUEUE_CONNECTION=sync` or run a queue worker as shown above.
+- If you see private channel authentication failures, ensure the app is reachable at the host/port used by Reverb and that `REVERB_HOST`/`REVERB_SERVER_HOST` in `.env` is correct. Private channel auth requests are made to your Laravel app via `/broadcasting/auth` and require session/cookie or token auth.
+- For production, run Reverb and queue workers under a process supervisor (supervisord/systemd) and ensure you secure the Reverb endpoint and scale workers appropriately.
 
 ## Project structure (high level)
 - app/ — Laravel application code (Models, Http controllers, Policies, Services)
