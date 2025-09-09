@@ -6,6 +6,7 @@ use App\Models\Sensor;
 use App\Services\InfluxDBService;
 use App\Services\SensorMeasurementPayloadFactory;
 use Illuminate\Support\Collection;
+use App\Events\SensorReadingEvent;
 
 class SensorDataService
 {
@@ -32,7 +33,7 @@ class SensorDataService
             $sensorModel->last_reading_at = now();
             $sensorModel->save();
             // Broadcast the new reading to any listeners (private per-sensor channel)
-            event(new \App\Events\SensorReadingEvent(
+            event(new SensorReadingEvent(
                 $sensorModel->id,
                 [
                     'value' => $sensorModel->last_reading,
