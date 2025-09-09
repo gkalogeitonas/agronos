@@ -34,7 +34,7 @@ Route::get('/test-first-event', function () {
 // Quick test route to dispatch a private sensor event (requires auth)
 Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', function (\App\Models\Sensor $sensor) {
     $payload = [
-        'value' => 100,
+        'value' => 50,
         'time' => now()->toDateTimeString(),
         'message' => 'private test',
     ];
