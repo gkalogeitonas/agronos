@@ -13,9 +13,9 @@
         <div class="flex flex-col items-end gap-2 min-w-[120px]">
           <span class="text-sm text-muted-foreground">Type: {{ sensor.type }}</span>
           <span class="text-xs text-muted-foreground">Lat: {{ sensor.lat }}, Lon: {{ sensor.lon }}</span>
-          <span class="text-xs text-muted-foreground mt-2">Last seen: {{ sensor.last_reading_at ? sensor.last_reading_at : 'Never' }}</span>
+          <span class="text-xs text-muted-foreground mt-2">Last seen: {{ lastSeen ? lastSeen : 'Never' }}</span>
           <span class="text-base font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded shadow-sm mt-1">
-            Last value: {{ sensor.last_reading !== undefined && sensor.last_reading !== null ? sensor.last_reading : '—' }}
+            Last value: {{ lastReading !== undefined && lastReading !== null ? lastReading : '—' }}
           </span>
         </div>
       </CardHeader>
@@ -25,9 +25,37 @@
 
 <script setup lang="ts">
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
-import { Link, router } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
 import type { Sensor } from '@/types/sensor';
+import { ref, watch } from 'vue';
+import { useEcho } from '@laravel/echo-vue';
 
 
-defineProps<{ sensor: Sensor }>();
+
+
+
+const props = defineProps<{ sensor: Sensor }>();
+
+// Local reactive copies so the component can update in realtime via websockets
+const lastReading = ref<string | number | null>(props.sensor.last_reading ?? null);
+const lastSeen = ref<string | null>(props.sensor.last_reading_at ?? null);
+
+// Keep local copies in sync if parent props change
+watch(() => props.sensor.last_reading, (v: any) => { lastReading.value = v ?? null; });
+watch(() => props.sensor.last_reading_at, (v: any) => { lastSeen.value = v ?? null; });
+
+// Subscribe to private sensor channel for realtime updates using same helper as Show.vue
+useEcho(`sensor.${props.sensor.id}`, 'SensorReadingEvent', (payload: any) => {
+  try {
+    if (payload && typeof payload.value !== 'undefined') {
+      lastReading.value = payload.value;
+    }
+    if (payload && payload.time) {
+      lastSeen.value = payload.time;
+    }
+  } catch {
+    // ignore
+  }
+});
+
 </script>
