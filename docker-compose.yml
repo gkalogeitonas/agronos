@@ -86,6 +86,29 @@ services:
     networks:
       - agronos_net
 
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: agronos_reverb
+    command: >
+      bash -lc "php /var/www/artisan reverb:start --host=0.0.0.0 --port=${REVERB_PORT:-8080}"
+    volumes:
+      - ./:/var/www
+    environment:
+      APP_ENV: ${APP_ENV}
+      APP_DEBUG: ${APP_DEBUG}
+      REVERB_HOST: ${REVERB_HOST}
+      REVERB_PORT: ${REVERB_PORT}
+      REVERB_SCHEME: ${REVERB_SCHEME}
+    depends_on:
+      - app
+    restart: unless-stopped
+    ports:
+      - "${REVERB_PORT:-8080}:${REVERB_PORT:-8080}"
+    networks:
+      - agronos_net
+
 networks:
   agronos_net:
   proxy:
