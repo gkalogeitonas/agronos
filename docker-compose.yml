@@ -60,6 +60,32 @@ services:
     networks:
       - agronos_net
 
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: agronos_worker
+    command: >
+      bash -lc "php /var/www/artisan queue:work --sleep=3 --tries=3 --timeout=0 --queue=default"
+    volumes:
+      - ./:/var/www
+    environment:
+      APP_ENV: ${APP_ENV}
+      APP_DEBUG: ${APP_DEBUG}
+      DB_CONNECTION: ${DB_CONNECTION}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION}
+    depends_on:
+      - db
+      - app
+    restart: unless-stopped
+    networks:
+      - agronos_net
+
 networks:
   agronos_net:
   proxy:
