@@ -40,8 +40,7 @@ This project uses Reverb for websocket/real-time broadcasting and Laravel queues
 
 - Run the Reverb server (local):
   - If you installed the Reverb binary via composer or globally, run its serve command. Example variations depending on setup:
-    - vendor/bin/reverb serve --host=0.0.0.0 --port=8080
-    - php artisan reverb:serve --host=0.0.0.0 --port=8080  # if package registers an artisan command
+    - php artisan reverb:start --host=0.0.0.0 --port=8080  # if package registers an artisan command
   - Confirm `REVERB_SERVER_HOST`/`REVERB_SERVER_PORT` in `.env` match the command above.
 
 - Run a queue worker (to process broadcasts/jobs):
