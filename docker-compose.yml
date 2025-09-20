@@ -111,15 +111,13 @@ services:
       - db
       - app
     restart: unless-stopped
-    # Keep internal port mapping for direct access if needed
-    ports:
-      - "127.0.0.1:${REVERB_PORT:-8080}:${REVERB_PORT:-8080}"
+    # No direct port binding - Traefik handles external access
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.reverb.rule=Host(`${REVERB_HOST}`)"
+      - "traefik.http.routers.reverb.rule=Host(`websocket.kalogeitonas.xyz`)"
       - "traefik.http.routers.reverb.entrypoints=websecure"
       - "traefik.http.routers.reverb.tls.certresolver=letsencrypt"
-      - "traefik.http.services.reverb.loadbalancer.server.port=${REVERB_PORT:-8080}"
+      - "traefik.http.services.reverb.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.reverb-headers.headers.customResponseHeaders.X-Forwarded-Proto=https"
       - "traefik.http.routers.reverb.middlewares=reverb-headers"
     networks:
