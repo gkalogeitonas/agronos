@@ -2,15 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\Sensor;
-use App\Services\InfluxDBService;
-use App\Services\SensorMeasurementPayloadFactory;
-use Illuminate\Support\Collection;
 use App\Events\SensorReadingEvent;
+use App\Jobs\ProcessSensorInfluxData;
+use App\Models\Sensor;
 
 class SensorDataService
 {
-    public function processSensorData($device, array $sensorPayloads, InfluxDBService $influx): array
+    public function processSensorData($device, array $sensorPayloads): array
     {
         $uuids = collect($sensorPayloads)->pluck('uuid')->all();
         $sensors = Sensor::allTenants()
@@ -23,12 +21,15 @@ class SensorDataService
 
         foreach ($sensorPayloads as $sensor) {
             $sensorModel = $sensors->get($sensor['uuid']);
-            if (!$sensorModel) {
+            if (! $sensorModel) {
                 $missingUuids[] = $sensor['uuid'];
+
                 continue;
             }
-            $payload = SensorMeasurementPayloadFactory::make($sensorModel, $sensor['value']);
-            $influx->writeArray($payload);
+
+            // Dispatch job to write to InfluxDB asynchronously
+            ProcessSensorInfluxData::dispatch($sensorModel, (float) $sensor['value'], time());
+
             $sensorModel->last_reading = $sensor['value'];
             $sensorModel->last_reading_at = now();
             $sensorModel->save();
@@ -47,6 +48,7 @@ class SensorDataService
         if (count($missingUuids) > 0) {
             $response['missing_uuids'] = $missingUuids;
         }
+
         return $response;
     }
 }

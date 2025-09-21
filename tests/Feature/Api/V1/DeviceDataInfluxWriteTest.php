@@ -1,6 +1,11 @@
 <?php
 
-test('writeArray writes correct data to InfluxDBFake', function () {
+use App\Jobs\ProcessSensorInfluxData;
+use Illuminate\Support\Facades\Queue;
+
+test('dispatches job to write sensor data to InfluxDB', function () {
+    Queue::fake();
+
     $user = \App\Models\User::factory()->create();
     $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
     $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
@@ -24,6 +29,32 @@ test('writeArray writes correct data to InfluxDBFake', function () {
 
     $response->assertStatus(200)
         ->assertJsonFragment(['message' => 'Data received.']);
+
+    // Assert that the job was dispatched
+    Queue::assertPushed(ProcessSensorInfluxData::class, function ($job) use ($sensor) {
+        return $job->sensor->id === $sensor->id
+            && $job->value === 22.5;
+    });
+
+    // Assert it was pushed to the correct queue
+    Queue::assertPushedOn('sensor-data', ProcessSensorInfluxData::class);
+});
+
+test('job writes correct data to InfluxDBFake when processed', function () {
+    $user = \App\Models\User::factory()->create();
+    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
+    $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
+    $sensor = \App\Models\Sensor::factory()->create([
+        'uuid' => 'sensor-uuid-1',
+        'user_id' => $user->id,
+        'device_id' => $device->id,
+        'farm_id' => $farm->id,
+        'type' => 'temperature',
+    ]);
+
+    // Create and process the job directly
+    $job = new ProcessSensorInfluxData($sensor, 22.5, time());
+    $job->handle(app(\App\Services\InfluxDBService::class));
 
     $influx = app(\App\Services\InfluxDBService::class);
     expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);

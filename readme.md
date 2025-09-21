@@ -50,6 +50,9 @@ This project uses Reverb for websocket/real-time broadcasting and Laravel queues
 # single worker for default queue
 php artisan queue:work --queue=default --sleep=3 --tries=3
 
+# worker for sensor data processing (recommended for production)
+php artisan queue:work --queue=sensor-data,default --sleep=3 --tries=3
+
 # or run the queue in the foreground using sync driver for immediate execution
 php artisan queue:work --once
 ```
@@ -184,6 +187,29 @@ A short overview of the main tables and key columns. See `database/migrations` a
 Notes
 - Multi-tenancy: models use a `BelongsToTenant` trait and `TenantScope` to ensure tenant separation; see `app/Traits/BelongsToTenant.php` and `app/Scopes/TenantScope.php`.
 - For exact column types, indexes and constraints, consult the migration files in `database/migrations` and the technical reference in `docs/technical_reference.md`.
+
+## Performance & Architecture Notes
+
+### Asynchronous InfluxDB Writes
+
+Sensor data ingestion is designed for high performance and reliability:
+
+- **Non-blocking API**: Device data posts return immediately after updating the local database
+- **Queued writes**: InfluxDB writes are processed asynchronously via the `ProcessSensorInfluxData` job
+- **Dedicated queue**: Sensor data uses the `sensor-data` queue for optimal processing separation
+- **Retry mechanism**: Failed InfluxDB writes are retried up to 3 times with exponential backoff
+- **Monitoring**: All InfluxDB failures are logged for monitoring and alerting
+
+To ensure optimal performance in production:
+```bash
+# Run dedicated workers for sensor data processing
+php artisan queue:work --queue=sensor-data --sleep=1 --tries=3
+
+# Scale workers based on ingestion volume
+supervisorctl start worker_sensor_data:*
+```
+
+This architecture allows the platform to handle high-frequency sensor data while maintaining fast API response times.
 
 
 
