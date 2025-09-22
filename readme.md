@@ -32,15 +32,17 @@ A platform for collecting, storing and visualizing sensor data from agricultural
    - php artisan migrate
 5. Run (local)
    - php artisan serve 
-   - or using Docker: docker-compose up -d --build
+
    
 ### Additional services for realtime (Reverb) & workers
 
 This project uses Reverb for websocket/real-time broadcasting and Laravel queues for broadcasting jobs and other background work. For a local development environment you should run the Reverb server and at least one queue worker.
 
 - Run the Reverb server (local):
-  - If you installed the Reverb binary via composer or globally, run its serve command. Example variations depending on setup:
-    - php artisan reverb:start --host=0.0.0.0 --port=8080  # if package registers an artisan command
+  - If you installed the Reverb binary via composer or globally, run its start command:
+```bash
+  php artisan reverb:start
+```
   - Confirm `REVERB_SERVER_HOST`/`REVERB_SERVER_PORT` in `.env` match the command above.
 
 - Run a queue worker (to process broadcasts/jobs):
@@ -57,15 +59,35 @@ php artisan queue:work --queue=sensor-data,default --sleep=3 --tries=3
 php artisan queue:work --once
 ```
 
-- Running both in Docker: add services to `docker-compose.yml` or run the commands inside the PHP container. Example (inside container):
+### Example terminal layout during development:
 
+
+
+Terminal 1 — Laravel app server
 ```bash
-# in one terminal (reverb)
-6. Run tests
-
-# in another terminal (queue)
-   - php artisan test
+php artisan serve
 ```
+
+Terminal 2 — Frontend (Vite dev server)
+```bash
+npm run dev
+```
+
+Terminal 3 — Queue worker
+```bash
+php artisan queue:listen --queue=sensor-data,default --sleep=3 --tries=3
+```
+
+Terminal 4 — Reverb (websockets)
+```bash
+php artisan reverb:start
+```
+
+Terminal 5 — Run tests
+```bash
+php artisan test
+```
+
 
 Notes:
 - Broadcasting may be queued depending on `BROADCAST_DRIVER` and `QUEUE_CONNECTION` in your `.env`. For immediate delivery in development you can set `QUEUE_CONNECTION=sync` or run a queue worker as shown above.
