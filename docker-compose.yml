@@ -150,6 +150,55 @@ services:
       - agronos_net
       - proxy
 
+  emqx:
+    image: emqx/emqx:5.7.0
+    container_name: agronos_emqx
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT port
+      - "8883:8883"   # MQTT SSL port
+      - "8083:8083"   # MQTT WebSocket port
+      - "8084:8084"   # MQTT WebSocket SSL port
+      - "18083:18083" # Management Console (Dashboard)
+    environment:
+      # Basic configuration
+      EMQX_NAME: emqx
+      EMQX_HOST: 127.0.0.1
+      
+      # Authentication settings
+      EMQX_AUTH__USER__1__USERNAME: admin
+      EMQX_AUTH__USER__1__PASSWORD: ${MQTT_ADMIN_PASSWORD:-agronos123}
+      
+      # Dashboard authentication
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:-agronos123}
+      
+      # API settings
+      EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID: agronos_app
+      EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET: ${MQTT_API_SECRET:-agronos_secret}
+      
+      # Logging
+      EMQX_LOG__CONSOLE__LEVEL: info
+      EMQX_LOG__FILE__LEVEL: info
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+      - emqx_etc:/opt/emqx/etc
+    networks:
+      - agronos_net
+    labels:
+      - "traefik.enable=true"
+      # MQTT Dashboard
+      - "traefik.http.routers.emqx-dashboard.rule=Host(`mqtt.kalogeitonas.xyz`)"
+      - "traefik.http.routers.emqx-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.emqx-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.emqx-dashboard.loadbalancer.server.port=18083"
+      # MQTT WebSocket
+      - "traefik.http.routers.emqx-ws.rule=Host(`mqtt-ws.kalogeitonas.xyz`)"
+      - "traefik.http.routers.emqx-ws.entrypoints=websecure"
+      - "traefik.http.routers.emqx-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.emqx-ws.loadbalancer.server.port=8083"
+
 networks:
   agronos_net:
   proxy:
@@ -157,3 +206,6 @@ networks:
 
 volumes:
   agronos_db_data:
+  emqx_data:
+  emqx_log:
+  emqx_etc:
