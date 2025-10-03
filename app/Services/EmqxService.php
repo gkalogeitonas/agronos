@@ -17,11 +17,11 @@ class EmqxService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('services.emqx.url', 'http://emqx:8081'), '/');
+        $this->baseUrl = rtrim(config('services.emqx.url', '/'), '/');
         // EMQX management API v5 is exposed under /api/v5 in your instance (see swagger)
-        $this->basePath = trim(config('services.emqx.base_path', '/api/v5'), '/');
+        $this->basePath = trim(config('services.emqx.base_path'), '/');
         // Use the password_based built-in database authenticator identifier used by EMQX v5
-        $this->authId = config('services.emqx.authenticator_id', 'password_based:built_in_database');
+        $this->authId = config('services.emqx.authenticator_id');
 
         // Basic auth credentials for management API (use app_id/app_secret names from config/services.php)
         $this->http = Http::withBasicAuth(config('services.emqx.api_key'), config('services.emqx.secret_key'))
@@ -86,5 +86,61 @@ class EmqxService
         $response = $this->http->delete($url);
 
         return $response->successful();
+    }
+
+    /**
+     * Authorize a username so it may only publish on its own topic prefix and deny broader publishes.
+     * Example payload posted to EMQX:
+     * [
+     *   {
+     *     "rules": [
+     *       {"action":"publish","permission":"allow","topic":"devices/{username}/#"},
+     *       {"action":"publish","permission":"deny","topic":"devices/#"}
+     *     ],
+     *     "username": "{username}"
+     *   }
+     * ]
+     *
+     * @param string $username
+     * @param string $deviceTopicPrefix example: devices/{username}/# or devices/device1/#
+     * @return bool|array true on success, or array with status/body on failure
+     */
+    public function authorizeUser(string $username)
+    {
+        $url = $this->apiUrl("authorization/sources/built_in_database/rules/users");
+
+        $payload = [
+            [
+                'rules' => [
+                    [
+                        'action' => 'publish',
+                        'permission' => 'allow',
+                        'topic' => 'devices/' . $username . '/#',
+                    ],
+                    [
+                        'action' => 'publish',
+                        'permission' => 'deny',
+                        'topic' => 'devices/#',
+                    ],
+                ],
+                'username' => $username,
+            ],
+        ];
+
+        $response = $this->http->post($url, $payload);
+
+        if ($response->successful()) {
+            return true;
+        }
+
+        try {
+            $body = $response->json();
+        } catch (\Throwable $e) {
+            $body = $response->body();
+        }
+
+        Log::error('EMQX authorizePublishOnly failed', ['url' => $url, 'status' => $response->status(), 'body' => $body, 'payload' => $payload]);
+
+        return ['status' => $response->status(), 'body' => $body];
     }
 }

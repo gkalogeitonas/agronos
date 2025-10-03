@@ -44,7 +44,7 @@ return [
     ],
     'emqx' => [
         // Management API base url (include scheme and host, without path)
-        'url' => env('EMQX_API_URL', 'http://localhost:18083/'),
+        'url' => env('EMQX_API_URL'),
         // Management application id/secret configured for EMQX management API
         'api_key' => env('EMQX_API_KEY', env('MQTT_API_KEY')),
         'secret_key' => env('EMQX_API_SECRET', env('MQTT_API_SECRET')),
