@@ -164,19 +164,19 @@ services:
       # Basic configuration
       EMQX_NAME: emqx
       EMQX_HOST: 127.0.0.1
-      
+
       # Authentication settings
       EMQX_AUTH__USER__1__USERNAME: admin
       EMQX_AUTH__USER__1__PASSWORD: ${MQTT_ADMIN_PASSWORD:-agronos123}
-      
+
       # Dashboard authentication
       EMQX_DASHBOARD__DEFAULT_USERNAME: admin
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:-agronos123}
-      
+
       # API settings
       EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID: agronos_app
       EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET: ${MQTT_API_SECRET:-agronos_secret}
-      
+
       # Logging
       EMQX_LOG__CONSOLE__LEVEL: info
       EMQX_LOG__FILE__LEVEL: info

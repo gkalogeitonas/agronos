@@ -42,4 +42,15 @@ return [
         // Enable fake client during tests or when explicitly requested
         'fake' => env('INFLUXDB_FAKE', env('APP_ENV') === 'testing'),
     ],
+    'emqx' => [
+        // Management API base url (include scheme and host, without path)
+        'url' => env('EMQX_API_URL', 'http://localhost:18083/'),
+        // Management application id/secret configured for EMQX management API
+        'api_key' => env('EMQX_API_KEY', env('MQTT_API_KEY')),
+        'secret_key' => env('EMQX_API_SECRET', env('MQTT_API_SECRET')),
+        // API base path (most EMQX management APIs are under /api/v5)
+        'base_path' => env('EMQX_API_BASE_PATH', '/api/v5'),
+        // The authenticator id to use for built_in_database (default name used in EMQX dashboard)
+        'authenticator_id' => env('EMQX_AUTHENTICATOR_ID', 'password_based:built_in_database'),
+    ],
 ];
