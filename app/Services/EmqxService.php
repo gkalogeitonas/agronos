@@ -105,24 +105,21 @@ class EmqxService
      * @param string $deviceTopicPrefix example: devices/{username}/# or devices/device1/#
      * @return bool|array true on success, or array with status/body on failure
      */
-    public function authorizeUser(string $username)
+    /**
+     * Authorize a username with a set of rules.
+     * If $rules is null, a default set is applied that allows publish to devices/{username}/# and denies devices/#.
+     *
+     * @param string $username
+     * @param array|null $rules Array of rule arrays, each with keys: action, permission, topic
+     * @return bool|array
+     */
+    public function authorizeUser(string $username, ?array $rules = null)
     {
         $url = $this->apiUrl("authorization/sources/built_in_database/rules/users");
 
         $payload = [
             [
-                'rules' => [
-                    [
-                        'action' => 'publish',
-                        'permission' => 'allow',
-                        'topic' => 'devices/' . $username . '/#',
-                    ],
-                    [
-                        'action' => 'publish',
-                        'permission' => 'deny',
-                        'topic' => 'devices/#',
-                    ],
-                ],
+                'rules' => $rules,
                 'username' => $username,
             ],
         ];
