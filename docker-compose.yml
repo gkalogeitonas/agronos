@@ -180,6 +180,10 @@ services:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
       - emqx_etc:/opt/emqx/etc
+      # Mount host bootstrap file for API keys (create via scripts/generate_emqx_api_keys.sh)
+      - ./docker/emqx/default_api_key.conf:/opt/emqx/etc/default_api_key.conf:ro
+        # Mount host ACL file for topic access control (create via scripts/generate_emqx_acl.sh)
+      - ./docker/emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
     networks:
       - agronos_net
     labels:

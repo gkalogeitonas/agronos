@@ -26,3 +26,6 @@ docs/report.pdf
 docs/Device_registration.pdf
 
 docker/coap-proxy/node_modules/*
+
+# EMQX API key bootstrap file (generated from .env)
+docker/emqx/default_api_key.conf

@@ -1,0 +1,6 @@
+# Example EMQX API key bootstrap file
+# Format: {API_KEY}:{SECRET_KEY}:{?ROLE}
+# Role is optional. Default role is 'administrator' when omitted.
+
+my-example-key:example-secret
+my-publisher:publisher-secret:publisher
