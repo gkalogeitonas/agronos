@@ -169,6 +169,10 @@ services:
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${MQTT_DASHBOARD_USERNAME:-admin}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:-agronos123}
 
+      # basic authentication, username/password
+      EMQX_AUTHENTICATION__1__MECHANISM: password_based
+      EMQX_AUTHENTICATION__1__BACKEND: built_in_database
+
       # Logging
       EMQX_LOG__CONSOLE__LEVEL: info
       EMQX_LOG__FILE__LEVEL: info
