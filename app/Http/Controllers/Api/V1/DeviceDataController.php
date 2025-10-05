@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\DeviceDataRequest;
 use App\Services\SensorDataService;
 use Illuminate\Http\Request;
+use App\Models\Device;
 
 class DeviceDataController extends Controller
 {
@@ -25,20 +26,29 @@ class DeviceDataController extends Controller
     }
 
 
-    public function mqttBrokerWebhook(Request $request)
+    public function mqttBrokerWebhook(Request $request, SensorDataService $sensorDataService)
     {
         info('MQTT Broker Webhook GET called');
         info($request->all());
-        // // This endpoint is called by the MQTT broker webhook integration
-        // // The request is validated by DeviceDataRequest to ensure required fields are present
-        // $device = $request->user();
+        $device = $request['username'];
+        $payload = $request['payload'];
+        info("Device from username: $device");
+        info("Payload: $payload");
+        // Find device by uuid (assuming username is the device UUID)
+        $device = Device::where('uuid', $request['username'])->first();
+        if (!$device) {
+            info("Device not found: " . $request['username']);
+            return response()->json(['message' => 'Device not found'], 404);
+        }
+        info("Device found: " . $device->id);
         // // Update device status and last seen
-        // $device->update([
-        //     'status' => DeviceStatus::ONLINE,
-        //     'last_seen_at' => now(),
-        // ]);
-        // $sensorPayloads = $request->validated()['sensors'];
-        // $response = $sensorDataService->processSensorData($device, $sensorPayloads);
+        $device->update([
+            'status' => DeviceStatus::ONLINE,
+            'last_seen_at' => now(),
+        ]);
+        $sensorPayloads = $payload ? json_decode($payload, true) : [];
+        info ($sensorPayloads);
+        $response = $sensorDataService->processSensorData($device, $sensorPayloads);
 
         return response()->json(['message' => 'Webhook received'], 200);
     }
