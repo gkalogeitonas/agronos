@@ -165,6 +165,8 @@ services:
       EMQX_NAME: emqx
       EMQX_HOST: 127.0.0.1
 
+      EMQX_API_KEY__BOOTSTRAP_FILE: etc/default_api_key.conf
+
       # Dashboard authentication
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${MQTT_DASHBOARD_USERNAME:-admin}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:-agronos123}
@@ -172,6 +174,7 @@ services:
       # basic authentication, username/password
       EMQX_AUTHENTICATION__1__MECHANISM: password_based
       EMQX_AUTHENTICATION__1__BACKEND: built_in_database
+
 
       # Logging
       EMQX_LOG__CONSOLE__LEVEL: info
