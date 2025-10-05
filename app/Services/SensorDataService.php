@@ -19,7 +19,6 @@ class SensorDataService
             ->keyBy('uuid');
         $missingUuids = [];
         $writtenCount = 0;
-        info($sensorPayloads);
         foreach ($sensorPayloads as $sensor) {
             $sensorModel = $sensors->get($sensor['uuid']);
             if (! $sensorModel) {

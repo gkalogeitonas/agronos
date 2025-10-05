@@ -29,18 +29,13 @@ class DeviceDataController extends Controller
     public function mqttBrokerWebhook(Request $request, SensorDataService $sensorDataService)
     {
         info('MQTT Broker Webhook GET called');
-        info($request->all());
         $device = $request['username'];
         $payload = $request['payload'];
-        info("Device from username: $device");
-        info("Payload: $payload");
         // Find device by uuid (assuming username is the device UUID)
         $device = Device::where('uuid', $request['username'])->first();
         if (!$device) {
-            info("Device not found: " . $request['username']);
             return response()->json(['message' => 'Device not found'], 404);
         }
-        info("Device found: " . $device->id);
         // // Update device status and last seen
         $device->update([
             'status' => DeviceStatus::ONLINE,
