@@ -47,7 +47,7 @@ class DeviceDataController extends Controller
             'last_seen_at' => now(),
         ]);
         $sensorPayloads = $payload ? json_decode($payload, true) : [];
-        info ($sensorPayloads);
+        $sensorPayloads = $sensorPayloads['sensors'] ?? [];
         $response = $sensorDataService->processSensorData($device, $sensorPayloads);
 
         return response()->json(['message' => 'Webhook received'], 200);
