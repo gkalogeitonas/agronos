@@ -65,7 +65,7 @@ php artisan queue:work --once
 
 Terminal 1 — Laravel app server
 ```bash
-php artisan serve
+php artisan serve --host=0.0.0.0 --port=8000
 ```
 
 Terminal 2 — Frontend (Vite dev server)
