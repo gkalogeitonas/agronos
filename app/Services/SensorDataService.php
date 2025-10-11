@@ -10,7 +10,6 @@ class SensorDataService
 {
     public function processSensorData($device, array $sensorPayloads): array
     {
-        info($sensorPayloads);
         $uuids = collect($sensorPayloads)->pluck('uuid')->all();
         $sensors = Sensor::allTenants()
             ->where('device_id', $device->id)

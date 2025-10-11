@@ -28,7 +28,6 @@ class DeviceDataController extends Controller
 
     public function mqttBrokerWebhook(Request $request, SensorDataService $sensorDataService)
     {
-        info('MQTT Broker Webhook GET called');
         $device = $request['username'];
         $payload = $request['payload'];
         // Find device by uuid (assuming username is the device UUID)
