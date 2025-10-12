@@ -23,6 +23,8 @@ class Device extends Authenticatable
         'last_seen_at',
         'battery_level',
         'signal_strength',
+        'mqtt_username',
+        'mqtt_password',
     ];
 
     protected $casts = [

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Device;
 use Illuminate\Support\Facades\Hash;
 use App\Enums\DeviceStatus;
+use App\Services\MqttCredentialService;
 
 class DeviceAuthController extends Controller
 {
@@ -32,5 +33,15 @@ class DeviceAuthController extends Controller
         $token = $device->createToken('device-token')->plainTextToken;
 
         return response()->json(['token' => $token]);
+    }
+
+    // Device can call this after authenticating with the token to get mqtt credentials
+    public function provisionMqttCredentials(Request $request, MqttCredentialService $svc)
+    {
+        $device = $request->user();
+
+        $creds = $svc->createCredentials($device);
+
+        return response()->json($creds, 200);
     }
 }
