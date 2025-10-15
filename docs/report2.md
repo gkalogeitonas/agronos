@@ -100,11 +100,11 @@ return Inertia::render('Farms/Show', [
 
 Κάποια από τα κύρια αρχεία και components που σχετίζονται με την ενότητα "Enhanced Farm Page" είναι:
 
-- `app/Models/Farm.php` — Eloquent model του αγρού και σχέσεις με `sensors`.
-- `app/Models/Sensor.php` — μοντέλο αισθητήρα, πεδία `last_reading` και `last_reading_at`.
-- `app/Http/Controllers/SensorController.php` και `app/Http/Controllers/FarmController.php` — controllers για φόρτωση δεδομένων και rendering της σελίδας.
-- `app/Services/TimeSeries/SensorTimeSeriesService.php` — service για ερωτήματα και aggregation προς την InfluxDB.
-- `resources/js/pages/Sensors/Show.vue` και `resources/js/pages/Farms/Show.vue` — frontend pages που εμφανίζουν τις κάρτες, τον χάρτη και τη λίστα αισθητήρων.
+- [`app/Models/Farm.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Models/Farm.php) — Eloquent model του αγρού και σχέσεις με `sensors`.
+- [`app/Models/Sensor.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Models/Sensor.php) — μοντέλο αισθητήρα, πεδία `last_reading` και `last_reading_at`.
+- [`app/Http/Controllers/SensorController.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Http/Controllers/SensorController.php) και [`app/Http/Controllers/FarmController.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Http/Controllers/FarmController.php) — controllers για φόρτωση δεδομένων και rendering της σελίδας.
+- [`app/Services/TimeSeries/SensorTimeSeriesService.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Services/TimeSeries/SensorTimeSeriesService.php) — service για ερωτήματα και aggregation προς την InfluxDB.
+- [`resources/js/pages/Sensors/Show.vue`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/pages/Sensors/Show.vue) και [`resources/js/pages/Farms/Show.vue`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/pages/Farms/Show.vue) — frontend pages που εμφανίζουν τις κάρτες, τον χάρτη και τη λίστα αισθητήρων.
 
 ## Επόμενα βήματα
 
