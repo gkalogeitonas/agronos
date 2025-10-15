@@ -114,6 +114,75 @@ return Inertia::render('Farms/Show', [
 
 ---
 
+
+# Real‑time Communication
+
+Η ενότητα αυτή περιγράφει την υλοποίηση του real‑time layer της πλατφόρμας, η οποία επιτυγχάνεται με WebSockets χρησιμοποιώντας Laravel Reverb (server side) και Laravel Echo (client side). Στόχος είναι η άμεση διάδοση νέων μετρήσεων και γεγονότων στον browser χωρίς να απαιτείται polling.
+
+Αρχιτεκτονική & ροή δεδομένων
+
+- Εγγραφή μιας νέας μέτρησης → εγγραφή στην InfluxDB (και update των πεδίων `Sensor::last_reading` στο σχεσιακό μοντέλο) → εκπομπή event `SensorReadingEvent` από το service `SensorDataService`.
+```php
+    event(new SensorReadingEvent(
+        $sensorModel->id,
+        [
+            'value' => $sensorModel->last_reading,
+            'time' => optional($sensorModel->last_reading_at)->toDateTimeString() ?: (string) $sensorModel->last_reading_at ?: now()->toDateTimeString(),
+        ]
+    ));
+```
+            
+- Το event υλοποιεί `ShouldBroadcast` και μεταδίδεται σε ιδιωτικά κανάλια `sensor.{sensorId}`. Προς το παρόν τα events εκπέμπονται σε επίπεδο αισθητήρα και όχι σε επίπεδο αγρού.
+
+```php
+
+class SensorReadingEvent implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public int $sensorId, public array $payload = [])
+    {
+    }
+
+    public function broadcastOn(): PrivateChannel
+    {
+        return new PrivateChannel("sensor.{$this->sensorId}");
+    }
+
+    public function broadcastWith(): array
+    {
+        return $this->payload;
+    }
+}
+```
+
+- Ο frontend με Laravel Echo εγγράφεται στα αντίστοιχα private κανάλια· οι  listeners  είναι  η σελίδα του αισθητηρα  `resources/js/pages/Sensors/Show.vue` αλλα και το component του αισθητηρα `resources/js/components/SensorCard.vue`, τα οποία ενημερώνουν το UI (latest reading, recent readings) σε πραγματικό χρόνο.
+
+
+
+Κύρια components / αρχεία
+
+- [`app/Events/SensorReadingEvent.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Events/SensorReadingEvent.php) — payload με `sensor_id`, `farm_id`, `value`, `unit`, `timestamp`.
+- [`app/Services/SensorDataService.php`](https://github.com/gkalogeitonas/agronos/blob/main/app/Services/SensorDataService.php) — επεξεργασία εισερχόμενων payloads, ενημέρωση `Sensor` μοντέλου, dispatch job για InfluxDB και εκπομπή `SensorReadingEvent`.
+- [`routes/channels.php`](https://github.com/gkalogeitonas/agronos/blob/main/routes/channels.php) — policy checks για ιδιωτικά κανάλια (εξουσιοδότηση χρήστη για πρόσβαση σε `sensor.{id}` / `farm.{id}`).
+- [`resources/js/bootstrap/echo.ts`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/bootstrap/echo.ts) — αρχικοποίηση του Echo client (authToken, broadcaster, host).
+- [`resources/js/pages/Sensors/Show.vue`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/pages/Sensors/Show.vue) — σελίδα αισθητήρα (listener που ενημερώνεται σε πραγματικό χρόνο).
+- [`resources/js/components/SensorCard.vue`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/components/SensorCard.vue) — component που εγγράφεται σε per‑sensor κανάλι και εμφανίζει live την τελευταία τιμή.
+- [`config/broadcasting.php`](https://github.com/gkalogeitonas/agronos/blob/main/config/broadcasting.php) — ρύθμιση driver (reverb/pusher compatible) και connection settings.
+
+Client implementation (συνοπτικά)
+
+- Εγκαθιστούμε και ρυθμίζουμε το Echo ώστε να συνδεθεί στο Reverb websocket endpoint.
+- Οι κύριες subscriptions γίνονται σε επίπεδο αισθητήρα, π.χ. από το component `SensorCard.vue` και από τη σελίδα `Sensors/Show.vue`:
+
+- Η σελίδα `Farms/Show.vue` αυτή τη στιγμή δεν κάνει subscription στα per‑sensor channels — αντίθετα, λαμβάνει τα aggregated time‑series στατιστικά μέσω `Inertia::defer()` και εμφανίζει τις κάρτες όταν τα δεδομένα είναι διαθέσιμα.
+
+Ασφάλεια & fallback
+
+- Τα ιδιωτικά κανάλια απαιτούν authorization — οι έλεγχοι γράφονται σε `routes/channels.php` και βασίζονται στο policy του `Farm/Sensor`.
+- Όταν WebSockets δεν είναι διαθέσιμα (περιορισμοί δικτύου ή browser), υπάρχει fallback σε deferred polling: το frontend μπορεί να κάνει periodical Inertia/Fetch αίτημα για να ανακτήσει `timeSeriesStats` ή `sensorDbStats`.
+
+
 <!-- Dark inline code styling for this document -->
 <style>
 /* Dark backdrop for inline code in this document */
