@@ -159,6 +159,42 @@ class SensorReadingEvent implements ShouldBroadcast
 - Ο frontend με Laravel Echo εγγράφεται στα αντίστοιχα private κανάλια· οι  listeners  είναι  η σελίδα του αισθητηρα  `resources/js/pages/Sensors/Show.vue` αλλα και το component του αισθητηρα `resources/js/components/SensorCard.vue`, τα οποία ενημερώνουν το UI (latest reading, recent readings) σε πραγματικό χρόνο.
 
 
+Client implementation (συνοπτικά)
+
+- Εγκαθιστούμε και ρυθμίζουμε το Echo ώστε να συνδεθεί στο Reverb websocket endpoint.
+- Οι κύριες subscriptions γίνονται σε επίπεδο αισθητήρα, π.χ. από το component `SensorCard.vue` και από τη σελίδα `Sensors/Show.vue`:
+
+
+Ασφάλεια & fallback
+
+- Τα ιδιωτικά κανάλια απαιτούν authorization — οι έλεγχοι γράφονται σε `routes/channels.php` και βασίζονται στο policy του `Farm/Sensor`.
+
+
+Channels — authorization για κανάλια αισθητήρων
+
+Στο αρχείο `routes/channels.php` υλοποιείται ο έλεγχος πρόσβασης για τα ιδιωτικά κανάλια των αισθητήρων. Συγκεκριμένα, ο server ελέγχει αν ο αιτών χρήστης είναι ο ιδιοκτήτης του αισθητήρα ή αν πληροί τους όρους tenancy/μέλους του αγρού. Το σημεία κλειδί από το repository είναι διαθέσιμο στο GitHub:
+
+- [`routes/channels.php`](https://github.com/gkalogeitonas/agronos/blob/main/routes/channels.php)
+
+Ενδεικτικό απόσπασμα (απλοποιημένο):
+
+```php
+Broadcast::channel('sensor.{sensorId}', function ($user, $sensorId) {
+  $sensor = Sensor::find($sensorId);
+  if (! $sensor) return false;
+
+  // Allow if the authenticated user is the owner of the sensor
+  if ($sensor->user_id && (int) $sensor->user_id === (int) $user->id) {
+    return true;
+  }
+
+  // Fallback: extend with tenant / farm membership checks if needed
+  return false;
+});
+```
+
+Αυτό σημαίνει ότι μόνο εξουσιοδοτημένοι χρήστες βλέπουν τα δεδομένα του συγκεκριμένου αισθητήρα μέσω του WebSocket καναλιού — ένα σημαντικό κομμάτι της ασφάλειας του real‑time layer.
+
 
 Κύρια components / αρχεία
 
@@ -169,18 +205,6 @@ class SensorReadingEvent implements ShouldBroadcast
 - [`resources/js/pages/Sensors/Show.vue`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/pages/Sensors/Show.vue) — σελίδα αισθητήρα (listener που ενημερώνεται σε πραγματικό χρόνο).
 - [`resources/js/components/SensorCard.vue`](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/components/SensorCard.vue) — component που εγγράφεται σε per‑sensor κανάλι και εμφανίζει live την τελευταία τιμή.
 - [`config/broadcasting.php`](https://github.com/gkalogeitonas/agronos/blob/main/config/broadcasting.php) — ρύθμιση driver (reverb/pusher compatible) και connection settings.
-
-Client implementation (συνοπτικά)
-
-- Εγκαθιστούμε και ρυθμίζουμε το Echo ώστε να συνδεθεί στο Reverb websocket endpoint.
-- Οι κύριες subscriptions γίνονται σε επίπεδο αισθητήρα, π.χ. από το component `SensorCard.vue` και από τη σελίδα `Sensors/Show.vue`:
-
-- Η σελίδα `Farms/Show.vue` αυτή τη στιγμή δεν κάνει subscription στα per‑sensor channels — αντίθετα, λαμβάνει τα aggregated time‑series στατιστικά μέσω `Inertia::defer()` και εμφανίζει τις κάρτες όταν τα δεδομένα είναι διαθέσιμα.
-
-Ασφάλεια & fallback
-
-- Τα ιδιωτικά κανάλια απαιτούν authorization — οι έλεγχοι γράφονται σε `routes/channels.php` και βασίζονται στο policy του `Farm/Sensor`.
-- Όταν WebSockets δεν είναι διαθέσιμα (περιορισμοί δικτύου ή browser), υπάρχει fallback σε deferred polling: το frontend μπορεί να κάνει periodical Inertia/Fetch αίτημα για να ανακτήσει `timeSeriesStats` ή `sensorDbStats`.
 
 
 <!-- Dark inline code styling for this document -->
