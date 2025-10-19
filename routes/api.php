@@ -15,7 +15,7 @@ Route::prefix('v1')->group(function () {
     // Device data post route (requires auth:sanctum for device tokens)
     Route::middleware('auth:sanctum')->post('/device/data', [DeviceDataController::class, 'store']);
     // Device can request/provision MQTT credentials after authenticating
-    Route::middleware('auth:sanctum')->post('/device/mqtt-credentials', [DeviceAuthController::class, 'provisionMqttCredentials']);
+    Route::middleware('auth:sanctum')->get('/device/mqtt-credentials', [DeviceAuthController::class, 'provisionMqttCredentials']);
     // ...move other v1 API routes here as needed...
     //Route::middleware('auth:sanctum')->post('/device/mqtt-webhook', [DeviceDataController::class, 'mqttBrokerWebhook']);
     Route::post('/device/mqtt-webhook', [DeviceDataController::class, 'mqttBrokerWebhook']);

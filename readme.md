@@ -127,7 +127,40 @@ Notes:
 }
 ```
 
-See `docs/Device_registration.md`.
+
+### MQTT provisioning (how a device gets MQTT credentials)
+
+- Flow summary:
+  1. The device authenticates to the HTTP API using its UUID and secret (POST `/api/v1/device/login`) and receives a Sanctum token.
+   2. Using that token as a Bearer token the device calls the MQTT provisioning HTTP endpoint.
+     - Endpoint: GET /api/v1/device/mqtt-credentials
+  3. The server uses `App\Services\MqttCredentialService` to ensure the device has broker credentials. If none exist, the service creates an EMQX user (via `EmqxService`), stores `mqtt_username` and `mqtt_password` on the `devices` table and returns the credentials to the device.
+
+- Important details:
+  - The returned payload includes `mqtt_broker_url` (from `config('services.emqx.url')`), `username`, `password` and `created` (boolean indicating whether new credentials were created).
+  - When credentials already exist for the device the service returns them again and sets `created: false`.
+  - By default the implementation sets the MQTT username to the device UUID and generates a random password (see `MqttCredentialService::createCredentials`).
+
+- Example (device side):
+
+  - After login, include the token in the Authorization header and call the provisioning endpoint (device must be authenticated):
+
+    Authorization: Bearer <token>
+
+  - Example JSON response from the provisioning call:
+
+    {
+      "mqtt_broker_url": "https://emqx.local",
+      "username": "device-uuid-string",
+      "password": "0123ab...",
+      "created": true
+    }
+
+- Notes for operators / backend:
+  - The EMQX broker URL and API settings are configured under `services.emqx.*` in your config/env.
+  - The server-side implementation is idempotent: calling the provision endpoint multiple times will return the same credentials unless they are missing and need creation.
+  - Ensure the EMQX admin API (used by `EmqxService`) is reachable from the Laravel app and that any required API credentials are set in `.env`/`config/services.php`.
+
 
 ### Device firmware repository
 
