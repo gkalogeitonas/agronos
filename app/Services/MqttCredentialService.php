@@ -15,6 +15,7 @@ class MqttCredentialService
     {
         if ($device->mqtt_username && $device->mqtt_password) {
             return [
+                'mqtt_broker_url' => config('services.emqx.url', '/'),
                 'username' => $device->mqtt_username,
                 'password' => $device->mqtt_password,
                 'created' => false,
@@ -34,6 +35,7 @@ class MqttCredentialService
         ]);
 
         return [
+            'mqtt_broker_url' => config('services.emqx.url', '/'),
             'username' => $username,
             'password' => $password,
             'created' => true,
