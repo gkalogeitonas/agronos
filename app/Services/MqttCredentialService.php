@@ -41,24 +41,4 @@ class MqttCredentialService
             'created' => true,
         ];
     }
-
-    public function rotateCredentials(Device $device): array
-    {
-        $username = $device->mqtt_username ?: $device->uuid;
-        $password = bin2hex(random_bytes(16));
-
-        // update EMQX password
-        app('emqx')->updateUserPassword($username, $password);
-
-        $device->update([
-            'mqtt_username' => $username,
-            'mqtt_password' => $password,
-        ]);
-
-        return [
-            'username' => $username,
-            'password' => $password,
-            'rotated' => true,
-        ];
-    }
 }
