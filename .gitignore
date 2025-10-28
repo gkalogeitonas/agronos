@@ -30,3 +30,4 @@ docker/coap-proxy/node_modules/*
 # EMQX API key bootstrap file (generated from .env)
 docker/emqx/default_api_key.conf
 docs/test.md
+docs/report2.pdf
