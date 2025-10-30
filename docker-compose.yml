@@ -189,17 +189,20 @@ services:
       - ./docker/emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
     networks:
       - agronos_net
+      - proxy
     labels:
       - "traefik.enable=true"
       # MQTT Dashboard
       - "traefik.http.routers.emqx-dashboard.rule=Host(`mqtt.kalogeitonas.xyz`)"
       - "traefik.http.routers.emqx-dashboard.entrypoints=websecure"
       - "traefik.http.routers.emqx-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.emqx-dashboard.service=emqx-dashboard"
       - "traefik.http.services.emqx-dashboard.loadbalancer.server.port=18083"
       # MQTT WebSocket
       - "traefik.http.routers.emqx-ws.rule=Host(`mqtt-ws.kalogeitonas.xyz`)"
       - "traefik.http.routers.emqx-ws.entrypoints=websecure"
       - "traefik.http.routers.emqx-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.emqx-ws.service=emqx-ws"
       - "traefik.http.services.emqx-ws.loadbalancer.server.port=8083"
 
 networks:
