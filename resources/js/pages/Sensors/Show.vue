@@ -41,7 +41,7 @@
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-muted-foreground">Device UUID</h3>
-                            <p class="font-mono break-all">{{ sensor.device?.uuid || '—' }}</p>
+                            <p class="font-mono break-all"><Link :href="route('devices.show', sensor.device?.id)">{{ sensor.device?.uuid || '—' }}</Link></p>
                         </div>
                         <div>
                             <h3 class="text-sm font-medium text-muted-foreground">Sensor type</h3>
