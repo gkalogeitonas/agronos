@@ -13,7 +13,7 @@
         <div class="flex flex-col items-end gap-2 min-w-[120px]">
           <span class="text-sm text-muted-foreground">Type: {{ sensor.type }}</span>
           <span class="text-xs text-muted-foreground">Lat: {{ sensor.lat }}, Lon: {{ sensor.lon }}</span>
-          <span class="text-xs text-muted-foreground mt-2">Last seen: {{ lastSeen ? lastSeen : 'Never' }}</span>
+          <span class="text-xs text-muted-foreground mt-2">Last seen: {{ lastSeen ? formatTimestamp(lastSeen) : 'Never' }}</span>
           <span class="text-base font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded shadow-sm mt-1">
             Last value: {{ lastReading !== undefined && lastReading !== null ? lastReading : '—' }}
           </span>
@@ -29,6 +29,9 @@ import { Link } from '@inertiajs/vue3';
 import type { Sensor } from '@/types/sensor';
 import { ref, watch } from 'vue';
 import { useEcho } from '@laravel/echo-vue';
+import { useTimestamp } from '@/composables/useTimestamp';
+
+const { formatTimestamp } = useTimestamp();
 
 
 
