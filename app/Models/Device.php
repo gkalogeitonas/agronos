@@ -35,4 +35,10 @@ class Device extends Authenticatable
     {
         return $this->belongsTo(User::class);
     }
+
+    public function sensors()
+    {
+        // Return a simplified array of sensors for frontend consumption
+        return $this->hasMany(Sensor::class);
+    }
 }

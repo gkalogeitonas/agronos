@@ -62,8 +62,12 @@ class DeviceController extends Controller
     public function show(Device $device)
     {
         $this->authorize('view', $device);
+
+        $sensors = $device->sensors()->get();
+
         return Inertia::render('Devices/Show', [
             'device' => $device,
+            'sensors' => $sensors,
         ]);
     }
 

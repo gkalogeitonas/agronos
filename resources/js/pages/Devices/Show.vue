@@ -4,10 +4,12 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import SensorCard from '@/components/SensorCard.vue';
 import { computed } from 'vue';
 
 const page = usePage();
 const device = computed(() => page.props.device);
+const sensors = computed<any[]>(() => (page.props as any).sensors ?? []);
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
@@ -56,6 +58,18 @@ const breadcrumbs: BreadcrumbItem[] = [
           </div>
         </div>
       </Card>
+        <Card class="mb-6">
+            <CardHeader>
+                <CardTitle>Sensors</CardTitle>
+                <CardDescription>All sensors registered to this device</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div v-if="sensors.length === 0" class="text-muted-foreground">No sensors found for this device.</div>
+                <div v-else class="grid grid-cols-1 gap-4">
+                    <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
+                </div>
+            </CardContent>
+        </Card>
      <Link :href="route('devices.index')">
         <Button variant="outline">Back to List</Button>
      </Link>
