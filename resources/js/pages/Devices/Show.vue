@@ -5,11 +5,13 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SensorCard from '@/components/SensorCard.vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const page = usePage();
-const device = computed(() => page.props.device);
+const device = computed<any>(() => (page.props as any).device);
 const sensors = computed<any[]>(() => (page.props as any).sensors ?? []);
+const showMqtt = ref(false);
+const toggleMqtt = () => { showMqtt.value = !showMqtt.value; };
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -48,13 +50,25 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <div class="text-xs text-muted-foreground">Last Seen</div>
                             <div>{{ device.last_seen_at || 'Never' }}</div>
                         </div>
+                    </div>
+                </div>
+            </Card>
+            <Card class="mt-2">
+                <CardHeader class="flex items-center justify-between bg-muted/10">
+                    <CardDescription class="text-lg font-semibold">MQTT Credentials</CardDescription>
+                    <div class="flex items-center gap-2">
+                        <Button variant="outline" @click="toggleMqtt">{{ showMqtt ? 'Hide' : 'Show' }}</Button>
+                    </div>
+                </CardHeader>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <div class="text-xs text-muted-foreground">Battery Level</div>
-                            <div>{{ device.battery_level !== null ? device.battery_level + '%' : 'N/A' }}</div>
+                            <div class="text-xs text-muted-foreground">Username</div>
+                            <div class="font-mono text-sm">{{ device.mqtt_username ?? 'N/A' }}</div>
                         </div>
                         <div>
-                            <div class="text-xs text-muted-foreground">Signal Strength</div>
-                            <div>{{ device.signal_strength !== null ? device.signal_strength : 'N/A' }}</div>
+                            <div class="text-xs text-muted-foreground">Password</div>
+                            <div class="font-mono text-sm">{{ device.mqtt_password ? (showMqtt ? device.mqtt_password : '•'.repeat(8)) : 'N/A' }}</div>
                         </div>
                     </div>
                 </div>
