@@ -22,8 +22,9 @@ it('creates mqtt credentials on first request and returns created=true', functio
     });
 
     $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-        ->postJson('/api/v1/device/mqtt-credentials');
+        ->getJson('/api/v1/device/mqtt-credentials');
 
+    //dd($response->json());
     $response->assertStatus(200)->assertJson(['created' => true]);
     $device->refresh();
     expect($device->mqtt_username)->toBe('device-abc');
@@ -41,7 +42,7 @@ it('returns existing creds and created=false on subsequent calls', function () {
     $token = $device->createToken('device-token')->plainTextToken;
 
     $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-        ->postJson('/api/v1/device/mqtt-credentials');
+        ->getJson('/api/v1/device/mqtt-credentials');
 
     $response->assertStatus(200)->assertJson(['created' => false, 'username' => 'device-xyz']);
 });
