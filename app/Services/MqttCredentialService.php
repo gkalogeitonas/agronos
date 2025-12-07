@@ -26,8 +26,28 @@ class MqttCredentialService
         $password = bin2hex(random_bytes(16));
 
 
-        $emqx = new EmqxService();
-        $emqx->createUser($username, $password);
+        // Resolve EmqxService from the container so it can be mocked in tests
+        $emqx = app(EmqxService::class);
+
+        try {
+            $result = $emqx->createUser($username, $password);
+        } catch (\Throwable $e) {
+            // Broker unreachable or other error: do not create credentials
+            return [
+                'mqtt_broker_url' => config('services.emqx.url', '/'),
+                'created' => false,
+                'error' => 'emqx_unavailable',
+            ];
+        }
+
+        // EmqxService returns an array with 'status' on failure; treat that as failure
+        if (is_array($result) && array_key_exists('status', $result)) {
+            return [
+                'mqtt_broker_url' => config('services.emqx.url', '/'),
+                'created' => false,
+                'error' => 'emqx_unavailable',
+            ];
+        }
 
         $device->update([
             'mqtt_username' => $username,

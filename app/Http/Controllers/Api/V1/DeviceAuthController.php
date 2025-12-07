@@ -42,6 +42,10 @@ class DeviceAuthController extends Controller
 
         $creds = $svc->createCredentials($device);
 
+        if (isset($creds['error'])) {
+            return response()->json($creds, 503);
+        }
+
         return response()->json($creds, 200);
     }
 }

@@ -14,11 +14,9 @@ it('creates mqtt credentials on first request and returns created=true', functio
 
     $token = $device->createToken('device-token')->plainTextToken;
 
-    // mock emqx app binding
-    app()->bind('emqx', function () {
-        return new class {
-            public function createUser($u, $p) { return true; }
-        };
+    // mock EmqxService in the container
+    app()->instance(\App\Services\EmqxService::class, new class {
+        public function createUser($u, $p) { return true; }
     });
 
     $response = $this->withHeader('Authorization', 'Bearer ' . $token)
@@ -45,4 +43,30 @@ it('returns existing creds and created=false on subsequent calls', function () {
         ->getJson('/api/v1/device/mqtt-credentials');
 
     $response->assertStatus(200)->assertJson(['created' => false, 'username' => 'device-xyz']);
+});
+
+it('does not create credentials when broker is offline and returns no error', function () {
+    $device = Device::factory()->create([
+        'uuid' => 'device-offline',
+        'status' => DeviceStatus::OFFLINE,
+    ]);
+
+    $token = $device->createToken('device-token')->plainTextToken;
+
+    // Mock EmqxService in the container to simulate broker failure
+    app()->instance(\App\Services\EmqxService::class, new class {
+        public function createUser($u, $p)
+        {
+            return ['status' => 500, 'body' => 'service unavailable'];
+        }
+    });
+
+    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        ->getJson('/api/v1/device/mqtt-credentials');
+
+    $response->assertStatus(503)->assertJson(['created' => false]);
+
+    $device->refresh();
+    expect($device->mqtt_username)->toBeNull();
+    expect($device->mqtt_password)->toBeNull();
 });
