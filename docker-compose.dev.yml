@@ -11,26 +11,3 @@ services:
       timeout: 2s
       retries: 12
 
-  # ensure EMQX is available in dev and exposed to host (does not set container_name
-  # to avoid conflicts with production naming)
-  emqx:
-    image: emqx/emqx:5.7.0
-    ports:
-      - "1883:1883"
-      - "8883:8883"
-      - "8083:8083"
-      - "8084:8084"
-      - "18083:18083"
-    environment:
-      EMQX_DASHBOARD__DEFAULT_USERNAME: ${MQTT_DASHBOARD_USERNAME:-admin}
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:-agronos123}
-    volumes:
-      - emqx_data:/opt/emqx/data
-      - emqx_log:/opt/emqx/log
-      - emqx_etc:/opt/emqx/etc
-
-volumes:
-  emqx_data:
-  emqx_log:
-  emqx_etc:
-
