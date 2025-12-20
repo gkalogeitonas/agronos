@@ -1,8 +1,7 @@
-version: "3.8"
-
 services:
   # publish DB port so host processes (php artisan, etc.) can connect
   db:
+    image: mysql:8
     ports:
       - "3306:3306"
     healthcheck:
@@ -10,4 +9,18 @@ services:
       interval: 5s
       timeout: 2s
       retries: 12
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: agronos_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "8081:80"
+    # Use the default Compose network in local dev (no explicit network required)
 
