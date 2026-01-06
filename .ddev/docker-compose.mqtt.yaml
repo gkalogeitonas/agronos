@@ -1,5 +1,4 @@
 # Custom EMQX MQTT service for DDEV
-version: '3.6'
 services:
   mqtt:
     container_name: ddev-${DDEV_SITENAME}-mqtt
