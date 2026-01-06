@@ -31,3 +31,4 @@ docker/coap-proxy/node_modules/*
 docker/emqx/default_api_key.conf
 docs/test.md
 docs/report2.pdf
+backups/agronos_2026-01-06.sql
