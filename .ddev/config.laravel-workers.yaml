@@ -1,0 +1,6 @@
+# Custom Laravel Workers for Agronos
+ddev_version_constraint: '>=v1.23.0'
+web_extra_daemons:
+  - name: "queue-sensor"
+    command: '/usr/bin/php /var/www/html/artisan queue:listen --queue=sensor-data,default --sleep=3 --tries=3'
+    directory: /var/www/html
