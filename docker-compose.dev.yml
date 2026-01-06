@@ -17,10 +17,14 @@ services:
     depends_on:
       - db
     environment:
-      PMA_HOST: db
+      # connect to the published DB port on the Docker host so no custom network is required
+      PMA_HOST: host.docker.internal
       PMA_PORT: 3306
       UPLOAD_LIMIT: 300M
     ports:
       - "8081:80"
+    extra_hosts:
+      # allow the container to resolve host.docker.internal to the host gateway
+      - "host.docker.internal:host-gateway"
     # Use the default Compose network in local dev (no explicit network required)
 
