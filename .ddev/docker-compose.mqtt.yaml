@@ -1,0 +1,39 @@
+# Custom EMQX MQTT service for DDEV
+version: '3.6'
+services:
+  mqtt:
+    container_name: ddev-${DDEV_SITENAME}-mqtt
+    image: emqx/emqx:5.7.0
+    restart: "no"
+    environment:
+      - EMQX_NAME=emqx
+      - EMQX_HOST=127.0.0.1
+      - EMQX_DASHBOARD__DEFAULT_USERNAME=${MQTT_DASHBOARD_USERNAME:-admin}
+      - EMQX_DASHBOARD__DEFAULT_PASSWORD=${MQTT_DASHBOARD_PASSWORD:-agronos123}
+      - EMQX_API_KEY__BOOTSTRAP_FILE=etc/default_api_key.conf
+      - EMQX_AUTHENTICATION__1__MECHANISM=password_based
+      - EMQX_AUTHENTICATION__1__BACKEND=built_in_database
+      - EMQX_LOG__CONSOLE__LEVEL=info
+      - EMQX_LOG__FILE__LEVEL=info
+    volumes:
+      - "../docker/emqx/default_api_key.conf:/opt/emqx/etc/default_api_key.conf:ro"
+      - "../docker/emqx/acl.conf:/opt/emqx/etc/acl.conf:ro"
+      - "mqtt_data:/opt/emqx/data"
+      - "mqtt_log:/opt/emqx/log"
+      - "mqtt_etc:/opt/emqx/etc"
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+      - "8083:8083"
+      - "8084:8084"
+      - "18083:18083"
+    external_links:
+      - "mqtt:mqtt"
+
+volumes:
+  mqtt_data:
+  mqtt_log:
+  mqtt_etc:
