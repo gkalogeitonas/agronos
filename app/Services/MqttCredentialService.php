@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Device;
 use App\Services\EmqxService;
+use Illuminate\Support\Facades\Log;
 
 class MqttCredentialService
 {
@@ -32,6 +33,11 @@ class MqttCredentialService
         try {
             $result = $emqx->createUser($username, $password);
         } catch (\Throwable $e) {
+            Log::error('MQTT credential creation failed: EMQX service error', [
+                'device_id' => $device->id,
+                'device_uuid' => $device->uuid,
+                'error' => $e->getMessage(),
+            ]);
             // Broker unreachable or other error: do not create credentials
             return [
                 'mqtt_broker_url' => config('services.emqx.url', '/'),
@@ -42,6 +48,11 @@ class MqttCredentialService
 
         // EmqxService returns an array with 'status' on failure; treat that as failure
         if (is_array($result) && array_key_exists('status', $result)) {
+            Log::error('MQTT credential creation failed: EMQX returned error response', [
+                'device_id' => $device->id,
+                'device_uuid' => $device->uuid,
+                'emqx_response' => $result,
+            ]);
             return [
                 'mqtt_broker_url' => config('services.emqx.url', '/'),
                 'created' => false,
