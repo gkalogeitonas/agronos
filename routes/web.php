@@ -69,6 +69,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/devices', [DeviceController::class, 'store'])
         ->name('devices.store');
 
+    // Create MQTT credentials for a device
+    Route::post('/devices/{device}/mqtt-credentials', [DeviceController::class, 'createMqttCredentials'])
+        ->name('devices.mqtt.create');
+
     Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])
         ->name('devices.destroy');
 });

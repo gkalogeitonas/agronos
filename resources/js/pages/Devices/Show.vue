@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage, useForm } from '@inertiajs/vue3';
 import { Card, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SensorCard from '@/components/SensorCard.vue';
@@ -12,6 +12,14 @@ const device = computed<any>(() => (page.props as any).device);
 const sensors = computed<any[]>(() => (page.props as any).sensors ?? []);
 const showMqtt = ref(false);
 const toggleMqtt = () => { showMqtt.value = !showMqtt.value; };
+
+const hasMqttCredentials = computed<boolean>(() => {
+    return Boolean(device.value?.mqtt_username || device.value?.mqtt_password);
+});
+
+const mqttCredentials = computed<any>(() => (page.props as any).mqtt_credentials ?? null);
+const form = useForm();
+const createMqtt = () => { form.post(route('devices.mqtt.create', device.value.id)); };
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -37,7 +45,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <CardDescription class="text-lg font-semibold">{{ device.name }}</CardDescription>
                     </div>
                     <div class="flex flex-col items-end gap-2 min-w-[120px]">
-                        <span :class="statusClass(device.status)">{{ device.status }}</span>
+                        <span class="device-status" :class="device.status">{{ device.status }}</span>
                     </div>
                 </CardHeader>
                 <div class="p-6">
@@ -53,7 +61,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
             </Card>
-            <Card class="mt-2">
+            <Card v-if="hasMqttCredentials && !(mqttCredentials && mqttCredentials.created)" class="mt-2">
                 <CardHeader class="flex items-center justify-between bg-muted/10">
                     <CardDescription class="text-lg font-semibold">MQTT Credentials</CardDescription>
                     <div class="flex items-center gap-2">
@@ -72,6 +80,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
                 </div>
+            </Card>
+            <Card v-if="!hasMqttCredentials" class="mt-2">
+                <CardHeader>
+                    <CardTitle>MQTT Credentials</CardTitle>
+                    <CardDescription>No MQTT credentials are set for this device.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div class="text-right text-sm text-muted-foreground p-4">
+                        <Button variant="outline" @click="createMqtt">Set MQTT Credentials</Button>
+                    </div>
+                </CardContent>
             </Card>
             <Card class="mb-6">
                 <CardHeader>
@@ -93,25 +112,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     </AppLayout>
 </template>
 
-<script lang="ts">
-export default {
-    methods: {
-        statusClass(status: string) {
-            switch (status) {
-                case 'registered':
-                    return 'text-green-600 font-semibold';
-                case 'inactive':
-                    return 'text-gray-400';
-                case 'error':
-                    return 'text-red-600 font-semibold';
-                case 'online':
-                    return 'text-blue-600 font-semibold';
-                case 'offline':
-                    return 'text-gray-400 font-semibold';
-                default:
-                    return '';
-            }
-        },
-    },
-};
-</script>
+<style scoped lang="postcss">
+.device-status.registered { color: #16a34a; font-weight: 600; }
+.device-status.inactive,
+.device-status.offline { color: #9ca3af; font-weight: 600; }
+.device-status.error { color: #dc2626; font-weight: 600; }
+.device-status.online { color: #2563eb; font-weight: 600; }
+</style>

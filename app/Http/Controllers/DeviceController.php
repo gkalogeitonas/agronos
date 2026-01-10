@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Requests\RegisterDeviceRequest;
 use App\Enums\DeviceType;
 use Illuminate\Support\Facades\Hash;
+use App\Services\MqttCredentialService;
 
 class DeviceController extends Controller
 {
@@ -70,6 +71,19 @@ class DeviceController extends Controller
             'sensors' => $sensors,
         ]);
     }
+
+        /**
+         * Ensure MQTT credentials exist for the given device and return them via flash.
+         */
+        public function createMqttCredentials(Device $device)
+        {
+            $this->authorize('update', $device);
+
+            $service = app(MqttCredentialService::class);
+            $result = $service->createCredentials($device);
+
+            return redirect()->route('devices.show', $device)->with('mqtt_credentials', $result);
+        }
 
     /**
      * Show the form for editing the specified resource.
