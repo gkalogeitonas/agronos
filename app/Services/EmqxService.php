@@ -24,7 +24,16 @@ class EmqxService
         $this->authId = config('services.emqx.authenticator_id');
 
         // Basic auth credentials for management API (use app_id/app_secret names from config/services.php)
-        $this->http = Http::withBasicAuth(config('services.emqx.api_key'), config('services.emqx.secret_key'))
+        $apiKey = config('services.emqx.api_key');
+        $secretKey = config('services.emqx.secret_key');
+        
+        Log::info('EMQX Service initialized', [
+            'api_key' => $apiKey,
+            'secret_key_length' => $secretKey ? strlen($secretKey) : 0,
+            'secret_key_preview' => $secretKey ? substr($secretKey, 0, 10) . '...' : 'null',
+        ]);
+        
+        $this->http = Http::withBasicAuth($apiKey, $secretKey)
                 ->acceptJson();
     }
 
