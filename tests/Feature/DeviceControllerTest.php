@@ -4,9 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Device;
 use App\Models\User;
-use App\Services\MqttCredentialService;
+use App\Services\EmqxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
@@ -16,17 +15,13 @@ describe('DeviceController@createMqttCredentials', function () {
         $user = User::factory()->create();
         $device = Device::factory()->create(['user_id' => $user->id]);
 
-        $mockService = \Mockery::mock(MqttCredentialService::class);
-        $mockService->shouldReceive('createCredentials')
+        $mockEmqx = \Mockery::mock(EmqxService::class);
+        $mockEmqx->shouldReceive('createUser')
             ->once()
-            ->andReturn([
-                'mqtt_broker_url' => 'mqtt://broker.local',
-                'username' => $device->uuid,
-                'password' => 'test-password',
-                'created' => true,
-            ]);
+            ->with($device->uuid, \Mockery::type('string'))
+            ->andReturn(['user_id' => $device->uuid]);
 
-        $this->app->instance(MqttCredentialService::class, $mockService);
+        $this->app->instance(EmqxService::class, $mockEmqx);
 
         $response = $this->actingAs($user)
             ->post(route('devices.mqtt.create', $device));
@@ -37,6 +32,16 @@ describe('DeviceController@createMqttCredentials', function () {
                 && $credentials['username'] !== null
                 && $credentials['password'] !== null;
         });
+
+        $device->refresh();
+        expect($device->mqtt_username)->toBe($device->uuid);
+        expect($device->mqtt_password)->not->toBeNull();
+        //assert also database has the updated credentials
+        $this->assertDatabaseHas('devices', [
+            'id' => $device->id,
+            'mqtt_username' => $device->uuid,
+            'mqtt_password' => $device->mqtt_password,
+        ]);
     });
 
     it('returns existing credentials without creating new ones', function () {
@@ -47,47 +52,47 @@ describe('DeviceController@createMqttCredentials', function () {
             'mqtt_password' => 'existing-pass',
         ]);
 
-        $mockService = \Mockery::mock(MqttCredentialService::class);
-        $mockService->shouldReceive('createCredentials')
-            ->once()
-            ->andReturn([
-                'mqtt_broker_url' => 'mqtt://broker.local',
-                'username' => 'existing-user',
-                'password' => 'existing-pass',
-                'created' => false,
-            ]);
+        $mockEmqx = \Mockery::mock(EmqxService::class);
+        $mockEmqx->shouldNotReceive('createUser');
 
-        $this->app->instance(MqttCredentialService::class, $mockService);
+        $this->app->instance(EmqxService::class, $mockEmqx);
 
         $response = $this->actingAs($user)
             ->post(route('devices.mqtt.create', $device));
 
         $response->assertSessionHas('mqtt_credentials', function ($credentials) {
-            return $credentials['created'] === false;
+            return $credentials['created'] === false
+                && $credentials['username'] === 'existing-user'
+                && $credentials['password'] === 'existing-pass';
         });
     });
 
-    it('flashes error when emqx is unavailable', function () {
+
+    it('flashes error when emqx returns error response', function () {
         $user = User::factory()->create();
         $device = Device::factory()->create(['user_id' => $user->id]);
 
-        $mockService = \Mockery::mock(MqttCredentialService::class);
-        $mockService->shouldReceive('createCredentials')
+        $mockEmqx = \Mockery::mock(EmqxService::class);
+        $mockEmqx->shouldReceive('createUser')
             ->once()
             ->andReturn([
-                'mqtt_broker_url' => 'mqtt://broker.local',
-                'created' => false,
-                'error' => 'emqx_unavailable',
+                'status' => 400,
+                'body' => 'Bad request',
             ]);
 
-        $this->app->instance(MqttCredentialService::class, $mockService);
+        $this->app->instance(EmqxService::class, $mockEmqx);
 
         $response = $this->actingAs($user)
             ->post(route('devices.mqtt.create', $device));
 
         $response->assertSessionHas('mqtt_credentials', function ($credentials) {
-            return $credentials['error'] === 'emqx_unavailable';
+            return $credentials['created'] === false
+                && $credentials['error'] === 'emqx_unavailable';
         });
+
+        $device->refresh();
+        expect($device->mqtt_username)->toBeNull();
+        expect($device->mqtt_password)->toBeNull();
     });
 
     it('requires authentication', function () {
