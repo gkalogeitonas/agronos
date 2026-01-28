@@ -8,6 +8,7 @@ enum SensorType: string
     case TEMPERATURE = 'temperature';
     case HUMIDITY = 'humidity';
     case LIGHT = 'light';
+    case BATTERY = 'battery';
     case OTHER = 'other';
 
     public static function values(): array
@@ -22,6 +23,7 @@ enum SensorType: string
             self::TEMPERATURE->value => 'Temperature',
             self::HUMIDITY->value => 'Humidity',
             self::LIGHT->value => 'Light',
+            self::BATTERY->value => 'Battery',
             self::OTHER->value => 'Other',
         ];
     }
@@ -33,6 +35,7 @@ enum SensorType: string
             self::TEMPERATURE => '°C',
             self::HUMIDITY => '%',
             self::LIGHT => 'lux',
+            self::BATTERY => '%',
             self::OTHER => '',
         };
     }
