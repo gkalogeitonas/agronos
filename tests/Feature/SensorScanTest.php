@@ -3,10 +3,10 @@
 use App\Models\Device;
 use App\Models\Sensor;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\postJson;
 use function Pest\Laravel\get;
+use function Pest\Laravel\postJson;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -40,7 +40,7 @@ it('updates an existing sensor on repeated scan', function () {
     $payload = [
         'device_uuid' => $this->device->uuid,
         'uuid' => 'test-uuid-123',
-        'lat' => 99.9999999,
+        'lat' => 89.9999999,
         'lon' => 88.8888888,
         'type' => 'humidity',
         'name' => 'Updated Name',
@@ -50,7 +50,7 @@ it('updates an existing sensor on repeated scan', function () {
     $this->assertDatabaseHas('sensors', [
         'uuid' => 'test-uuid-123',
         'device_id' => $this->device->id,
-        'lat' => 99.9999999,
+        'lat' => 89.9999999,
         'lon' => 88.8888888,
         'type' => 'humidity',
         'name' => 'Updated Name',
@@ -73,7 +73,7 @@ it('cannot update another user\'s sensor by scanning', function () {
     $payload = [
         'device_uuid' => $otherDevice->uuid,
         'uuid' => 'other-uuid-123',
-        'lat' => 99.9999999,
+        'lat' => 89.9999999,
         'lon' => 88.8888888,
         'type' => 'humidity',
         'name' => 'Hacked Name',
@@ -82,7 +82,7 @@ it('cannot update another user\'s sensor by scanning', function () {
     $response->assertStatus(404);
     $this->assertDatabaseMissing('sensors', [
         'id' => $sensor->id,
-        'lat' => 99.9999999,
+        'lat' => 89.9999999,
         'lon' => 88.8888888,
         'type' => 'humidity',
         'name' => 'Hacked Name',
@@ -126,7 +126,7 @@ it('cannot create a sensor by scanning with a device that does not belong to the
     $response = postJson(route('sensors.scan'), $payload);
     $this->assertTrue(
         in_array($response->status(), [403, 404]),
-        'Expected 403 Forbidden or 404 Not Found, got ' . $response->status()
+        'Expected 403 Forbidden or 404 Not Found, got '.$response->status()
     );
     $this->assertDatabaseMissing('sensors', ['uuid' => 'scan-wrong-owner-device']);
 });

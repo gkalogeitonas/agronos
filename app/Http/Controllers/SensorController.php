@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Sensor;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use App\Models\Farm;
-use App\Services\TimeSeries\SensorTimeSeriesService;
+use App\Http\Requests\ScanSensorRequest;
+use App\Http\Requests\StoreSensorRequest;
+use App\Http\Requests\UpdateSensorRequest;
 use App\Http\Resources\SensorResource;
-
+use App\Models\Farm;
+use App\Models\Sensor;
+use App\Services\TimeSeries\SensorTimeSeriesService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Inertia\Inertia;
 
 class SensorController extends Controller
 {
@@ -23,6 +24,7 @@ class SensorController extends Controller
         $this->authorize('viewAny', Sensor::class);
         $sensors = request()->user()->sensors;
         $farms = request()->user()->farms;
+
         return Inertia::render('Sensors/Index', [
             'sensors' => $sensors,
             'farms' => $farms,
@@ -36,6 +38,7 @@ class SensorController extends Controller
     {
         $this->authorize('create', Sensor::class);
         $farms = request()->user()->farms;
+
         return Inertia::render('Sensors/Create', [
             'farms' => $farms,
             'selectedFarm' => $farm,
@@ -45,22 +48,13 @@ class SensorController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreSensorRequest $request)
     {
         $this->authorize('create', Sensor::class);
-        $validated = $request->validate([
-            'device_uuid' => 'required|exists:devices,uuid',
-            'uuid' => 'required|string|unique:sensors,uuid',
-            'farm_id' => 'nullable|exists:farms,id',
-            'lat' => 'nullable|numeric',
-            'lon' => 'nullable|numeric',
-            'type' => 'nullable|string',
-            'name' => 'nullable|string'
-        ]);
-
+        $validated = $request->validated();
 
         $device = \App\Models\Device::where('uuid', $validated['device_uuid'])
-                   ->firstOrFail();
+            ->firstOrFail();
         $this->authorize('view', $device); // This uses DevicePolicy
 
         $sensor = Sensor::create(
@@ -72,6 +66,7 @@ class SensorController extends Controller
                 'device_id' => $device->id,
             ]
         );
+
         return redirect()->route('sensors.index');
     }
 
@@ -87,7 +82,8 @@ class SensorController extends Controller
         $ts = app(SensorTimeSeriesService::class);
         $recent = $ts->recentReadings($sensor->id, '-7d', 20);
         $statsArr = $ts->stats($sensor->id, '-24h');
-        //dd($sensor, new SensorResource($sensor));
+
+        // dd($sensor, new SensorResource($sensor));
         return Inertia::render('Sensors/Show', [
             'sensor' => (new SensorResource($sensor))->flat(request()),
             'recentReadings' => $recent,
@@ -103,6 +99,7 @@ class SensorController extends Controller
         $this->authorize('update', $sensor);
         $sensor->load(['farm', 'device']);
         $farms = request()->user()->farms;
+
         return Inertia::render('Sensors/Edit', [
             'sensor' => $sensor,
             'farms' => $farms,
@@ -112,15 +109,10 @@ class SensorController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Sensor $sensor)
+    public function update(UpdateSensorRequest $request, Sensor $sensor)
     {
         $this->authorize('update', $sensor);
-        $validated = $request->validate([
-            'name' => 'nullable|string',
-            'farm_id' => 'nullable|exists:farms,id',
-            'lat' => 'nullable|numeric',
-            'lon' => 'nullable|numeric',
-        ]);
+        $validated = $request->validated();
 
         $sensor->update($validated);
 
@@ -134,22 +126,16 @@ class SensorController extends Controller
     {
         $this->authorize('delete', $sensor);
         $sensor->delete();
+
         return redirect()->route('sensors.index');
     }
 
     /**
      * Scan or add a sensor by QR code (uuid). If the sensor exists, update it; otherwise, create it.
      */
-    public function scan(Request $request)
+    public function scan(ScanSensorRequest $request)
     {
-        $validated = $request->validate([
-            'uuid'        => 'required|string',
-            'device_uuid' => 'required|exists:devices,uuid',
-            'lat'         => 'nullable|numeric',
-            'lon'         => 'nullable|numeric',
-            'type'        => 'nullable|string',
-            'name'        => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $device = \App\Models\Device::where('uuid', $validated['device_uuid'])->firstOrFail();
         $sensor = Sensor::where('uuid', $validated['uuid'])->first();
@@ -158,10 +144,23 @@ class SensorController extends Controller
         if ($sensor) {
             // Update sensor, but never update device_id or user_id from scan
             $sensor->update(collect($validated)->except(['device_uuid', 'uuid'])->toArray());
+
             return redirect()->route('sensors.index');
         } else {
-            // Create sensor, pass device_id and user_id
-            return $this->store($request);
+            // Create sensor, ensure user can create
+            $this->authorize('create', Sensor::class);
+
+            $sensor = Sensor::create(
+                collect($validated)
+                    ->except('device_uuid')
+                    ->toArray()
+                + [
+                    'user_id' => $request->user()->id,
+                    'device_id' => $device->id,
+                ]
+            );
+
+            return redirect()->route('sensors.index');
         }
     }
 }
