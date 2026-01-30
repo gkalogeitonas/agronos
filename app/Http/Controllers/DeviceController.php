@@ -2,24 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Device;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use App\Http\Requests\RegisterDeviceRequest;
 use App\Enums\DeviceType;
-use Illuminate\Support\Facades\Hash;
+use App\Http\Requests\RegisterDeviceRequest;
+use App\Models\Device;
 use App\Services\MqttCredentialService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
 
 class DeviceController extends Controller
 {
     use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
         $devices = Device::all();
+
         return Inertia::render('Devices/Index', [
             'devices' => $devices,
         ]);
@@ -31,7 +33,7 @@ class DeviceController extends Controller
     public function create()
     {
         return Inertia::render('Devices/Create', [
-            'deviceTypes' => collect(DeviceType::cases())->map(fn($type) => [
+            'deviceTypes' => collect(DeviceType::cases())->map(fn ($type) => [
                 'label' => DeviceType::labels()[$type->value],
                 'value' => $type->value,
             ])->values(),
@@ -72,18 +74,18 @@ class DeviceController extends Controller
         ]);
     }
 
-        /**
-         * Ensure MQTT credentials exist for the given device and return them via flash.
-         */
-        public function createMqttCredentials(Device $device)
-        {
-            $this->authorize('update', $device);
+    /**
+     * Ensure MQTT credentials exist for the given device and return them via flash.
+     */
+    public function createMqttCredentials(Device $device)
+    {
+        $this->authorize('update', $device);
 
-            $service = app(MqttCredentialService::class);
-            $result = $service->createCredentials($device);
+        $service = app(MqttCredentialService::class);
+        $result = $service->createCredentials($device);
 
-            return redirect()->route('devices.show', $device)->with('mqtt_credentials', $result);
-        }
+        return redirect()->route('devices.show', $device)->with('mqtt_credentials', $result);
+    }
 
     /**
      * Show the form for editing the specified resource.
@@ -108,6 +110,7 @@ class DeviceController extends Controller
     {
         $this->authorize('delete', $device);
         $device->delete();
+
         return redirect()->route('devices.index');
     }
 }

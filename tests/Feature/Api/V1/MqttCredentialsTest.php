@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Device;
 use App\Enums\DeviceStatus;
+use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -15,14 +15,18 @@ it('creates mqtt credentials on first request and returns created=true', functio
     $token = $device->createToken('device-token')->plainTextToken;
 
     // mock EmqxService in the container
-    app()->instance(\App\Services\EmqxService::class, new class {
-        public function createUser($u, $p) { return true; }
+    app()->instance(\App\Services\EmqxService::class, new class
+    {
+        public function createUser($u, $p)
+        {
+            return true;
+        }
     });
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->getJson('/api/v1/device/mqtt-credentials');
 
-    //dd($response->json());
+    // dd($response->json());
     $response->assertStatus(200)->assertJson(['created' => true]);
     $device->refresh();
     expect($device->mqtt_username)->toBe('device-abc');
@@ -39,7 +43,7 @@ it('returns existing creds and created=false on subsequent calls', function () {
 
     $token = $device->createToken('device-token')->plainTextToken;
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->getJson('/api/v1/device/mqtt-credentials');
 
     $response->assertStatus(200)->assertJson(['created' => false, 'username' => 'device-xyz']);
@@ -54,14 +58,15 @@ it('does not create credentials when broker is offline and returns no error', fu
     $token = $device->createToken('device-token')->plainTextToken;
 
     // Mock EmqxService in the container to simulate broker failure
-    app()->instance(\App\Services\EmqxService::class, new class {
+    app()->instance(\App\Services\EmqxService::class, new class
+    {
         public function createUser($u, $p)
         {
             return ['status' => 500, 'body' => 'service unavailable'];
         }
     });
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->getJson('/api/v1/device/mqtt-credentials');
 
     $response->assertStatus(503)->assertJson(['created' => false]);

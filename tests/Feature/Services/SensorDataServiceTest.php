@@ -1,12 +1,11 @@
 <?php
 
+use App\Events\SensorReadingEvent;
 use App\Models\Device;
 use App\Models\Sensor;
 use App\Services\InfluxDBFake;
 use App\Services\SensorDataService;
-use App\Events\SensorReadingEvent;
 use Illuminate\Support\Facades\Event;
-
 
 test('processing sensor data updates model and broadcasts reading', function () {
     Event::fake();
@@ -21,9 +20,9 @@ test('processing sensor data updates model and broadcasts reading', function () 
     ]);
 
     // Prepare a fake influx client
-    $influx = new InfluxDBFake();
+    $influx = new InfluxDBFake;
 
-    $service = new SensorDataService();
+    $service = new SensorDataService;
 
     $value = 42.5;
     $payloads = [

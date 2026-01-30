@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Enums\SensorType;
 use App\Http\Resources\SensorResource;
 use App\Models\Sensor;
-use App\Enums\SensorType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

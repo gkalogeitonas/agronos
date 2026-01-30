@@ -30,7 +30,7 @@ enum SensorType: string
 
     public function unit(): string
     {
-        return match($this) {
+        return match ($this) {
             self::MOISTURE => '%',
             self::TEMPERATURE => '°C',
             self::HUMIDITY => '%',

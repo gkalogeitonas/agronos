@@ -9,7 +9,9 @@ use InfluxDB2\Point;
 class InfluxDBService
 {
     protected $client;
+
     protected $bucket;
+
     protected $org;
 
     public function __construct()
@@ -47,7 +49,8 @@ class InfluxDBService
      */
     public function queryPipeline(string $pipeline)
     {
-        $flux = 'from(bucket: "' . $this->bucket . '")' . "\n" . ltrim($pipeline);
+        $flux = 'from(bucket: "'.$this->bucket.'")'."\n".ltrim($pipeline);
+
         return $this->query($flux);
     }
 
@@ -86,8 +89,6 @@ class InfluxDBService
         $this->client->close();
     }
 
-
-
     /**
      * Run a Flux query and return the result.
      * Use this for queries that return data.
@@ -98,6 +99,7 @@ class InfluxDBService
     public function query(string $flux)
     {
         $queryApi = $this->client->createQueryApi();
+
         return $queryApi->query($flux, $this->org);
     }
 }

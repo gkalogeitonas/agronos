@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\Log;
 class EmqxService
 {
     protected string $baseUrl;
+
     protected string $basePath;
+
     protected string $authId;
+
     /**
      * @var \Illuminate\Http\Client\PendingRequest
      */
@@ -26,31 +29,27 @@ class EmqxService
         // Basic auth credentials for management API (use app_id/app_secret names from config/services.php)
         $apiKey = config('services.emqx.api_key');
         $secretKey = config('services.emqx.secret_key');
-        
+
         Log::info('EMQX Service initialized', [
             'api_key' => $apiKey,
             'secret_key_length' => $secretKey ? strlen($secretKey) : 0,
-            'secret_key_preview' => $secretKey ? substr($secretKey, 0, 10) . '...' : 'null',
+            'secret_key_preview' => $secretKey ? substr($secretKey, 0, 10).'...' : 'null',
         ]);
-        
+
         $this->http = Http::withBasicAuth($apiKey, $secretKey)
-                ->acceptJson();
+            ->acceptJson();
     }
 
     protected function apiUrl(string $path = ''): string
     {
         $path = trim($path, '/');
-        return $this->baseUrl . '/' . $this->basePath . ($path ? '/' . $path : '');
-    }
 
+        return $this->baseUrl.'/'.$this->basePath.($path ? '/'.$path : '');
+    }
 
     /**
      * Create or update a user in the built_in_database authenticator.
      * Returns decoded response on success, or an array with status/body on failure.
-     *
-     * @param string $username
-     * @param string $password
-     * @return mixed
      */
     public function createUser(string $username, string $password): mixed
     {
@@ -84,13 +83,10 @@ class EmqxService
 
     /**
      * Delete a user from the built_in_database authenticator.
-     *
-     * @param string $username
-     * @return bool
      */
     public function deleteUser(string $username): bool
     {
-        $url = $this->apiUrl("authentication/{$this->authId}/users/" . rawurlencode($username));
+        $url = $this->apiUrl("authentication/{$this->authId}/users/".rawurlencode($username));
 
         $response = $this->http->delete($url);
 
@@ -110,21 +106,19 @@ class EmqxService
      *   }
      * ]
      *
-     * @param string $username
-     * @param string $deviceTopicPrefix example: devices/{username}/# or devices/device1/#
+     * @param  string  $deviceTopicPrefix  example: devices/{username}/# or devices/device1/#
      * @return bool|array true on success, or array with status/body on failure
      */
     /**
      * Authorize a username with a set of rules.
      * If $rules is null, a default set is applied that allows publish to devices/{username}/# and denies devices/#.
      *
-     * @param string $username
-     * @param array|null $rules Array of rule arrays, each with keys: action, permission, topic
+     * @param  array|null  $rules  Array of rule arrays, each with keys: action, permission, topic
      * @return bool|array
      */
     public function authorizeUser(string $username, ?array $rules = null)
     {
-        $url = $this->apiUrl("authorization/sources/built_in_database/rules/users");
+        $url = $this->apiUrl('authorization/sources/built_in_database/rules/users');
 
         $payload = [
             [

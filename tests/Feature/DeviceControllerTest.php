@@ -36,7 +36,7 @@ describe('DeviceController@createMqttCredentials', function () {
         $device->refresh();
         expect($device->mqtt_username)->toBe($device->uuid);
         expect($device->mqtt_password)->not->toBeNull();
-        //assert also database has the updated credentials
+        // assert also database has the updated credentials
         $this->assertDatabaseHas('devices', [
             'id' => $device->id,
             'mqtt_username' => $device->uuid,
@@ -66,7 +66,6 @@ describe('DeviceController@createMqttCredentials', function () {
                 && $credentials['password'] === 'existing-pass';
         });
     });
-
 
     it('flashes error when emqx returns error response', function () {
         $user = User::factory()->create();

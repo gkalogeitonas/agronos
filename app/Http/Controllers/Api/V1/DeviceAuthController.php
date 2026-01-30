@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Device;
-use Illuminate\Support\Facades\Hash;
 use App\Enums\DeviceStatus;
+use App\Http\Controllers\Controller;
+use App\Models\Device;
 use App\Services\MqttCredentialService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class DeviceAuthController extends Controller
 {

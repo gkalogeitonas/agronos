@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Traits\BelongsToTenant;
-use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use App\Enums\DeviceStatus;
+use App\Traits\BelongsToTenant;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
 class Device extends Authenticatable
 {
-    use HasApiTokens, HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasApiTokens, HasFactory;
 
     protected $fillable = [
         'user_id',

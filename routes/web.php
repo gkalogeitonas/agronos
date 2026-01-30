@@ -1,8 +1,7 @@
 <?php
 
-use App\Http\Controllers\FarmController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\FarmController;
 use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,6 +27,7 @@ Route::get('/', function () {
 // Quick test route to dispatch FirstEvent (used to validate broadcasting)
 Route::get('/test-first-event', function () {
     event(new \App\Events\FirstEvent('test from /test-first-event', ['time' => now()->toDateTimeString()]));
+
     return 'event dispatched';
 });
 
@@ -40,6 +40,7 @@ Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', func
     ];
 
     event(new \App\Events\SensorReadingEvent($sensor->id, $payload));
+
     return 'sensor private event dispatched';
 })->name('test.sensor.event');
 
@@ -57,7 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/devices', [DeviceController::class, 'index'])
         ->name('devices.index');
 
-    //Create new device
+    // Create new device
     Route::get('/devices/create', [DeviceController::class, 'create'])
         ->name('devices.create');
 
@@ -76,7 +77,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])
         ->name('devices.destroy');
 });
-
 
 // Device QR Tool route
 Route::get('/tools/device-qr', function () {

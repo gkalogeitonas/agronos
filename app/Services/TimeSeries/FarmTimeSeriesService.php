@@ -56,8 +56,8 @@ class FarmTimeSeriesService
                 'maxReading' => null,
             ];
 
-            //log base
-           //dd("InfluxDB Query: {$base}");
+            // log base
+            // dd("InfluxDB Query: {$base}");
 
             try {
                 // Overall stats for this type

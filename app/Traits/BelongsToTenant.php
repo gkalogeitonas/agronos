@@ -19,7 +19,7 @@ trait BelongsToTenant
 
         // Automatically set user_id on model creation if not explicitly set
         static::creating(function (Model $model) {
-            if (!$model->user_id && Auth::check()) {
+            if (! $model->user_id && Auth::check()) {
                 $model->user_id = Auth::id();
             }
         });
@@ -38,7 +38,7 @@ trait BelongsToTenant
     /**
      * Get models for a specific tenant.
      *
-     * @param int $userId
+     * @param  int  $userId
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public static function forTenant($userId)

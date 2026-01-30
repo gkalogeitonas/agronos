@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use App\Services\InfluxDBService;
 use App\Services\InfluxDBFake;
+use App\Services\InfluxDBService;
+use Illuminate\Support\ServiceProvider;
 
 class InfluxDBServiceProvider extends ServiceProvider
 {
@@ -16,9 +16,10 @@ class InfluxDBServiceProvider extends ServiceProvider
         // Bind real or fake service based on config
         $this->app->singleton(InfluxDBService::class, function ($app) {
             if (config('services.influxdb.fake')) {
-                return new InfluxDBFake();
+                return new InfluxDBFake;
             }
-            return new InfluxDBService();
+
+            return new InfluxDBService;
         });
     }
 

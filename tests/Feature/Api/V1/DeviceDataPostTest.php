@@ -1,11 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Log;
-use App\Models\Device;
-use Laravel\Sanctum\Sanctum;
-use Illuminate\Support\Facades\Hash;
 use App\Enums\DeviceStatus;
+use App\Models\Device;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 it('allows a device to post data with a valid token', function () {
     $device = Device::factory()->create();
@@ -207,7 +205,6 @@ it('does not write data for sensors not belonging to the user who owns the devic
     $response = $this->withToken($token)
         ->postJson('/api/v1/device/data', $payload);
 
-
     $response->assertStatus(200)
         ->assertJsonFragment(['message' => 'Data received.'])
         ->assertJsonFragment(['missing_uuids' => ['sensor-uuid-other-user']]);
@@ -228,7 +225,6 @@ it('updates last_reading and last_reading_at on sensors after posting data', fun
     ]);
     $token = $device->createToken('device-token')->plainTextToken;
 
-
     $response = $this->withToken($token)
         ->postJson('/api/v1/device/data', [
             'sensors' => [
@@ -243,7 +239,6 @@ it('updates last_reading and last_reading_at on sensors after posting data', fun
     expect($sensor->last_reading)->toBe(42.42);
     expect($sensor->last_reading_at)->not->toBeNull();
 });
-
 
 it('updates device status to ONLINE and last_seen_at when device sends data', function () {
     $device = Device::factory()->create([
@@ -265,7 +260,7 @@ it('updates device status to ONLINE and last_seen_at when device sends data', fu
         ],
     ];
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->postJson('/api/v1/device/data', $payload);
 
     $response->assertStatus(200);

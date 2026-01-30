@@ -3,12 +3,10 @@
 namespace App\Services;
 
 use App\Models\Device;
-use App\Services\EmqxService;
 use Illuminate\Support\Facades\Log;
 
 class MqttCredentialService
 {
-
     /**
      * Ensure the device has mqtt credentials. Returns ['username' => ..., 'password' => ..., 'created' => bool]
      */
@@ -26,7 +24,6 @@ class MqttCredentialService
         $username = $device->uuid;
         $password = bin2hex(random_bytes(16));
 
-
         // Resolve EmqxService from the container so it can be mocked in tests
         $emqx = app(EmqxService::class);
 
@@ -38,6 +35,7 @@ class MqttCredentialService
                 'device_uuid' => $device->uuid,
                 'error' => $e->getMessage(),
             ]);
+
             // Broker unreachable or other error: do not create credentials
             return [
                 'mqtt_broker_url' => config('services.emqx.url', '/'),
@@ -53,6 +51,7 @@ class MqttCredentialService
                 'device_uuid' => $device->uuid,
                 'emqx_response' => $result,
             ]);
+
             return [
                 'mqtt_broker_url' => config('services.emqx.url', '/'),
                 'created' => false,

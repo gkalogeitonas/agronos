@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Enums\DeviceType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Enums\DeviceType;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Device>

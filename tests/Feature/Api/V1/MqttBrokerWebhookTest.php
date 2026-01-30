@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Device;
 use App\Enums\DeviceStatus;
+use App\Models\Device;
 use App\Services\SensorDataService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

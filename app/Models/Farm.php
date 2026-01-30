@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Scopes\TenantScope;
-use App\Traits\BelongsToTenant;
 
 class Farm extends Model
 {
-    use HasFactory, BelongsToTenant;
+    use BelongsToTenant, HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -42,7 +41,7 @@ class Farm extends Model
 
     public function getAreaAttribute()
     {
-        if (!$this->coordinates || !isset($this->coordinates['coordinates'][0])) {
+        if (! $this->coordinates || ! isset($this->coordinates['coordinates'][0])) {
             return 0;
         }
 
@@ -52,7 +51,7 @@ class Farm extends Model
 
     public function getCenterAttribute()
     {
-        if (!$this->coordinates || !isset($this->coordinates['coordinates'][0])) {
+        if (! $this->coordinates || ! isset($this->coordinates['coordinates'][0])) {
             return null;
         }
         $coords = $this->coordinates['coordinates'][0];
@@ -63,6 +62,7 @@ class Farm extends Model
         $sum = array_reduce($coords, function ($acc, $p) {
             return [$acc[0] + $p[0], $acc[1] + $p[1]];
         }, [0, 0]);
+
         return [
             'lng' => $sum[0] / $count,
             'lat' => $sum[1] / $count,
@@ -73,5 +73,4 @@ class Farm extends Model
     {
         return $this->hasMany(Sensor::class);
     }
-
 }

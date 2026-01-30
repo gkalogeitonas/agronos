@@ -38,7 +38,7 @@ test('job rethrows exception on failure', function () {
         ->once()
         ->andThrow(new \Exception('InfluxDB connection failed'));
 
-    expect(fn() => $job->handle($influxMock))->toThrow(\Exception::class);
+    expect(fn () => $job->handle($influxMock))->toThrow(\Exception::class);
 });
 
 test('job has correct configuration', function () {

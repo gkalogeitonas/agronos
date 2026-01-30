@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers\Settings;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use App\Http\Controllers\Controller;
+use Inertia\Inertia;
 
 class AppSettingsController extends Controller
 {

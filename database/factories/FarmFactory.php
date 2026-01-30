@@ -29,12 +29,12 @@ class FarmFactory extends Factory
                 [$centerLng + $delta, $centerLat + $delta],
                 [$centerLng, $centerLat + $delta],
                 [$centerLng, $centerLat], // Close the polygon
-            ]
+            ],
         ];
 
         return [
             'user_id' => User::factory(),
-            'name' => $this->faker->company() . ' Farm',
+            'name' => $this->faker->company().' Farm',
             'location' => $this->faker->city(),
             'size' => $this->faker->randomFloat(2, 10, 1000),
             'coordinates' => [

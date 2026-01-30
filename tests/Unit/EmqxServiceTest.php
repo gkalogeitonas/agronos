@@ -18,7 +18,7 @@ it('sends correct request when creating a user', function () {
         '*' => Http::response(['result' => 'ok'], 200),
     ]);
 
-    $svc = new EmqxService();
+    $svc = new EmqxService;
 
     // Act
     $resp = $svc->createUser('user1', 'p@ss');
@@ -53,7 +53,7 @@ it('sends correct rules when authorizing a user with defaults', function () {
         '*' => Http::response(null, 200),
     ]);
 
-    $svc = new EmqxService();
+    $svc = new EmqxService;
 
     $rules = [
         ['permission' => 'allow', 'topic' => 'devices/device1/#'],
@@ -74,6 +74,7 @@ it('sends correct rules when authorizing a user with defaults', function () {
         }
 
         $entry = $body[0];
+
         return $request->method() === 'POST'
             && $request->url() === $expectedUrl
             && isset($entry['username'])

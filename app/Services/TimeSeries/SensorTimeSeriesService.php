@@ -6,9 +6,7 @@ use App\Services\InfluxDBService;
 
 class SensorTimeSeriesService
 {
-    public function __construct(private readonly InfluxDBService $influx)
-    {
-    }
+    public function __construct(private readonly InfluxDBService $influx) {}
 
     // Round numeric values consistently for timeseries output
     private function roundValue(mixed $val, int $decimals = 2): mixed
@@ -19,6 +17,7 @@ class SensorTimeSeriesService
         if (is_numeric($val)) {
             return round((float) $val, $decimals);
         }
+
         return $val;
     }
 
@@ -63,9 +62,10 @@ class SensorTimeSeriesService
                     'value' => $value,
                 ];
             }
-         }
-         return $out;
-     }
+        }
+
+        return $out;
+    }
 
     /**
      * Compute min/max/avg/count for a sensor over a range.
@@ -82,35 +82,47 @@ class SensorTimeSeriesService
 
         try {
             // min
-            $minRes = $this->influx->queryPipeline($base . "\n|> min()");
+            $minRes = $this->influx->queryPipeline($base."\n|> min()");
             foreach ($minRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['min'] = $this->roundValue($val, 2); break 2; }
+                    if ($val !== null) {
+                        $stats['min'] = $this->roundValue($val, 2);
+                        break 2;
+                    }
                 }
             }
             // max
-            $maxRes = $this->influx->queryPipeline($base . "\n|> max()");
+            $maxRes = $this->influx->queryPipeline($base."\n|> max()");
             foreach ($maxRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['max'] = $this->roundValue($val, 2); break 2; }
+                    if ($val !== null) {
+                        $stats['max'] = $this->roundValue($val, 2);
+                        break 2;
+                    }
                 }
             }
             // mean
-            $meanRes = $this->influx->queryPipeline($base . "\n|> mean()");
+            $meanRes = $this->influx->queryPipeline($base."\n|> mean()");
             foreach ($meanRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['avg'] = $this->roundValue($val, 2); break 2; }
+                    if ($val !== null) {
+                        $stats['avg'] = $this->roundValue($val, 2);
+                        break 2;
+                    }
                 }
             }
             // count
-            $countRes = $this->influx->queryPipeline($base . "\n|> count()");
+            $countRes = $this->influx->queryPipeline($base."\n|> count()");
             foreach ($countRes as $t) {
                 foreach (($t->records ?? []) as $rec) {
                     $val = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
-                    if ($val !== null) { $stats['count'] = (int)$val; break 2; }
+                    if ($val !== null) {
+                        $stats['count'] = (int) $val;
+                        break 2;
+                    }
                 }
             }
         } catch (\Throwable $e) {

@@ -1,10 +1,9 @@
 <?php
 
+use App\Enums\DeviceStatus;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
-use App\Enums\DeviceStatus;
 
 uses(RefreshDatabase::class);
 
@@ -52,7 +51,6 @@ test('device login requires uuid and secret', function () {
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['uuid', 'secret']);
 });
-
 
 it('updates device status to ONLINE on successful authentication', function () {
     $device = Device::factory()->create([

@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Farm;
 use App\Models\Device;
+use App\Models\Farm;
 use App\Models\Sensor;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class DevEnvironmentSeeder extends Seeder
 {
@@ -25,11 +25,11 @@ class DevEnvironmentSeeder extends Seeder
                         'type' => 'Polygon',
                         'coordinates' => [
                             [
-                                [122.795943,63.594299],
-                                [122.796943,63.594299],
-                                [122.796943,63.595299],
-                                [122.795943,63.595299],
-                                [122.795943,63.594299],
+                                [122.795943, 63.594299],
+                                [122.796943, 63.594299],
+                                [122.796943, 63.595299],
+                                [122.795943, 63.595299],
+                                [122.795943, 63.594299],
                             ],
                         ],
                     ],
@@ -90,7 +90,7 @@ class DevEnvironmentSeeder extends Seeder
 
         foreach ($data as $entry) {
             $userData = $entry['user'] ?? null;
-            if (!$userData) {
+            if (! $userData) {
                 continue;
             }
 

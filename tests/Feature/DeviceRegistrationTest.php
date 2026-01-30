@@ -1,10 +1,8 @@
 <?php
 
-use App\Models\User;
-use App\Models\Farm;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Device;
-use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
@@ -40,14 +38,13 @@ test('guest cannot register a device', function () {
         'uuid' => 'test-device-uuid-'.time(),
         'secret' => 'test-secret-key',
         'name' => 'Test Soil Sensor',
-        'type' => 'wifi'
+        'type' => 'wifi',
     ];
 
     $response = $this->post(route('devices.store'), $deviceData);
 
     $response->assertRedirect(route('login'));
 });
-
 
 test('device registration requires valid data', function () {
 
@@ -61,12 +58,10 @@ test('device registration requires valid data', function () {
         ->withHeaders(['Accept' => 'application/json'])
         ->postJson(route('devices.store'), $deviceData);
 
-    //$response->dump();
+    // $response->dump();
 
     $response->assertStatus(422);
 });
-
-
 
 test('device secret is hashed when device is registered', function () {
     $plainSecret = 'plain-secret-test';
@@ -81,10 +76,10 @@ test('device secret is hashed when device is registered', function () {
         ->actingAs($this->user, 'web')
         ->post(route('devices.store'), $deviceData);
 
-        //dump($response->getContent());
+    // dump($response->getContent());
 
     $device = Device::where('uuid', $deviceData['uuid'])->first();
-    //dd($device);
+    // dd($device);
     expect($device)->not->toBeNull();
     expect($device->secret)->not->toBe($plainSecret);
     expect(\Illuminate\Support\Facades\Hash::check($plainSecret, $device->secret))->toBeTrue();

@@ -26,9 +26,9 @@ describe('Farm model', function () {
             'user_id' => $user->id,
             'coordinates' => [
                 'coordinates' => [
-                    [[0,0],[2,0],[2,2],[0,2],[0,0]]
-                ]
-            ]
+                    [[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]],
+                ],
+            ],
         ]);
         $center = $farm->center;
         expect($center)->toHaveKeys(['lng', 'lat']);

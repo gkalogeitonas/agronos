@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Sensor;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 it('can create a sensor', function () {
     $sensor = Sensor::factory()->create();

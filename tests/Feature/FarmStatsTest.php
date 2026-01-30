@@ -80,7 +80,7 @@ it('provides last reading average per sensor type from sensors table', function 
     $response->assertInertia(fn ($page) => $page->component('Farms/Show')
         ->has('sensorDbStats')
         ->has('sensorDbStats.lastAvgByType')
-    ->where('sensorDbStats.lastAvgByType.temperature', 12)
+        ->where('sensorDbStats.lastAvgByType.temperature', 12)
         ->where('sensorDbStats.lastAvgByType.humidity', 55.5)
     );
 });

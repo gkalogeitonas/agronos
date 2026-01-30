@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\DeviceStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\DeviceDataRequest;
+use App\Models\Device;
 use App\Services\SensorDataService;
 use Illuminate\Http\Request;
-use App\Models\Device;
 
 class DeviceDataController extends Controller
 {
@@ -25,14 +25,13 @@ class DeviceDataController extends Controller
         return response()->json($response, 200);
     }
 
-
     public function mqttBrokerWebhook(Request $request, SensorDataService $sensorDataService)
     {
         $device = $request['username'];
         $payload = $request['payload'];
         // Find device by uuid (assuming username is the device UUID)
         $device = Device::where('uuid', $request['username'])->first();
-        if (!$device) {
+        if (! $device) {
             return response()->json(['message' => 'Device not found'], 404);
         }
         // // Update device status and last seen

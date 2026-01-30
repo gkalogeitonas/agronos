@@ -12,7 +12,9 @@ use App\Models\Sensor;
 
 Broadcast::channel('sensor.{sensorId}', function ($user, $sensorId) {
     $sensor = Sensor::find($sensorId);
-    if (! $sensor) return false;
+    if (! $sensor) {
+        return false;
+    }
 
     // Allow if the authenticated user is the owner of the sensor
     if ($sensor->user_id && (int) $sensor->user_id === (int) $user->id) {
