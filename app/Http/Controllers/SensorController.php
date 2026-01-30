@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ScanSensorRequest;
-use App\Http\Requests\StoreSensorRequest;
-use App\Http\Requests\UpdateSensorRequest;
+use App\Http\Requests\SensorRequest\ScanSensorRequest;
+use App\Http\Requests\SensorRequest\StoreSensorRequest;
+use App\Http\Requests\SensorRequest\UpdateSensorRequest;
 use App\Http\Resources\SensorResource;
 use App\Models\Farm;
 use App\Models\Sensor;
