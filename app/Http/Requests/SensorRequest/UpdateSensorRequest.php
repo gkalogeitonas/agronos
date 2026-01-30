@@ -3,6 +3,8 @@
 namespace App\Http\Requests\SensorRequest;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Enums\SensorType;
+use Illuminate\Validation\Rule;
 
 class UpdateSensorRequest extends FormRequest
 {
@@ -26,6 +28,7 @@ class UpdateSensorRequest extends FormRequest
             'farm_id' => ['nullable', 'exists:farms,id'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lon' => ['nullable', 'numeric', 'between:-180,180'],
+            'type' => ['nullable', Rule::in(SensorType::values())],
         ];
     }
 }
