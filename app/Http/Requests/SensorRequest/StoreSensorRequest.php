@@ -2,11 +2,10 @@
 
 namespace App\Http\Requests\SensorRequest;
 
-use App\Enums\SensorType;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Enums\SensorType;
 
-class StoreSensorRequest extends FormRequest
+class StoreSensorRequest extends SensorRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,14 +22,9 @@ class StoreSensorRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        return array_merge($this->commonRules(), [
             'device_uuid' => ['required', 'exists:devices,uuid'],
             'uuid' => ['required', 'string', 'unique:sensors,uuid'],
-            'farm_id' => ['nullable', 'exists:farms,id'],
-            'lat' => ['nullable', 'numeric', 'between:-90,90'],
-            'lon' => ['nullable', 'numeric', 'between:-180,180'],
-            'type' => ['nullable', Rule::in(SensorType::values())],
-            'name' => ['nullable', 'string', 'max:255'],
-        ];
+        ]);
     }
 }
