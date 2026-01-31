@@ -47,7 +47,15 @@
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="type">Type</label>
-          <input v-model="form.type" id="type" type="text" class="input w-full" :disabled="!allowEdit" required />
+          <div v-if="allowEdit">
+            <select v-model="form.type" id="type" class="input w-full" required>
+              <option value="" disabled>Select type</option>
+              <option v-for="t in SensorTypes" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </div>
+          <div v-else>
+            <input v-model="form.type" id="type" type="text" class="input w-full" :disabled="true" required />
+          </div>
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1" for="uuid">Sensor UUID</label>
@@ -93,6 +101,7 @@ const page = usePage();
 
 // Type for farms to fix TS errors
 interface Farm { id: number; name: string; }
+const SensorTypes = computed(() => (page.props.SensorTypes as string[]) ?? []);
 const farms = computed(() => (page.props.farms as Farm[]) ?? []);
 
 const breadcrumbs = [

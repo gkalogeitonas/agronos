@@ -11,6 +11,7 @@ use App\Models\Sensor;
 use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
+use App\Enums\SensorType;
 
 class SensorController extends Controller
 {
@@ -42,6 +43,7 @@ class SensorController extends Controller
         return Inertia::render('Sensors/Create', [
             'farms' => $farms,
             'selectedFarm' => $farm,
+            'SensorTypes' => SensorType::values(),
         ]);
     }
 
