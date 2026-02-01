@@ -39,4 +39,20 @@ enum SensorType: string
             self::OTHER => '',
         };
     }
+
+    /**
+     * Values that are relevant for farm-facing UIs (exclude internal-only types).
+     */
+    public static function farmRelevantValues(): array
+    {
+        return array_values(array_filter(self::values(), fn ($v) => $v !== self::BATTERY->value));
+    }
+
+    /**
+     * Whether this sensor type is relevant for farm-facing display.
+     */
+    public function isFarmRelevant(): bool
+    {
+        return in_array($this->value, self::farmRelevantValues(), true);
+    }
 }

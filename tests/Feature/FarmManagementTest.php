@@ -151,6 +151,7 @@ describe('Show (Viewing a Single Farm)', function () {
         $sensors = \App\Models\Sensor::factory()->count(2)->create([
             'farm_id' => $farm->id,
             'user_id' => $this->user->id,
+            'type' => \App\Enums\SensorType::MOISTURE->value,
         ]);
 
         actingAs($this->user);

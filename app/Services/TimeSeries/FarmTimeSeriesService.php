@@ -27,7 +27,7 @@ class FarmTimeSeriesService
      */
     public function farmStats(Farm $farm, string $range = '-24h'): array
     {
-        $sensorsByType = $farm->sensors()->get()->groupBy('type');
+        $sensorsByType = $farm->sensors()->farmRelevant()->get()->groupBy('type');
         $readingStatsByType = [];
 
         if ($sensorsByType->isEmpty()) {

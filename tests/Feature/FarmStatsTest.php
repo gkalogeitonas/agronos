@@ -107,3 +107,23 @@ it('farm service provides reading statistics per sensor type', function () {
         ]);
     }
 });
+
+it('farmRelevant scope excludes battery sensors', function () {
+    $farm = \App\Models\Farm::factory()->create();
+
+    $battery = \App\Models\Sensor::factory()->create([
+        'farm_id' => $farm->id,
+        'type' => \App\Enums\SensorType::BATTERY->value,
+    ]);
+
+    $moisture = \App\Models\Sensor::factory()->count(2)->create([
+        'farm_id' => $farm->id,
+        'type' => \App\Enums\SensorType::MOISTURE->value,
+    ]);
+
+    expect($farm->sensors()->count())->toBe(3);
+
+    $relevant = $farm->sensors()->farmRelevant()->get();
+    expect($relevant)->toHaveCount(2);
+    expect($relevant->pluck('id'))->not->toContain($battery->id);
+});

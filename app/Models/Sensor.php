@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DeviceStatus;
+use App\Enums\SensorType;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -49,5 +50,14 @@ class Sensor extends Model
         return $query->whereHas('device', function (Builder $q) {
             $q->where('status', DeviceStatus::ONLINE->value);
         });
+    }
+
+    /**
+     * Scope to return sensors that are relevant for farm-facing UIs.
+     * Excludes internal-only sensor types (e.g. battery).
+     */
+    public function scopeFarmRelevant(Builder $query): Builder
+    {
+        return $query->whereIn('type', SensorType::farmRelevantValues());
     }
 }

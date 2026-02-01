@@ -56,11 +56,12 @@ class FarmController extends Controller
     public function show(Farm $farm)
     {
         $this->authorize('view', $farm);
-        $sensors = $farm->sensors()->get();
+        $sensors = $farm->sensors()->farmRelevant()->get();
 
-        // Calculate sensor statistics from database
-        $totalSensors = $farm->sensors()->count();
+        // Calculate sensor statistics from database (exclude internal-only types)
+        $totalSensors = $farm->sensors()->farmRelevant()->count();
         $sensorTypeStats = $farm->sensors()
+            ->farmRelevant()
             ->selectRaw('type, COUNT(*) as count')
             ->whereNotNull('type')
             ->groupBy('type')
@@ -70,6 +71,7 @@ class FarmController extends Controller
         // Calculate average of last reading per sensor type (using sensors.last_reading)
         // Only include sensors whose device is currently ONLINE
         $lastAvgByType = $farm->sensors()
+            ->farmRelevant()
             ->deviceOnline()
             ->selectRaw('type, AVG(last_reading) as avg_last_reading')
             ->whereNotNull('type')
