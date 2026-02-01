@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DeviceType;
 use App\Enums\SensorType;
+use App\Services\TimeSeries\SensorTimeSeriesService;
 use App\Http\Requests\RegisterDeviceRequest;
 use App\Models\Device;
 use App\Services\MqttCredentialService;
@@ -80,10 +81,16 @@ class DeviceController extends Controller
             }
         }
 
+        $ts = app(SensorTimeSeriesService::class);
+
+        // Prepare deferred battery time-series (only if a battery sensor exists)
+        $batterySensorId = optional($sensors->firstWhere('type', SensorType::BATTERY->value))->id;
+
         return Inertia::render('Devices/Show', [
             'device' => $device,
             'sensors' => $sensors,
             'batteryReading' => $batteryReading,
+            'batteryTimeSeries' => Inertia::defer(fn () => $batterySensorId ? $ts->recentReadings((int) $batterySensorId, '-24h', 100) : []),
         ]);
     }
 

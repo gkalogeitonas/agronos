@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage, useForm } from '@inertiajs/vue3';
-import { Card, CardHeader, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardDescription, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SensorCard from '@/components/SensorCard.vue';
 import { computed, ref } from 'vue';
@@ -27,6 +27,12 @@ const batteryReading = computed<number | null>(() => {
         return typeof prop === 'number' ? prop : (isNaN(Number(prop)) ? null : Number(prop));
     }
     return device.value?.battery_level ?? null;
+});
+
+const batterySeries = computed<any[] | null>(() => {
+    const prop = (page.props as any).batteryTimeSeries;
+    if (prop === undefined) return null; // deferred prop not resolved yet
+    return prop ?? [];
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -114,6 +120,39 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                     <div v-else class="grid grid-cols-1 gap-4">
                         <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <!-- Battery Card -->
+            <Card class="mb-6">
+                <CardHeader>
+                    <CardTitle>Battery</CardTitle>
+                    <CardDescription>Device battery level and recent readings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <div class="text-xs text-muted-foreground">Current</div>
+                            <div class="text-lg font-semibold">{{ batteryReading !== null ? batteryReading + '%' : 'N/A' }}</div>
+                        </div>
+
+                        <div>
+                            <div class="text-xs text-muted-foreground">Recent readings (last 5)</div>
+                            <div class="mt-2">
+                                <template v-if="batterySeries === null">
+                                    <div>Loading...</div>
+                                </template>
+                                <template v-else-if="batterySeries.length === 0">
+                                    <div class="text-muted-foreground">No time-series data available.</div>
+                                </template>
+                                <template v-else>
+                                    <ul class="list-inside list-disc text-sm">
+                                        <li v-for="(p, i) in batterySeries.slice(0, 5)" :key="i">{{ p.time }} — {{ p.value }}</li>
+                                    </ul>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
