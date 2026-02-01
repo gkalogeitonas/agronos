@@ -71,15 +71,7 @@ class DeviceController extends Controller
         $sensors = $device->sensors()->get();
 
         // Prefer device-level battery_level if present, otherwise use battery sensor last_reading
-        $batteryReading = null;
-        if ($device->battery_level !== null) {
-            $batteryReading = is_numeric($device->battery_level) ? (float) $device->battery_level : null;
-        } else {
-            $batterySensor = $sensors->firstWhere('type', SensorType::BATTERY->value);
-            if ($batterySensor && $batterySensor->last_reading !== null) {
-                $batteryReading = is_numeric($batterySensor->last_reading) ? (float) $batterySensor->last_reading : null;
-            }
-        }
+        $batteryReading = $this->getBatteryLevel($device, $sensors);
 
         $ts = app(SensorTimeSeriesService::class);
 
@@ -132,5 +124,22 @@ class DeviceController extends Controller
         $device->delete();
 
         return redirect()->route('devices.index');
+    }
+
+
+
+    private function getBatteryLevel(Device $device, $sensors): ?float
+    {
+
+        if ($device->battery_level !== null) {
+            return is_numeric($device->battery_level) ? (float) $device->battery_level : null;
+        }
+
+        $batterySensor = $sensors->firstWhere('type', SensorType::BATTERY->value);
+        if ($batterySensor && $batterySensor->last_reading !== null) {
+            return is_numeric($batterySensor->last_reading) ? (float) $batterySensor->last_reading : null;
+        }
+
+        return null;
     }
 }
