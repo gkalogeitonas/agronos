@@ -21,6 +21,14 @@ const mqttCredentials = computed<any>(() => (page.props as any).mqtt_credentials
 const form = useForm();
 const createMqtt = () => { form.post(route('devices.mqtt.create', device.value.id)); };
 
+const batteryReading = computed<number | null>(() => {
+    const prop = (page.props as any).batteryReading;
+    if (prop !== undefined && prop !== null) {
+        return typeof prop === 'number' ? prop : (isNaN(Number(prop)) ? null : Number(prop));
+    }
+    return device.value?.battery_level ?? null;
+});
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Devices', href: '/devices' },
@@ -46,6 +54,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                     <div class="flex flex-col items-end gap-2 min-w-[120px]">
                         <span class="device-status" :class="device.status">{{ device.status }}</span>
+                        <div class="text-right">
+                            <div class="text-xs text-muted-foreground">Battery</div>
+                            <div class="text-sm">{{ batteryReading !== null ? batteryReading + '%' : 'N/A' }}</div>
+                        </div>
                     </div>
                 </CardHeader>
                 <div class="p-6">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DeviceType;
+use App\Enums\SensorType;
 use App\Http\Requests\RegisterDeviceRequest;
 use App\Models\Device;
 use App\Services\MqttCredentialService;
@@ -68,9 +69,21 @@ class DeviceController extends Controller
 
         $sensors = $device->sensors()->get();
 
+        // Prefer device-level battery_level if present, otherwise use battery sensor last_reading
+        $batteryReading = null;
+        if ($device->battery_level !== null) {
+            $batteryReading = is_numeric($device->battery_level) ? (float) $device->battery_level : null;
+        } else {
+            $batterySensor = $sensors->firstWhere('type', SensorType::BATTERY->value);
+            if ($batterySensor && $batterySensor->last_reading !== null) {
+                $batteryReading = is_numeric($batterySensor->last_reading) ? (float) $batterySensor->last_reading : null;
+            }
+        }
+
         return Inertia::render('Devices/Show', [
             'device' => $device,
             'sensors' => $sensors,
+            'batteryReading' => $batteryReading,
         ]);
     }
 
