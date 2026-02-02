@@ -80,16 +80,14 @@ class SensorController extends Controller
         $this->authorize('view', $sensor);
         $sensor->load(['farm', 'device']);
 
-        // Time-series queries via dedicated service
+        // Prepare time-series service; defer heavy/time-series work so initial page is fast
         $ts = app(SensorTimeSeriesService::class);
-        $recent = $ts->recentReadings($sensor->id, '-7d', 20);
-        $statsArr = $ts->stats($sensor->id, '-24h');
 
-        // dd($sensor, new SensorResource($sensor));
         return Inertia::render('Sensors/Show', [
             'sensor' => (new SensorResource($sensor))->flat(request()),
-            'recentReadings' => $recent,
-            'stats' => $statsArr,
+            // defer recent readings and stats (resolved asynchronously by Inertia)
+            'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, '-7d', 20)),
+            'stats' => Inertia::defer(fn () => $ts->stats($sensor->id, '-24h')),
         ]);
     }
 
