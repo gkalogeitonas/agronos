@@ -164,25 +164,31 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useEcho, useEchoPublic } from '@laravel/echo-vue';
-import { usePage } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import FarmMapbox from '@/components/FarmMapbox.vue'
 import useTimestamp from '@/composables/useTimestamp';
 
+const props = defineProps<{
+    sensor: any;
+    recentReadings?: Array<{ time: string; value: number }>;
+    stats?: { min: number | null; max: number | null; avg: number | null; count?: number };
+}>();
 
-const page = usePage();
-const sensor = computed(() => page.props.sensor as any);
+// local reactive copies so we can mutate on realtime events
+const sensor = ref(props.sensor);
+const recentReadings = ref(props.recentReadings ?? []);
+const stats = ref(props.stats ?? { min: null, max: null, avg: null, count: 0 });
 
 const { formatTimestamp, parseAsUTCDate } = useTimestamp();
 
 const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Sensors', href: '/sensors' },
-    { title: sensor.value.name || 'Sensor Details', href: null },
+    { title: sensor.value?.name || 'Sensor Details', href: null },
 ];
 
 function deleteSensor() {
@@ -191,21 +197,15 @@ function deleteSensor() {
     }
 }
 
-const recentReadings = computed(() => (page.props.recentReadings as Array<{ time: string, value: number }>) || []);
-const stats = computed(() => page.props.stats as { min: number | null, max: number | null, avg: number | null, count: number });
-
 // Use the provided Vue hook which is already configured in `resources/js/app.ts`
-// Subscribe to public `first-event` channel (keep this channel as requested)
-// useEcho supports an explicit visibility argument — use that for public channels.
+// Subscribe to public `first-event` channel
 useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
-    console.log('FirstEvent received:', payload);
-    // If payload looks like a reading, optionally add to recent readings for demo
     try {
         if (payload.time && payload.value !== undefined) {
             const arr = recentReadings.value.slice();
             arr.unshift({ time: payload.time, value: payload.value });
             if (arr.length > 50) arr.pop();
-            (page.props as any).recentReadings = arr;
+            recentReadings.value = arr;
         }
     } catch {
         // ignore
@@ -214,23 +214,17 @@ useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
 
 // Subscribe to private sensor channel (only authorized users can listen)
 useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
-    console.log('SensorReadingEvent received for sensor', sensor.value.id, payload);
-    // Optionally update recentReadings client-side for demo purposes
     try {
         if (payload.time && payload.value !== undefined) {
             const arr = recentReadings.value.slice();
             arr.unshift({ time: payload.time, value: payload.value });
-            // limit to 50
             if (arr.length > 50) arr.pop();
-            // This directly mutates the page props derived array but is OK for a demo.
-            // For a cleaner approach, use a local reactive copy as earlier discussed.
-            const p = (page.props as any);
-            p.recentReadings = arr;
+            recentReadings.value = arr;
 
-            // Also update the sensor's latest reading so the "Latest Reading" card reflects realtime data
-            p.sensor = p.sensor || {};
-            p.sensor.last_reading = payload.value;
-            p.sensor.last_reading_at = payload.time;
+            // update local sensor latest reading
+            sensor.value = sensor.value || {};
+            sensor.value.last_reading = payload.value;
+            sensor.value.last_reading_at = payload.time;
         }
     } catch {
         // ignore
