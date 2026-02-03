@@ -91,43 +91,50 @@
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>24h Statistics</CardTitle>
-                        <CardDescription>Min/Max/Average</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <h3 class="text-sm font-medium text-muted-foreground">Min</h3>
-                                <p class="text-lg font-semibold">
-                                    {{ stats?.min ?? '—' }}
-                                    <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                        sensor.unit
-                                        }}</span>
-                                </p>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-medium text-muted-foreground">Max</h3>
-                                <p class="text-lg font-semibold">
-                                    {{ stats?.max ?? '—' }}
-                                    <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                        sensor.unit
-                                        }}</span>
-                                </p>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-medium text-muted-foreground">Avg</h3>
-                                <p class="text-lg font-semibold">
-                                    {{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}
-                                    <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                        sensor.unit
-                                        }}</span>
-                                </p>
-                            </div>
+                <Deferred data="stats">
+                    <template #fallback>
+                        <div class="flex justify-center items-center text-sm text-muted-foreground h-24">
+                            <span>Loading statistics...</span>
                         </div>
-                    </CardContent>
-                </Card>
+                    </template>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>24h Statistics</CardTitle>
+                            <CardDescription>Min/Max/Average</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted-foreground">Min</h3>
+                                    <p class="text-lg font-semibold">
+                                        {{ stats?.min ?? '—' }}
+                                        <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
+                                            sensor.unit
+                                            }}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted-foreground">Max</h3>
+                                    <p class="text-lg font-semibold">
+                                        {{ stats?.max ?? '—' }}
+                                        <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
+                                            sensor.unit
+                                            }}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-medium text-muted-foreground">Avg</h3>
+                                    <p class="text-lg font-semibold">
+                                        {{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}
+                                        <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
+                                            sensor.unit
+                                            }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Deferred>
             </div>
 
             <Card class="mb-6" v-if="recentReadings && recentReadings.length">
@@ -163,8 +170,8 @@
 
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, router, Deferred } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 import { useEcho, useEchoPublic } from '@laravel/echo-vue';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -180,8 +187,14 @@ const props = defineProps<{
 
 // local reactive copies so we can mutate on realtime events
 const sensor = ref(props.sensor);
+// keep a local mutable copy for realtime updates, but sync when the deferred prop resolves
 const recentReadings = ref(props.recentReadings ?? []);
-const stats = ref(props.stats ?? { min: null, max: null, avg: null, count: 0 });
+watch(() => props.recentReadings, (val) => {
+    recentReadings.value = val ?? [];
+}, { immediate: true });
+
+// use a computed directly from props so Deferred updates are reflected automatically
+const stats = computed(() => props.stats ?? { min: null, max: null, avg: null, count: 0 });
 
 const { formatTimestamp, parseAsUTCDate } = useTimestamp();
 
