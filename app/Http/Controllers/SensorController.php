@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SensorType;
 use App\Http\Requests\SensorRequest\ScanSensorRequest;
 use App\Http\Requests\SensorRequest\StoreSensorRequest;
 use App\Http\Requests\SensorRequest\UpdateSensorRequest;
@@ -11,7 +12,6 @@ use App\Models\Sensor;
 use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
-use App\Enums\SensorType;
 
 class SensorController extends Controller
 {
@@ -88,6 +88,7 @@ class SensorController extends Controller
             // defer recent readings and stats (resolved asynchronously by Inertia)
             'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, '-7d', 20)),
             'stats' => Inertia::defer(fn () => $ts->stats($sensor->id, '-24h')),
+            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, '-7d')), // Για το γράφημα
         ]);
     }
 

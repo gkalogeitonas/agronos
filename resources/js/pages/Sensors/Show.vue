@@ -137,6 +137,16 @@
                 </Deferred>
             </div>
 
+            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-semibold mb-4">Ιστορικό Μετρήσεων</h3>
+                <VueApexCharts
+                type="line"
+                height="350"
+                :options="chartOptions"
+                :series="series"
+                />
+            </div>
+
             <Card class="mb-6" v-if="recentReadings && recentReadings.length">
                 <CardHeader>
                     <CardTitle>Recent Readings</CardTitle>
@@ -178,11 +188,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import FarmMapbox from '@/components/FarmMapbox.vue'
 import useTimestamp from '@/composables/useTimestamp';
+import VueApexCharts from "vue3-apexcharts";
 
 const props = defineProps<{
     sensor: any;
     recentReadings?: Array<{ time: string; value: number }>;
     stats?: { min: number | null; max: number | null; avg: number | null; count?: number };
+    // chartData may be provided as an array of [ms, value] pairs from the backend
+    chartData?: Array<any>;
 }>();
 
 // local reactive copies so we can mutate on realtime events
@@ -203,6 +216,47 @@ const breadcrumbs = [
     { title: 'Sensors', href: '/sensors' },
     { title: sensor.value?.name || 'Sensor Details', href: null },
 ];
+
+
+// Ρυθμίσεις Γραφήματος
+const chartOptions = {
+  chart: {
+    type: 'line',
+    toolbar: { show: false }, // Διατήρηση καθαρού UI
+    zoom: { enabled: true }
+  },
+  xaxis: {
+    type: 'datetime', // native διαχείριση χρόνου
+  },
+  stroke: {
+    curve: 'smooth', // Για "οργανική" εμφάνιση των αγροτικών μετρήσεων
+    width: 3
+  },
+  colors: ['#4f46e5'], // Indigo χρώμα για επαγγελματική εμφάνιση
+};
+
+// Φορμάρισμα των δεδομένων για την ApexCharts
+// Προτίμησε `props.chartData` (επιστρέφει [[ms, value], ...]) όταν είναι διαθέσιμα,
+// αλλιώς fallback στα `recentReadings`.
+const series = computed(() => {
+  const data = (props.chartData && props.chartData.length)
+    ? props.chartData
+        .map((pt: any) => {
+          // Accept either [ms, value] or { time, value }
+          if (Array.isArray(pt) && typeof pt[0] === 'number') {
+            return [pt[0], pt[1]];
+          }
+          if (pt && (pt.time !== undefined)) {
+            const ms = typeof pt.time === 'number' ? pt.time : new Date(pt.time).getTime();
+            return [ms, pt.value];
+          }
+          return null;
+        })
+        .filter(Boolean)
+    : recentReadings.value.map(reading => [new Date(reading.time).getTime(), reading.value]);
+
+  return [{ name: props.sensor.type, data }];
+});
 
 function deleteSensor() {
     if (confirm(`Are you sure you want to delete ${sensor.value.name || 'this sensor'}?`)) {

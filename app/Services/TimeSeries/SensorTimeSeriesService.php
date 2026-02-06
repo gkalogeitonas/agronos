@@ -3,6 +3,7 @@
 namespace App\Services\TimeSeries;
 
 use App\Services\InfluxDBService;
+use Carbon\Carbon;
 
 class SensorTimeSeriesService
 {
@@ -138,5 +139,69 @@ class SensorTimeSeriesService
         }
 
         return $stats;
+    }
+
+    public function chartReadings(int $sensorId, string $range = '-24h'): array
+    {
+        $sensorIdStr = (string) $sensorId;
+
+        // Determine aggregate window based on requested range
+        $every = match ($range) {
+            '-1h' => '1m',
+            '-24h' => '15m',
+            '-7d' => '1h',
+            '-30d' => '6h',
+            default => '15m',
+        };
+
+        $pipeline = <<<FLUX
+                |> range(start: {$range})
+                |> filter(fn: (r) => r._measurement == "sensor_measurement" and r.sensor_id == "{$sensorIdStr}" and r._field == "value")
+                |> aggregateWindow(every: {$every}, fn: mean, createEmpty: false)
+                |> sort(columns: ["_time"])
+                FLUX;
+
+        try {
+            $result = $this->influx->queryPipeline($pipeline);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($result as $table) {
+            $records = $table->records ?? [];
+            foreach ($records as $rec) {
+                // Extract time (support getTime() if provided)
+                $time = method_exists($rec, 'getTime') ? $rec->getTime() : ($rec->_time ?? ($rec['time'] ?? null));
+
+                if ($time instanceof \DateTimeInterface) {
+                    $ms = (int) ($time->getTimestamp() * 1000);
+                } elseif (is_string($time) || is_numeric($time)) {
+                    try {
+                        $ms = (int) (Carbon::parse($time)->timestamp * 1000);
+                    } catch (\Throwable $e) {
+                        // skip unparseable times
+                        continue;
+                    }
+                } else {
+                    // unknown time format, skip
+                    continue;
+                }
+
+                $rawValue = method_exists($rec, 'getValue') ? $rec->getValue() : ($rec->_value ?? ($rec['value'] ?? null));
+                if ($rawValue === null) {
+                    continue;
+                }
+
+                $value = $this->roundValue($rawValue, 2);
+
+                $out[] = [$ms, $value];
+            }
+        }
+
+        // Ensure ascending order by timestamp
+        usort($out, fn ($a, $b) => $a[0] <=> $b[0]);
+
+        return $out;
     }
 }
