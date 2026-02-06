@@ -305,23 +305,6 @@ function deleteSensor() {
     }
 }
 
-// Use the provided Vue hook which is already configured in `resources/js/app.ts`
-// Subscribe to public `first-event` channel
-// useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
-//     try {
-//         if (payload.time && payload.value !== undefined) {
-//             const arr = recentReadings.value.slice();
-//             arr.unshift({ time: payload.time, value: payload.value });
-//             if (arr.length > 50) arr.pop();
-//             recentReadings.value = arr;
-
-//             // push to chart data (live update)
-//             try { pushToChartData(payload.time, payload.value); } catch { /* ignore */ }
-//         }
-//     } catch {
-//         // ignore
-//     }
-// });
 
 // Subscribe to private sensor channel (only authorized users can listen)
 useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
