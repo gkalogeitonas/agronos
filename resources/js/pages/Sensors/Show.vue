@@ -137,15 +137,36 @@
                 </Deferred>
             </div>
 
-            <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-                <h3 class="text-lg font-semibold mb-4">Ιστορικό Μετρήσεων</h3>
-                <VueApexCharts
-                type="line"
-                height="350"
-                :options="chartOptions"
-                :series="series"
-                />
-            </div>
+            <Deferred data="chartData">
+                <template #fallback>
+                    <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-center text-sm text-muted-foreground h-32">
+                            <span>Loading chart...</span>
+                        </div>
+                    </div>
+                </template>
+
+                <template #default>
+                    <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-lg font-semibold mb-4">Ιστορικό Μετρήσεων</h3>
+
+                        <template v-if="chartDataRef && chartDataRef.length">
+                            <VueApexCharts
+                                type="line"
+                                height="350"
+                                :options="chartOptions"
+                                :series="series"
+                            />
+                        </template>
+
+                        <template v-else>
+                            <div class="flex items-center justify-center text-sm text-muted-foreground h-32">
+                                <span>No chart data for the selected range.</span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </Deferred>
 
             <Card class="mb-6" v-if="recentReadings && recentReadings.length">
                 <CardHeader>
@@ -236,27 +257,47 @@ const chartOptions = {
 };
 
 // Φορμάρισμα των δεδομένων για την ApexCharts
-// Προτίμησε `props.chartData` (επιστρέφει [[ms, value], ...]) όταν είναι διαθέσιμα,
-// αλλιώς fallback στα `recentReadings`.
-const series = computed(() => {
-  const data = (props.chartData && props.chartData.length)
-    ? props.chartData
-        .map((pt: any) => {
-          // Accept either [ms, value] or { time, value }
-          if (Array.isArray(pt) && typeof pt[0] === 'number') {
-            return [pt[0], pt[1]];
-          }
-          if (pt && (pt.time !== undefined)) {
-            const ms = typeof pt.time === 'number' ? pt.time : new Date(pt.time).getTime();
-            return [ms, pt.value];
-          }
-          return null;
-        })
-        .filter(Boolean)
-    : recentReadings.value.map(reading => [new Date(reading.time).getTime(), reading.value]);
+// Ορίζουμε ένα local, reactive `chartDataRef` που αρχικοποιείται από το deferred `props.chartData`.
+import { ref } from 'vue';
+const chartDataRef = ref<Array<[number, number]>>([]);
 
-  return [{ name: props.sensor.type, data }];
-});
+function normalizePoint(pt: any): [number, number] | null {
+  if (Array.isArray(pt) && typeof pt[0] === 'number') {
+    return [pt[0], pt[1]];
+  }
+  if (pt && (pt.time !== undefined)) {
+    const ms = typeof pt.time === 'number' ? pt.time : new Date(pt.time).getTime();
+    return [ms, pt.value];
+  }
+  return null;
+}
+
+// keep chartDataRef in sync when the deferred prop resolves/changes
+watch(() => props.chartData, (val) => {
+  chartDataRef.value = (val ?? []).map(normalizePoint).filter(Boolean) as Array<[number, number]>;
+}, { immediate: true });
+
+function pushToChartData(time: string | number, value: number) {
+  const ms = typeof time === 'number' ? time : new Date(time).getTime();
+  const rounded = Math.round(value * 100) / 100;
+
+  // update if timestamp exists
+  const idx = chartDataRef.value.findIndex(pt => pt[0] === ms);
+  if (idx !== -1) {
+    chartDataRef.value[idx][1] = rounded;
+  } else {
+    chartDataRef.value.push([ms, rounded]);
+  }
+
+  // keep array size reasonable and sorted ascending
+  chartDataRef.value.sort((a, b) => a[0] - b[0]);
+  const MAX_POINTS = 1000;
+  if (chartDataRef.value.length > MAX_POINTS) {
+    chartDataRef.value.splice(0, chartDataRef.value.length - MAX_POINTS);
+  }
+}
+
+const series = computed(() => [{ name: props.sensor.type, data: chartDataRef.value }]);
 
 function deleteSensor() {
     if (confirm(`Are you sure you want to delete ${sensor.value.name || 'this sensor'}?`)) {
@@ -266,18 +307,21 @@ function deleteSensor() {
 
 // Use the provided Vue hook which is already configured in `resources/js/app.ts`
 // Subscribe to public `first-event` channel
-useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
-    try {
-        if (payload.time && payload.value !== undefined) {
-            const arr = recentReadings.value.slice();
-            arr.unshift({ time: payload.time, value: payload.value });
-            if (arr.length > 50) arr.pop();
-            recentReadings.value = arr;
-        }
-    } catch {
-        // ignore
-    }
-});
+// useEchoPublic('first-event', 'FirstEvent', (payload: any) => {
+//     try {
+//         if (payload.time && payload.value !== undefined) {
+//             const arr = recentReadings.value.slice();
+//             arr.unshift({ time: payload.time, value: payload.value });
+//             if (arr.length > 50) arr.pop();
+//             recentReadings.value = arr;
+
+//             // push to chart data (live update)
+//             try { pushToChartData(payload.time, payload.value); } catch { /* ignore */ }
+//         }
+//     } catch {
+//         // ignore
+//     }
+// });
 
 // Subscribe to private sensor channel (only authorized users can listen)
 useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
@@ -292,6 +336,9 @@ useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
             sensor.value = sensor.value || {};
             sensor.value.last_reading = payload.value;
             sensor.value.last_reading_at = payload.time;
+
+            // push to chart data (live update)
+            try { pushToChartData(payload.time, payload.value); } catch { /* ignore */ }
         }
     } catch {
         // ignore
