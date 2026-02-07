@@ -86,9 +86,9 @@ class SensorController extends Controller
         return Inertia::render('Sensors/Show', [
             'sensor' => (new SensorResource($sensor))->flat(request()),
             // defer recent readings and stats (resolved asynchronously by Inertia)
-            'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, '-7d', 20)),
+            'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, '-24h', 20)),
             'stats' => Inertia::defer(fn () => $ts->stats($sensor->id, '-24h')),
-            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, '-7d')), // Για το γράφημα
+            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, '-24h')), // Για το γράφημα
         ]);
     }
 

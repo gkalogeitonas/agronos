@@ -243,7 +243,8 @@ const breadcrumbs = [
 const chartOptions = {
   chart: {
     type: 'line',
-    toolbar: { show: false }, // Διατήρηση καθαρού UI
+    datetimeUTC: false,
+    toolbar: { show: true },
     zoom: { enabled: true }
   },
   xaxis: {
