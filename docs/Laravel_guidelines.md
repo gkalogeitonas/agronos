@@ -3,69 +3,6 @@
 
 This document is the project's canonical Laravel guidance. It contains project‑specific conventions for Agronos and now includes reconciled, version‑specific recommendations pulled from the Laravel Boost / official documentation. Keep this file in the repository — it captures domain rules the official docs do not, and it should be the single source of truth for contributors.
 
-## Project stack versions (authoritative for this repo)
-- PHP: 8.3.22
-- Laravel: v12
-- Inertia (server): inertiajs/inertia-laravel v2
-- Inertia (client): @inertiajs/vue3 v2
-- Vue: v3
-- Tailwind CSS: v4
-- Pest: v3
-- Pint: v1
-- Ziggy, Sail, Prompts, ESLint, Prettier as used in repo
-
-## Additions and enforced rules from Laravel Boost (summary)
-- Artisan-first workflow
-  - Always generate new classes with the appropriate artisan command (e.g. `php artisan make:model`, `php artisan make:controller`, `php artisan make:test --pest`) and pass `--no-interaction` for non-interactive runs.
-
-- PHP style and typing
-  - Use curly braces for all control structures.
-  - Use constructor property promotion and do not leave empty constructors.
-  - Explicit return type declarations and parameter type hints are required for methods and functions where applicable.
-  - Prefer PHPDoc blocks (with array shapes when appropriate) over inline comments.
-
-- Formatting and linting
-  - Run `vendor/bin/pint --dirty` before finalizing changes to conform to project style.
-
-- Testing (Pest)
-  - Write/modify tests for every change; use Pest and `php artisan make:test --pest <Name>`.
-  - Use expressive Pest assertions (e.g., `assertForbidden`, `assertNotFound`) and datasets for repeated validation cases.
-  - Run the minimal set of tests that verify the changes before committing.
-
-- Laravel v12 structural notes
-  - Application bootstrap files live in `bootstrap/` (e.g. `bootstrap/app.php`, `bootstrap/providers.php`).
-  - There is no `app/Console/Kernel.php` in this structure; commands auto-register from `app/Console/Commands/`.
-  - When altering columns in migrations, include full column attributes to avoid unintentionally dropping attributes.
-
-- Eloquent, API and Controllers
-  - Prefer Eloquent relationships and relationship methods over raw DB queries.
-  - Prevent N+1 queries via eager loading.
-  - For APIs prefer Eloquent API Resources and versioning when appropriate.
-  - Create Form Request classes for validation and include custom messages and attributes.
-
-- Inertia + Vue specifics
-  - Place Inertia pages under `resources/js/Pages` and use `Inertia::render()` for server-side routing.
-  - Use the `useForm` helper for building forms and handle deferred props with skeletons/empty states.
-  - Ensure Vue components have a single root element.
-
-- Tailwind v4 specifics
-  - Import Tailwind with `@import "tailwindcss"` (Tailwind v4) rather than v3 `@tailwind` directives.
-  - Avoid deprecated utilities from previous Tailwind versions; follow the v4 replacements.
-
-- Frontend component library
-  - Prefer using ShadCN Vue components for consistent UI across the app.
-
-- Queues, Jobs, and Background work
-  - Use queued Jobs (`ShouldQueue`) for long-running tasks.
-
-- Multi-tenancy
-  - Keep TenantScope / BelongsToTenant trait behavior as project-specific default; use `withoutTenant()` macro when admin access is required.
-
-## Maintenance recommendations
-- Add a short version header to this file when updating major package versions.
-- Periodically reconcile this file with Laravel Boost docs when Laravel or key packages are upgraded.
-
-## Laravel Resource Classes and Best Practices
 
 ### Core Resource Classes
 
