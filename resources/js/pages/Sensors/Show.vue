@@ -261,12 +261,14 @@ const breadcrumbs = [
 const chartOptions = {
   chart: {
     type: 'line',
-    datetimeUTC: false,
     toolbar: { show: true },
     zoom: { enabled: true }
   },
   xaxis: {
     type: 'datetime', // native διαχείριση χρόνου
+    labels: {
+      datetimeUTC: false, // εμφάνιση τοπικής ώρας
+    }
   },
   stroke: {
     curve: 'smooth', // Για "οργανική" εμφάνιση των αγροτικών μετρήσεων
