@@ -79,6 +79,15 @@
 
 ![Διάγραμμα Αισθητήρα](PLACEHOLDER_IMAGE)
 
+### Ενημερωμένα Αρχεία
+- [app/Http/Controllers/SensorController.php](https://github.com/gkalogeitonas/agronos/blob/main/app/Http/Controllers/SensorController.php)
+- [app/Services/TimeSeries/SensorTimeSeriesService.php](https://github.com/gkalogeitonas/agronos/blob/main/app/Services/TimeSeries/SensorTimeSeriesService.php)
+- [app/Enums/TimeRange.php](https://github.com/gkalogeitonas/agronos/blob/main/app/Enums/TimeRange.php)
+- [resources/js/pages/Sensors/Show.vue](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/pages/Sensors/Show.vue)
+(Το στιγμιότυπο οθόνης του αισθητήρα έχει προστεθεί ως placeholder παραπάνω — αντικαταστήστε PLACEHOLDER_IMAGE με το αρχείο εικόνας σας.)
+
+
+
 ### Βελτιστοποίηση Απόδοσης (Lazy Loading)
 
 Για να εξασφαλιστεί η ταχύτατη φόρτωση της σελίδας, υιοθετήθηκε η τεχνική `Deferred Props` του Inertia v2. Πλέον, τα "βαριά" δεδομένα δεν φορτώνονται κατά την αρχική απόδοση, αλλά ανακτώνται ασύγχρονα αμέσως μετά την εμφάνιση της σελίδας.
@@ -89,14 +98,6 @@
 3.  Οι πρόσφατες μετρήσεις (`recentReadings`)
 
 Αυτή η αλλαγή επιτρέπει στον χρήστη να έχει άμεση πρόσβαση στα βασικά στοιχεία του αισθητήρα, ενώ τα ιστορικά δεδομένα εμφανίζονται μόλις είναι διαθέσιμα.
-
-### Ενημερωμένα Αρχεία
-### Ενημερωμένα Αρχεία
-- [app/Http/Controllers/SensorController.php](https://github.com/gkalogeitonas/agronos/blob/main/app/Http/Controllers/SensorController.php)
-- [app/Services/TimeSeries/SensorTimeSeriesService.php](https://github.com/gkalogeitonas/agronos/blob/main/app/Services/TimeSeries/SensorTimeSeriesService.php)
-- [app/Enums/TimeRange.php](https://github.com/gkalogeitonas/agronos/blob/main/app/Enums/TimeRange.php)
-- [resources/js/pages/Sensors/Show.vue](https://github.com/gkalogeitonas/agronos/blob/main/resources/js/pages/Sensors/Show.vue)
-(Το στιγμιότυπο οθόνης του αισθητήρα έχει προστεθεί ως placeholder παραπάνω — αντικαταστήστε PLACEHOLDER_IMAGE με το αρχείο εικόνας σας.)
 
 
 
