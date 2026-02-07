@@ -130,12 +130,14 @@ class SensorTimeSeriesService
             // ignore and return defaults
         }
 
-        // Progressive widening if nothing found
-        if (($stats['count'] ?? 0) === 0 && $range === '-24h') {
-            return $this->stats($sensorId, '-7d');
-        }
-        if (($stats['count'] ?? 0) === 0 && $range === '-7d') {
-            return $this->stats($sensorId, '-30d');
+        // Progressive widening if nothing found — use TimeRange enum values
+        if (($stats['count'] ?? 0) === 0) {
+            if ($range === \App\Enums\TimeRange::DAY->value) {
+                return $this->stats($sensorId, \App\Enums\TimeRange::WEEK->value);
+            }
+            if ($range === \App\Enums\TimeRange::WEEK->value) {
+                return $this->stats($sensorId, \App\Enums\TimeRange::MONTH->value);
+            }
         }
 
         return $stats;
@@ -145,14 +147,16 @@ class SensorTimeSeriesService
     {
         $sensorIdStr = (string) $sensorId;
 
-        // Determine aggregate window based on requested range
-        $every = match ($range) {
-            '-1h' => '1m',
-            '-24h' => '15m',
-            '-7d' => '1h',
-            '-30d' => '6h',
-            default => '15m',
-        };
+        // Determine aggregate window based on requested range via TimeRange enum
+        $every = '15m';
+        try {
+            $tr = \App\Enums\TimeRange::tryFrom($range);
+            if ($tr !== null) {
+                $every = $tr->aggregateWindow();
+            }
+        } catch (\Throwable) {
+            // fallback to default
+        }
 
         $pipeline = <<<FLUX
                 |> range(start: {$range})

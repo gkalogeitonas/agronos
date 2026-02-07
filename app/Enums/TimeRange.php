@@ -21,6 +21,20 @@ enum TimeRange: string
         };
     }
 
+    /**
+     * Aggregate window to use for this range when querying time-series (InfluxDB `aggregateWindow` every value).
+     */
+    public function aggregateWindow(): string
+    {
+        return match ($this) {
+            self::HOUR => '1m',
+            self::DAY => '15m',
+            self::WEEK => '1h',
+            self::MONTH => '6h',
+            self::QUARTER => '12h',
+        };
+    }
+
     public static function options(): array
     {
         $out = [];
