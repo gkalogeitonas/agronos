@@ -150,7 +150,7 @@
                     <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
                         <h3 class="text-lg font-semibold mb-4">Ιστορικό Μετρήσεων</h3>
 
-                        <template v-if="chartDataRef && chartDataRef.length">
+                        <template v-if="series && series.length">
                             <VueApexCharts
                                 type="line"
                                 height="350"
@@ -257,48 +257,11 @@ const chartOptions = {
   colors: ['#4f46e5'], // Indigo χρώμα για επαγγελματική εμφάνιση
 };
 
-// Φορμάρισμα των δεδομένων για την ApexCharts
-// Ορίζουμε ένα local, reactive `chartDataRef` που αρχικοποιείται από το deferred `props.chartData`.
-import { ref } from 'vue';
-const chartDataRef = ref<Array<[number, number]>>([]);
-
-function normalizePoint(pt: any): [number, number] | null {
-  if (Array.isArray(pt) && typeof pt[0] === 'number') {
-    return [pt[0], pt[1]];
-  }
-  if (pt && (pt.time !== undefined)) {
-    const ms = typeof pt.time === 'number' ? pt.time : new Date(pt.time).getTime();
-    return [ms, pt.value];
-  }
-  return null;
-}
-
-// keep chartDataRef in sync when the deferred prop resolves/changes
-watch(() => props.chartData, (val) => {
-  chartDataRef.value = (val ?? []).map(normalizePoint).filter(Boolean) as Array<[number, number]>;
-}, { immediate: true });
-
-function pushToChartData(time: string | number, value: number) {
-  const ms = typeof time === 'number' ? time : new Date(time).getTime();
-  const rounded = Math.round(value * 100) / 100;
-
-  // update if timestamp exists
-  const idx = chartDataRef.value.findIndex(pt => pt[0] === ms);
-  if (idx !== -1) {
-    chartDataRef.value[idx][1] = rounded;
-  } else {
-    chartDataRef.value.push([ms, rounded]);
-  }
-
-  // keep array size reasonable and sorted ascending
-  chartDataRef.value.sort((a, b) => a[0] - b[0]);
-  const MAX_POINTS = 1000;
-  if (chartDataRef.value.length > MAX_POINTS) {
-    chartDataRef.value.splice(0, chartDataRef.value.length - MAX_POINTS);
-  }
-}
-
-const series = computed(() => [{ name: props.sensor.type, data: chartDataRef.value }]);
+// Chart data comes directly from the Influx-driven `props.chartData`.
+const series = computed(() => {
+    const d = Array.isArray(props.chartData) ? (props.chartData as Array<[number, number]>) : [];
+    return [{ name: props.sensor.type, data: d.slice() }];
+});
 
 function deleteSensor() {
     if (confirm(`Are you sure you want to delete ${sensor.value.name || 'this sensor'}?`)) {
@@ -322,7 +285,7 @@ useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
             sensor.value.last_reading_at = payload.time;
 
             // push to chart data (live update)
-            try { pushToChartData(payload.time, payload.value); } catch { /* ignore */ }
+            //try { pushToChartData(payload.time, payload.value); } catch { /* ignore */ }
         }
     } catch {
         // ignore
