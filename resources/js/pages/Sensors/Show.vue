@@ -66,6 +66,22 @@
                 </CardContent>
             </Card>
 
+            <Card class="mb-6">
+                <CardHeader>
+                    <CardTitle>Time Range</CardTitle>
+                    <CardDescription>Choose the time range for chart and statistics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm text-muted-foreground">Range:</label>
+                        <select v-model="selectedRange" @change="applyRange"
+                            class="border rounded px-2 py-1 text-sm">
+                            <option v-for="opt in rangeOptions ?? []" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                    </div>
+                </CardContent>
+            </Card>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <Card>
                     <CardHeader>
@@ -217,6 +233,8 @@ const props = defineProps<{
     stats?: { min: number | null; max: number | null; avg: number | null; count?: number };
     // chartData may be provided as an array of [ms, value] pairs from the backend
     chartData?: Array<any>;
+    rangeOptions?: Array<{ value: string; label: string }>;
+    selectedRange?: string;
 }>();
 
 // local reactive copies so we can mutate on realtime events
@@ -262,6 +280,16 @@ const series = computed(() => {
     const d = Array.isArray(props.chartData) ? (props.chartData as Array<[number, number]>) : [];
     return [{ name: props.sensor.type, data: d.slice() }];
 });
+
+// Selected range — initialize from server-provided selectedRange or URL param
+const urlRange = new URL(window.location.href).searchParams.get('range');
+const selectedRange = ref<string>(props.selectedRange ?? urlRange ?? (props.rangeOptions && props.rangeOptions[1]?.value) ?? '-24h');
+
+function applyRange() {
+    // Use Inertia to visit the same sensor show route with the new range param.
+    // This performs an XHR and replaces Inertia props without a full browser reload.
+    router.get(route('sensors.show', sensor.value.id), { range: selectedRange.value }, { replace: true, preserveScroll: true });
+}
 
 function deleteSensor() {
     if (confirm(`Are you sure you want to delete ${sensor.value.name || 'this sensor'}?`)) {

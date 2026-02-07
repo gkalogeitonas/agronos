@@ -10,6 +10,7 @@ use App\Http\Resources\SensorResource;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Services\TimeSeries\SensorTimeSeriesService;
+use App\Enums\TimeRange;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
@@ -83,12 +84,18 @@ class SensorController extends Controller
         // Prepare time-series service; defer heavy/time-series work so initial page is fast
         $ts = app(SensorTimeSeriesService::class);
 
+        // Respect optional ?range= query param; fall back to default
+        $range = request()->query('range', TimeRange::default()->value);
+
         return Inertia::render('Sensors/Show', [
             'sensor' => (new SensorResource($sensor))->flat(request()),
+            // expose available ranges and which is selected
+            'rangeOptions' => TimeRange::options(),
+            'selectedRange' => $range,
             // defer recent readings and stats (resolved asynchronously by Inertia)
-            'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, '-24h', 20)),
-            'stats' => Inertia::defer(fn () => $ts->stats($sensor->id, '-24h')),
-            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, '-24h')), // Για το γράφημα
+            'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, $range, 20)),
+            'stats' => Inertia::defer(fn () => $ts->stats($sensor->id, $range)),
+            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, $range)), // Για το γράφημα
         ]);
     }
 
