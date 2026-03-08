@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DeviceStatus;
+use App\Enums\DeviceType;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -24,6 +25,13 @@ class Device extends Authenticatable
         'signal_strength',
         'mqtt_username',
         'mqtt_password',
+        'lora_frame_counter',
+        'lora_aes_key',
+    ];
+
+    protected $hidden = [
+        'secret',
+        'lora_aes_key',
     ];
 
     protected $casts = [
@@ -39,5 +47,10 @@ class Device extends Authenticatable
     {
         // Return a simplified array of sensors for frontend consumption
         return $this->hasMany(Sensor::class);
+    }
+
+    public function isLoRa(): bool
+    {
+        return $this->type === DeviceType::LORA->value;
     }
 }

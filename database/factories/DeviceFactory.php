@@ -28,6 +28,15 @@ class DeviceFactory extends Factory
             'last_seen_at' => $this->faker->optional()->dateTime(),
             'battery_level' => $this->faker->optional()->numberBetween(0, 100),
             'signal_strength' => $this->faker->optional()->numberBetween(0, 5),
+            'lora_frame_counter' => 0,
         ];
+    }
+
+    public function lora(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => DeviceType::LORA->value,
+            'lora_aes_key' => bin2hex(random_bytes(16)),
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\DeviceAuthController;
 use App\Http\Controllers\Api\V1\DeviceDataController;
+use App\Http\Controllers\Api\V1\LoRaDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/test', function () {
@@ -18,4 +19,7 @@ Route::prefix('v1')->group(function () {
     // ...move other v1 API routes here as needed...
     // Route::middleware('auth:sanctum')->post('/device/mqtt-webhook', [DeviceDataController::class, 'mqttBrokerWebhook']);
     Route::post('/device/mqtt-webhook', [DeviceDataController::class, 'mqttBrokerWebhook']);
+
+    // LoRa gateway webhook (EMQX Rule Engine forwards lora/+/data topics here)
+    Route::post('/lora/webhook', [LoRaDataController::class, 'webhook']);
 });
