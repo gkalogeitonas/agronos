@@ -101,12 +101,10 @@ class LoRaDataController extends Controller
             return response()->json(['message' => 'Payload deserialization failed.'], 422);
         }
 
-        // Update device status, signal, and battery
+        // Update device status only; gateway metrics are not stored on device
         $device->update([
             'status' => DeviceStatus::ONLINE,
             'last_seen_at' => now(),
-            'signal_strength' => $validated['rssi'] ?? $device->signal_strength,
-            'battery_level' => $readings['battery'],
         ]);
 
         // Map deserialized readings to the device's pre-registered sensors by type
