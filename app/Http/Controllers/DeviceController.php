@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\DeviceType;
 use App\Enums\SensorType;
-use App\Services\TimeSeries\SensorTimeSeriesService;
 use App\Http\Requests\RegisterDeviceRequest;
 use App\Models\Device;
 use App\Services\MqttCredentialService;
+use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -56,6 +56,7 @@ class DeviceController extends Controller
             'name' => $validated['name'],
             'type' => $validated['type'],
             'status' => 'registered',
+            'lora_aes_key' => $validated['lora_aes_key'] ?? null,
         ]);
 
         return redirect()->route('devices.index')->with('success', 'Device registered successfully');
@@ -125,8 +126,6 @@ class DeviceController extends Controller
 
         return redirect()->route('devices.index');
     }
-
-
 
     private function getBatteryLevel(Device $device, $sensors): ?float
     {

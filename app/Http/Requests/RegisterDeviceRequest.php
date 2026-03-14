@@ -29,6 +29,7 @@ class RegisterDeviceRequest extends FormRequest
             'secret' => 'required|string',
             'name' => 'nullable|string|max:255',
             'type' => 'required|string|in:'.implode(',', DeviceType::values()),
+            'lora_aes_key' => 'nullable|string|size:32|required_if:type,lora',
         ];
     }
 

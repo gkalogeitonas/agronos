@@ -19,6 +19,7 @@ const form = useForm({
   uuid: '',
   secret: '',
   type: '',
+  lora_aes_key: '',
 });
 
 const page = usePage();
@@ -88,6 +89,11 @@ function onQrError(error) {
                 <option v-for="type in deviceTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
               </select>
               <div v-if="form.errors.type" class="text-red-500 text-sm mt-1">{{ form.errors.type }}</div>
+            </div>
+            <div v-if="form.type === 'lora'">
+              <label class="block mb-1 font-medium" for="lora_aes_key">AES Key (32-char hex)</label>
+              <input v-model="form.lora_aes_key" id="lora_aes_key" type="text" class="input w-full" placeholder="e.g. 0123456789abcdef0123456789abcdef" maxlength="32" />
+              <div v-if="form.errors.lora_aes_key" class="text-red-500 text-sm mt-1">{{ form.errors.lora_aes_key }}</div>
             </div>
             <div class="flex justify-end gap-2">
               <Link :href="route('devices.index')">
