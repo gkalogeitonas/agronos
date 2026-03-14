@@ -43,11 +43,21 @@ function buildWebhookPayload(Device $device, int $fcnt, string $base64Payload, i
 }
 
 /**
- * Helper: build a 7-byte plain binary payload.
+ * Helper: build a binary payload in the UUID-prefix format.
+ *
+ * Each reading is 6 bytes: [4-char UUID prefix (ASCII)][int16 LE value×100]
+ * Defaults to a single temperature reading for generic tests that only need valid bytes.
+ *
+ * @param  array<array{string, int}>  $readings  Each element: [4-char prefix, scaled int16 value]
  */
-function buildSensorBinary(int $tempScaled = 2550, int $humScaled = 6500, int $moistScaled = 4230, int $battery = 88): string
+function buildSensorBinary(array $readings = [['temp', 2550]]): string
 {
-    return pack('vvvC', $tempScaled, $humScaled, $moistScaled, $battery);
+    $binary = '';
+    foreach ($readings as [$prefix, $scaledValue]) {
+        $binary .= $prefix.pack('v', $scaledValue & 0xFFFF);
+    }
+
+    return $binary;
 }
 
 // ---------- Successful Flow ----------
@@ -84,7 +94,12 @@ it('processes a valid LoRa webhook and updates device + sensors', function () {
         'uuid' => 'bat-sensor-1',
     ]);
 
-    $plaintext = buildSensorBinary(2550, 6500, 4230, 88);
+    $plaintext = buildSensorBinary([
+        ['temp', 2550],   // 25.50°C — matches 'temp-sensor-1'
+        ['hum-', 6500],   // 65.00%  — matches 'hum-sensor-1'
+        ['mois', 4230],   // 42.30%  — matches 'moist-sensor-1'
+        ['bat-', 8800],   // 88.00%  — matches 'bat-sensor-1'
+    ]);
     $fcnt = 1;
     $encrypted = encryptLoRaPayload($device, $fcnt, $plaintext);
     $webhookData = buildWebhookPayload($device, $fcnt, $encrypted, -72, 9.0);
@@ -225,7 +240,7 @@ it('returns 422 when decryption fails due to bad ciphertext', function () {
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
-    // Decryption may succeed but deserialization of 5 bytes should fail
+    // Decryption may succeed but deserialization will fail (5 bytes is not a multiple of 6)
     $response->assertStatus(422);
 });
 

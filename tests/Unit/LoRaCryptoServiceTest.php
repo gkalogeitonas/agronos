@@ -61,57 +61,58 @@ it('accepts frame counter exactly at MAX_FCNT_GAP boundary', function () {
 
 // ---------- Deserialization ----------
 
-it('deserializes a 7-byte binary payload correctly', function () {
-    // temp=25.50°C (2550), humidity=65.00% (6500), moisture=42.30% (4230), battery=88%
-    $binary = pack('vvvC', 2550, 6500, 4230, 88);
+it('deserializes a multi-reading binary payload correctly', function () {
+    // 6 bytes per reading: [4-char UUID prefix][int16 LE value×100]
+    $binary = 'temp'.pack('v', 2550)   // 25.50°C
+            .'humi'.pack('v', 6500)   // 65.00%
+            .'mois'.pack('v', 4230)   // 42.30%
+            .'batt'.pack('v', 8800);  // 88.00%
 
     $result = $this->service->deserialize($binary);
 
     expect($result)->toBe([
-        'temperature' => 25.50,
-        'humidity' => 65.00,
-        'moisture' => 42.30,
-        'battery' => 88,
+        'temp' => 25.50,
+        'humi' => 65.00,
+        'mois' => 42.30,
+        'batt' => 88.00,
     ]);
 });
 
-it('handles negative temperature correctly', function () {
+it('handles negative values correctly', function () {
     // temp=-5.25°C: -525 as signed int16 → unsigned = 65536 - 525 = 65011
     $tempSigned = -525;
     $tempUnsigned = $tempSigned & 0xFFFF;
-    $binary = pack('vvvC', $tempUnsigned, 5000, 3000, 50);
+    $binary = 'temp'.pack('v', $tempUnsigned)
+            .'humi'.pack('v', 5000)
+            .'mois'.pack('v', 3000);
 
     $result = $this->service->deserialize($binary);
 
-    expect($result['temperature'])->toBe(-5.25);
-    expect($result['humidity'])->toBe(50.00);
-    expect($result['moisture'])->toBe(30.00);
-    expect($result['battery'])->toBe(50);
+    expect($result['temp'])->toBe(-5.25);
+    expect($result['humi'])->toBe(50.00);
+    expect($result['mois'])->toBe(30.00);
 });
 
 it('handles zero values', function () {
-    $binary = pack('vvvC', 0, 0, 0, 0);
+    $binary = 'temp'.pack('v', 0)
+            .'humi'.pack('v', 0);
 
     $result = $this->service->deserialize($binary);
 
-    expect($result)->toBe([
-        'temperature' => 0.0,
-        'humidity' => 0.0,
-        'moisture' => 0.0,
-        'battery' => 0,
-    ]);
+    expect($result)->toBe(['temp' => 0.0, 'humi' => 0.0]);
 });
 
-it('throws on binary payload shorter than 7 bytes', function () {
-    expect(fn () => $this->service->deserialize('short'))
+it('throws on binary payload length not a multiple of 6', function () {
+    expect(fn () => $this->service->deserialize('short'))  // 5 bytes
         ->toThrow(\InvalidArgumentException::class);
 });
 
 // ---------- Encryption / Decryption ----------
 
 it('decrypts a known ciphertext with correct key and nonce', function () {
-    // Known 7-byte sensor data
-    $plaintext = pack('vvvC', 2550, 6500, 4230, 88);
+    // Known sensor data in UUID-prefix format (2 readings × 6 bytes each)
+    $plaintext = 'temp'.pack('v', 2550)   // 25.50°C
+               .'batt'.pack('v', 8800);  // 88.00%
 
     // Generate a deterministic key
     $hexKey = str_repeat('ab', 16); // 32-char hex → 16-byte key
@@ -147,8 +148,8 @@ it('decrypts a known ciphertext with correct key and nonce', function () {
 
     // Verify full round-trip through deserialization
     $result = $this->service->deserialize($decrypted);
-    expect($result['temperature'])->toBe(25.50);
-    expect($result['battery'])->toBe(88);
+    expect($result['temp'])->toBe(25.50);
+    expect($result['batt'])->toBe(88.00);
 });
 
 it('throws on invalid base64 ciphertext', function () {

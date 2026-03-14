@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\DeviceStatus;
 use App\Enums\DeviceType;
-use App\Enums\SensorType;
 use App\Exceptions\LoRaFrameCounterGapException;
 use App\Exceptions\LoRaReplayException;
 use App\Http\Controllers\Controller;
@@ -107,21 +106,15 @@ class LoRaDataController extends Controller
             'last_seen_at' => now(),
         ]);
 
-        // Map deserialized readings to the device's pre-registered sensors by type
-        $typeToValue = [
-            SensorType::TEMPERATURE->value => $readings['temperature'],
-            SensorType::HUMIDITY->value => $readings['humidity'],
-            SensorType::MOISTURE->value => $readings['moisture'],
-            SensorType::BATTERY->value => $readings['battery'],
-        ];
-
+        // Map deserialized readings to the device's pre-registered sensors by UUID prefix
         $sensors = $device->sensors()->get();
         $sensorPayloads = [];
         foreach ($sensors as $sensor) {
-            if (isset($typeToValue[$sensor->type])) {
+            $prefix = substr($sensor->uuid, 0, 4);
+            if (array_key_exists($prefix, $readings)) {
                 $sensorPayloads[] = [
                     'uuid' => $sensor->uuid,
-                    'value' => $typeToValue[$sensor->type],
+                    'value' => $readings[$prefix],
                 ];
             }
         }

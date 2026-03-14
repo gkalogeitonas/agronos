@@ -72,45 +72,36 @@ class LoRaCryptoService
     }
 
     /**
-     * Deserialize a 7-byte binary payload into sensor readings.
+     * Deserialize a variable-length binary payload into sensor readings.
      *
-     * Layout:
-     *   Bytes 0-1: temperature (int16 LE, scaled ×100) → divide by 100 for °C
-     *   Bytes 2-3: humidity    (int16 LE, scaled ×100) → divide by 100 for %
-     *   Bytes 4-5: moisture    (int16 LE, scaled ×100) → divide by 100 for %
-     *   Byte  6:   battery     (uint8, 0–100%)
+     * Layout: N × 6-byte records, where each record is:
+     *   Bytes 0-3: first 4 characters of the sensor UUID (ASCII)
+     *   Bytes 4-5: sensor value (int16 LE, scaled ×100)
      *
-     * @return array{temperature: float, humidity: float, moisture: float, battery: int}
+     * @return array<string, float>  Keyed by 4-char UUID prefix, value divided by 100
      */
     public function deserialize(string $binary): array
     {
-        if (strlen($binary) < 7) {
-            throw new \InvalidArgumentException('Binary payload must be at least 7 bytes, got '.strlen($binary).'.');
+        $len = strlen($binary);
+        if ($len < 6 || $len % 6 !== 0) {
+            throw new \InvalidArgumentException(
+                "Binary payload length must be a non-zero multiple of 6 bytes, got {$len}."
+            );
         }
 
-        $unpacked = unpack('vtemp/vhumidity/vmoisture/Cbattery', $binary);
-
-        // Convert unsigned int16 to signed int16 for temperature (can be negative)
-        $temp = $unpacked['temp'];
-        if ($temp >= 0x8000) {
-            $temp -= 0x10000;
+        $readings = [];
+        $count = $len / 6;
+        for ($i = 0; $i < $count; $i++) {
+            $chunk = substr($binary, $i * 6, 6);
+            $prefix = substr($chunk, 0, 4);
+            $raw = unpack('v1v', substr($chunk, 4, 2))['v'];
+            // Convert unsigned int16 to signed int16 (values can be negative)
+            if ($raw >= 0x8000) {
+                $raw -= 0x10000;
+            }
+            $readings[$prefix] = round($raw / 100, 2);
         }
 
-        $humidity = $unpacked['humidity'];
-        if ($humidity >= 0x8000) {
-            $humidity -= 0x10000;
-        }
-
-        $moisture = $unpacked['moisture'];
-        if ($moisture >= 0x8000) {
-            $moisture -= 0x10000;
-        }
-
-        return [
-            'temperature' => round($temp / 100, 2),
-            'humidity' => round($humidity / 100, 2),
-            'moisture' => round($moisture / 100, 2),
-            'battery' => $unpacked['battery'],
-        ];
+        return $readings;
     }
 }
