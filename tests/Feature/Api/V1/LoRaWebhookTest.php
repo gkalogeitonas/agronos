@@ -244,6 +244,47 @@ it('returns 422 when decryption fails due to bad ciphertext', function () {
     $response->assertStatus(422);
 });
 
+// ---------- Real Device Test Vector: Test-LoRa-Battery ----------
+
+it('processes a real Test-LoRa-Battery hardware payload and records Battery Level 100.00', function () {
+    // Real-device parameters from Test-Device-LoRa-Battery.h
+    //   LORA_DEVICE_ID = 3,  UUID = "Test-LoRa-Battery"
+    //   LORA_AES_KEY   = 000102030405060708090a0b0c0d0e0f
+    // Observed transmission (fcnt = 801):
+    //   Raw payload       : 426174741027  ("Batt" + int16LE(10000) → Battery Level 100.00)
+    //   Encrypted payload : D88264C76A12
+    $device = Device::factory()->lora()->create([
+        'id' => 3,
+        'uuid' => 'Test-LoRa-Battery',
+        'lora_aes_key' => '000102030405060708090a0b0c0d0e0f',
+        'lora_frame_counter' => 800,
+        'status' => DeviceStatus::OFFLINE,
+    ]);
+
+    $batterySensor = Sensor::factory()->create([
+        'device_id' => $device->id,
+        'user_id' => $device->user_id,
+        'type' => SensorType::BATTERY->value,
+        'uuid' => 'Battery-Level-1',
+    ]);
+
+    $base64Payload = base64_encode(hex2bin('D88264C76A12'));
+    $webhookData = buildWebhookPayload($device, 801, $base64Payload, -90, 5.0);
+
+    $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
+
+    $response->assertStatus(200)
+        ->assertJsonFragment(['message' => 'LoRa data processed.']);
+
+    $device->refresh();
+    expect($device->status)->toBe(DeviceStatus::ONLINE);
+    expect($device->lora_frame_counter)->toBe(801);
+
+    $batterySensor->refresh();
+    expect((float) $batterySensor->last_reading)->toBe(100.0);
+    expect($batterySensor->last_reading_at)->not->toBeNull();
+});
+
 // ---------- Frame Counter Progression ----------
 
 it('allows sequential frame counter increments', function () {

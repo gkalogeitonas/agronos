@@ -165,3 +165,27 @@ it('throws on device with missing AES key', function () {
     expect(fn () => $this->service->decrypt($device, 1, base64_encode('test')))
         ->toThrow(\RuntimeException::class);
 });
+
+// ---------- Real Device Test Vector: Test-LoRa-Battery ----------
+
+it('decrypts a real Test-LoRa-Battery hardware payload to Battery Level 100.00', function () {
+    // Real-device parameters from Test-Device-LoRa-Battery.h
+    //   LORA_DEVICE_ID = 3
+    //   LORA_AES_KEY   = 000102030405060708090a0b0c0d0e0f
+    // Observed transmission (fcnt = 801):
+    //   Raw payload       : 426174741027  ("Batt" + int16LE(10000) → 100.00)
+    //   Encrypted payload : D88264C76A12
+    $device = Device::factory()->lora()->create([
+        'id' => 3,
+        'lora_aes_key' => '000102030405060708090a0b0c0d0e0f',
+        'lora_frame_counter' => 800,
+    ]);
+
+    $base64Ciphertext = base64_encode(hex2bin('D88264C76A12'));
+    $decrypted = $this->service->decrypt($device, 801, $base64Ciphertext);
+
+    expect($decrypted)->toBe(hex2bin('426174741027'));
+
+    $result = $this->service->deserialize($decrypted);
+    expect($result)->toBe(['Batt' => 100.0]);
+});
