@@ -9,12 +9,12 @@ use App\Models\Sensor;
 /**
  * Helper: build the hex-encoded LoRa raw_payload.
  *
- * Layout: [device_id (4B LE)] [fcnt (4B LE)] [AES-128-CTR encrypted plaintext]
+ * Layout: [1B uuid_len] [uuid_len B: UUID ASCII] [fcnt (4B LE)] [AES-128-CTR encrypted plaintext]
  */
 function buildLoRaRawPayloadHex(Device $device, int $fcnt, string $plaintext): string
 {
     $key = hex2bin($device->lora_aes_key);
-    $nonce = pack('V', $device->id).pack('V', $fcnt).str_repeat("\x00", 8);
+    $nonce = pack('V', crc32($device->uuid)).pack('V', $fcnt).str_repeat("\x00", 8);
 
     $ciphertext = openssl_encrypt(
         $plaintext,
@@ -24,7 +24,7 @@ function buildLoRaRawPayloadHex(Device $device, int $fcnt, string $plaintext): s
         $nonce,
     );
 
-    return bin2hex(pack('V', $device->id).pack('V', $fcnt).$ciphertext);
+    return bin2hex(chr(strlen($device->uuid)).$device->uuid.pack('V', $fcnt).$ciphertext);
 }
 
 /**
@@ -168,8 +168,9 @@ it('rejects frame counter with excessive gap with 422', function () {
 // ---------- Device Lookup ----------
 
 it('returns 404 for unknown device ID', function () {
-    // Pack a device ID (99999) that does not exist in the database
-    $rawPayloadHex = bin2hex(pack('V', 99999).pack('V', 1).str_repeat("\x00", 6));
+    // Use a UUID that does not exist in the database
+    $fakeUuid = 'nonexistent-uuid';
+    $rawPayloadHex = bin2hex(chr(strlen($fakeUuid)).$fakeUuid.pack('V', 1).str_repeat("\x00", 6));
     $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
@@ -181,8 +182,8 @@ it('returns 404 for unknown device ID', function () {
 it('rejects a non-LoRa device type', function () {
     $device = Device::factory()->create(['type' => DeviceType::WIFI->value]);
 
-    // Send the WIFI device's numeric ID — it won't match when filtered by LORA type
-    $rawPayloadHex = bin2hex(pack('V', $device->id).pack('V', 1).str_repeat("\x00", 6));
+    // Send the WIFI device's UUID — it won't match when filtered by LORA type
+    $rawPayloadHex = bin2hex(chr(strlen($device->uuid)).$device->uuid.pack('V', 1).str_repeat("\x00", 6));
     $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
@@ -230,7 +231,7 @@ it('returns 422 when raw_payload ciphertext length is not a multiple of 6', func
     $device = Device::factory()->lora()->create(['lora_frame_counter' => 0]);
 
     // Ciphertext is 5 bytes ('short') — (5 % 6 ≠ 0) so validation rejects it
-    $rawPayloadHex = bin2hex(pack('V', $device->id).pack('V', 1).'short');
+    $rawPayloadHex = bin2hex(chr(strlen($device->uuid)).$device->uuid.pack('V', 1).'short');
     $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
@@ -242,13 +243,13 @@ it('returns 422 when raw_payload ciphertext length is not a multiple of 6', func
 
 it('processes a real Test-LoRa-Battery hardware payload and records Battery Level 100.00', function () {
     // Real-device parameters from Test-Device-LoRa-Battery.h
-    //   LORA_DEVICE_ID = 3,  UUID = "Test-LoRa-Battery"
+    //   UUID           = "Test-LoRa-Battery"
     //   LORA_AES_KEY   = 000102030405060708090a0b0c0d0e0f
     // Observed transmission (fcnt = 801):
     //   Raw payload       : 426174741027  ("Batt" + int16LE(10000) → Battery Level 100.00)
-    //   Encrypted payload : D88264C76A12
+    //   Nonce uses CRC32("Test-LoRa-Battery") = 0x4368E3BC
+    //   Encrypted payload : CFBC0421AF34
     $device = Device::factory()->lora()->create([
-        'id' => 3,
         'uuid' => 'Test-LoRa-Battery',
         'lora_aes_key' => '000102030405060708090a0b0c0d0e0f',
         'lora_frame_counter' => 800,
@@ -262,8 +263,8 @@ it('processes a real Test-LoRa-Battery hardware payload and records Battery Leve
         'uuid' => 'Battery-Level-1',
     ]);
 
-    // raw_payload: [device_id=3 (4B LE)] [fcnt=801 (4B LE)] [ciphertext D88264C76A12]
-    $rawPayloadHex = bin2hex(pack('V', 3).pack('V', 801).hex2bin('D88264C76A12'));
+    // raw_payload: [1B uuid_len=17] [17B "Test-LoRa-Battery"] [fcnt=801 (4B LE)] [ciphertext CFBC0421AF34]
+    $rawPayloadHex = '11546573742D4C6F52612D4261747465727921030000CFBC0421AF34';
     $webhookData = buildWebhookPayload($rawPayloadHex, -90, 5.0);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);

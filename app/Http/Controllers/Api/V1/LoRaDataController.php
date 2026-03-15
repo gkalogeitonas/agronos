@@ -27,8 +27,6 @@ class LoRaDataController extends Controller
             return response()->json(['message' => 'Invalid inner payload JSON.'], 422);
         }
 
-
-
         // Validate the gateway JSON structure
         $innerValidator = Validator::make($gatewayPayload, [
             'gateway_id' => ['required', 'string', 'max:255'],
@@ -36,7 +34,6 @@ class LoRaDataController extends Controller
             'rssi' => ['nullable', 'integer'],
             'snr' => ['nullable', 'numeric'],
         ]);
-
 
         if ($innerValidator->fails()) {
             return response()->json([
@@ -47,33 +44,40 @@ class LoRaDataController extends Controller
 
         $validated = $innerValidator->validated();
 
-        // Decode hex → binary and extract the embedded device ID, frame counter, and ciphertext
-        // Layout: [device_id: 4B LE][fcnt: 4B LE][encrypted payload: N×6B]
+        // Decode hex → binary and extract UUID, frame counter, and ciphertext
+        // Layout: [1B uuid_len] [uuid_len B: UUID ASCII] [4B fcnt LE] [encrypted payload: N×6B]
         $rawBytes = hex2bin($validated['raw_payload']);
-        if ($rawBytes === false || strlen($rawBytes) < 8 || (strlen($rawBytes) - 8) % 6 !== 0) {
+        if ($rawBytes === false || strlen($rawBytes) < 12) {
             return response()->json(['message' => 'Invalid raw_payload structure.'], 422);
         }
 
-        //log the incoming webhook for debugging
+        $uuidLen = ord($rawBytes[0]);
+        $headerLen = 1 + $uuidLen + 4; // 1B uuid_len + UUID + 4B fcnt
+
+        if ($uuidLen < 1 || strlen($rawBytes) < $headerLen + 6 || (strlen($rawBytes) - $headerLen) % 6 !== 0) {
+            return response()->json(['message' => 'Invalid raw_payload structure.'], 422);
+        }
+
+        $uuid = substr($rawBytes, 1, $uuidLen);
+        $fcnt = unpack('V', substr($rawBytes, 1 + $uuidLen, 4))[1];
+        $ciphertext = base64_encode(substr($rawBytes, $headerLen));
+
+        // log the incoming webhook for debugging
         Log::info('Received LoRa webhook', [
             'username' => $request->validated()['request']['username'],
             'gateway_payload' => $validated,
         ]);
 
-        $deviceId = unpack('V', substr($rawBytes, 0, 4))[1];
-        $fcnt = unpack('V', substr($rawBytes, 4, 4))[1];
-        $ciphertext = base64_encode(substr($rawBytes, 8));
-
-        //log the extracted values for debugging
+        // log the extracted values for debugging
         Log::debug('Extracted LoRa payload components', [
-            'device_id' => $deviceId,
+            'uuid' => $uuid,
             'frame_counter' => $fcnt,
             'ciphertext_length' => strlen($ciphertext),
         ]);
 
-        // Look up the LoRa device by its embedded numeric ID
+        // Look up the LoRa device by its embedded UUID
         $device = Device::allTenants()
-            ->where('id', $deviceId)
+            ->where('uuid', $uuid)
             ->where('type', DeviceType::LORA->value)
             ->first();
 

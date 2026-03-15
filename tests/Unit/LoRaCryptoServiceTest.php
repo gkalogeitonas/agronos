@@ -118,11 +118,11 @@ it('decrypts a known ciphertext with correct key and nonce', function () {
     $hexKey = str_repeat('ab', 16); // 32-char hex → 16-byte key
     $key = hex2bin($hexKey);
 
-    $deviceId = 42;
+    $deviceUuid = 'test-device-42';
     $fcnt = 100;
 
-    // Build expected nonce
-    $nonce = pack('V', $deviceId).pack('V', $fcnt).str_repeat("\x00", 8);
+    // Build expected nonce using CRC32 of UUID
+    $nonce = pack('V', crc32($deviceUuid)).pack('V', $fcnt).str_repeat("\x00", 8);
 
     // Encrypt with AES-128-CTR to produce the ciphertext
     $ciphertext = openssl_encrypt(
@@ -137,7 +137,7 @@ it('decrypts a known ciphertext with correct key and nonce', function () {
 
     // Create a device matching the expected nonce inputs
     $device = Device::factory()->lora()->create([
-        'id' => $deviceId,
+        'uuid' => $deviceUuid,
         'lora_aes_key' => $hexKey,
         'lora_frame_counter' => 99,
     ]);
@@ -170,18 +170,19 @@ it('throws on device with missing AES key', function () {
 
 it('decrypts a real Test-LoRa-Battery hardware payload to Battery Level 100.00', function () {
     // Real-device parameters from Test-Device-LoRa-Battery.h
-    //   LORA_DEVICE_ID = 3
+    //   UUID           = "Test-LoRa-Battery"
     //   LORA_AES_KEY   = 000102030405060708090a0b0c0d0e0f
     // Observed transmission (fcnt = 801):
     //   Raw payload       : 426174741027  ("Batt" + int16LE(10000) → 100.00)
-    //   Encrypted payload : D88264C76A12
+    //   Nonce uses CRC32("Test-LoRa-Battery") = 0x4368E3BC
+    //   Encrypted payload : CFBC0421AF34
     $device = Device::factory()->lora()->create([
-        'id' => 3,
+        'uuid' => 'Test-LoRa-Battery',
         'lora_aes_key' => '000102030405060708090a0b0c0d0e0f',
         'lora_frame_counter' => 800,
     ]);
 
-    $base64Ciphertext = base64_encode(hex2bin('D88264C76A12'));
+    $base64Ciphertext = base64_encode(hex2bin('CFBC0421AF34'));
     $decrypted = $this->service->decrypt($device, 801, $base64Ciphertext);
 
     expect($decrypted)->toBe(hex2bin('426174741027'));

@@ -37,7 +37,7 @@ class LoRaCryptoService
      * Decrypt a Base64-encoded AES-128-CTR ciphertext using the device's LoRa key.
      *
      * Nonce layout (16 bytes):
-     *   [4-byte device ID LE] [4-byte frame counter LE] [8-byte zero padding]
+     *   [4-byte CRC32(device.uuid) LE] [4-byte frame counter LE] [8-byte zero padding]
      */
     public function decrypt(Device $device, int $fcnt, string $base64Ciphertext): string
     {
@@ -52,9 +52,9 @@ class LoRaCryptoService
         }
 
         // Build deterministic 16-byte nonce
-        $nonce = pack('V', $device->id)    // 4 bytes: device ID (little-endian uint32)
-               .pack('V', $fcnt)          // 4 bytes: frame counter (little-endian uint32)
-               .str_repeat("\x00", 8);    // 8 bytes: zero padding
+        $nonce = pack('V', crc32($device->uuid))  // 4 bytes: CRC32 of UUID (little-endian uint32)
+               .pack('V', $fcnt)                  // 4 bytes: frame counter (little-endian uint32)
+               .str_repeat("\x00", 8);            // 8 bytes: zero padding
 
         $plaintext = openssl_decrypt(
             $ciphertext,
@@ -78,7 +78,7 @@ class LoRaCryptoService
      *   Bytes 0-3: first 4 characters of the sensor UUID (ASCII)
      *   Bytes 4-5: sensor value (int16 LE, scaled ×100)
      *
-     * @return array<string, float>  Keyed by 4-char UUID prefix, value divided by 100
+     * @return array<string, float> Keyed by 4-char UUID prefix, value divided by 100
      */
     public function deserialize(string $binary): array
     {
