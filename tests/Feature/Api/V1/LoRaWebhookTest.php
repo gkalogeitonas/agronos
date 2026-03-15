@@ -7,9 +7,11 @@ use App\Models\Device;
 use App\Models\Sensor;
 
 /**
- * Helper: encrypt a 7-byte sensor payload for a given device/fcnt.
+ * Helper: build the hex-encoded LoRa raw_payload.
+ *
+ * Layout: [device_id (4B LE)] [fcnt (4B LE)] [AES-128-CTR encrypted plaintext]
  */
-function encryptLoRaPayload(Device $device, int $fcnt, string $plaintext): string
+function buildLoRaRawPayloadHex(Device $device, int $fcnt, string $plaintext): string
 {
     $key = hex2bin($device->lora_aes_key);
     $nonce = pack('V', $device->id).pack('V', $fcnt).str_repeat("\x00", 8);
@@ -22,23 +24,24 @@ function encryptLoRaPayload(Device $device, int $fcnt, string $plaintext): strin
         $nonce,
     );
 
-    return base64_encode($ciphertext);
+    return bin2hex(pack('V', $device->id).pack('V', $fcnt).$ciphertext);
 }
 
 /**
- * Helper: build a valid webhook payload.
+ * Helper: build a valid EMQX webhook envelope.
  */
-function buildWebhookPayload(Device $device, int $fcnt, string $base64Payload, int $rssi = -85, float $snr = 7.5): array
+function buildWebhookPayload(string $rawPayloadHex, int $rssi = -85, float $snr = 7.5, string $gatewayId = 'gateway-user'): array
 {
     return [
-        'username' => 'gateway-user',
-        'payload' => json_encode([
-            'device_id' => $device->uuid,
-            'fcnt' => $fcnt,
-            'payload' => $base64Payload,
-            'rssi' => $rssi,
-            'snr' => $snr,
-        ]),
+        'request' => [
+            'username' => $gatewayId,
+            'payload' => json_encode([
+                'gateway_id' => $gatewayId,
+                'rssi' => $rssi,
+                'snr' => $snr,
+                'raw_payload' => $rawPayloadHex,
+            ]),
+        ],
     ];
 }
 
@@ -101,8 +104,8 @@ it('processes a valid LoRa webhook and updates device + sensors', function () {
         ['bat-', 8800],   // 88.00%  — matches 'bat-sensor-1'
     ]);
     $fcnt = 1;
-    $encrypted = encryptLoRaPayload($device, $fcnt, $plaintext);
-    $webhookData = buildWebhookPayload($device, $fcnt, $encrypted, -72, 9.0);
+    $rawPayloadHex = buildLoRaRawPayloadHex($device, $fcnt, $plaintext);
+    $webhookData = buildWebhookPayload($rawPayloadHex, -72, 9.0);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
@@ -136,8 +139,8 @@ it('rejects a replayed frame counter with 409', function () {
     $device = Device::factory()->lora()->create(['lora_frame_counter' => 100]);
 
     $plaintext = buildSensorBinary();
-    $encrypted = encryptLoRaPayload($device, 100, $plaintext);
-    $webhookData = buildWebhookPayload($device, 100, $encrypted);
+    $rawPayloadHex = buildLoRaRawPayloadHex($device, 100, $plaintext);
+    $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
@@ -153,8 +156,8 @@ it('rejects frame counter with excessive gap with 422', function () {
     $device = Device::factory()->lora()->create(['lora_frame_counter' => 0]);
 
     $plaintext = buildSensorBinary();
-    $encrypted = encryptLoRaPayload($device, 10_001, $plaintext);
-    $webhookData = buildWebhookPayload($device, 10_001, $encrypted);
+    $rawPayloadHex = buildLoRaRawPayloadHex($device, 10_001, $plaintext);
+    $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
@@ -164,17 +167,10 @@ it('rejects frame counter with excessive gap with 422', function () {
 
 // ---------- Device Lookup ----------
 
-it('returns 404 for unknown device UUID', function () {
-    $webhookData = [
-        'username' => 'gateway-user',
-        'payload' => json_encode([
-            'device_id' => 'nonexistent-device-uuid',
-            'fcnt' => 1,
-            'payload' => base64_encode('1234567'),
-            'rssi' => -80,
-            'snr' => 5.0,
-        ]),
-    ];
+it('returns 404 for unknown device ID', function () {
+    // Pack a device ID (99999) that does not exist in the database
+    $rawPayloadHex = bin2hex(pack('V', 99999).pack('V', 1).str_repeat("\x00", 6));
+    $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
@@ -185,16 +181,9 @@ it('returns 404 for unknown device UUID', function () {
 it('rejects a non-LoRa device type', function () {
     $device = Device::factory()->create(['type' => DeviceType::WIFI->value]);
 
-    $webhookData = [
-        'username' => 'gateway-user',
-        'payload' => json_encode([
-            'device_id' => $device->uuid,
-            'fcnt' => 1,
-            'payload' => base64_encode('1234567'),
-            'rssi' => -80,
-            'snr' => 5.0,
-        ]),
-    ];
+    // Send the WIFI device's numeric ID — it won't match when filtered by LORA type
+    $rawPayloadHex = bin2hex(pack('V', $device->id).pack('V', 1).str_repeat("\x00", 6));
+    $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
@@ -206,7 +195,7 @@ it('rejects a non-LoRa device type', function () {
 
 it('returns 422 for missing outer payload field', function () {
     $response = $this->postJson('/api/v1/lora/webhook', [
-        'username' => 'gateway-user',
+        'request' => ['username' => 'gateway-user'],
     ]);
 
     $response->assertStatus(422);
@@ -214,8 +203,10 @@ it('returns 422 for missing outer payload field', function () {
 
 it('returns 422 for invalid inner JSON', function () {
     $response = $this->postJson('/api/v1/lora/webhook', [
-        'username' => 'gateway-user',
-        'payload' => 'not-valid-json',
+        'request' => [
+            'username' => 'gateway-user',
+            'payload' => 'not-valid-json',
+        ],
     ]);
 
     $response->assertStatus(422);
@@ -223,8 +214,10 @@ it('returns 422 for invalid inner JSON', function () {
 
 it('returns 422 for missing inner payload fields', function () {
     $response = $this->postJson('/api/v1/lora/webhook', [
-        'username' => 'gateway-user',
-        'payload' => json_encode(['device_id' => 'some-uuid']),
+        'request' => [
+            'username' => 'gateway-user',
+            'payload' => json_encode(['gateway_id' => 'some-gateway']),
+        ],
     ]);
 
     $response->assertStatus(422)
@@ -233,14 +226,15 @@ it('returns 422 for missing inner payload fields', function () {
 
 // ---------- Decryption Failure ----------
 
-it('returns 422 when decryption fails due to bad ciphertext', function () {
+it('returns 422 when raw_payload ciphertext length is not a multiple of 6', function () {
     $device = Device::factory()->lora()->create(['lora_frame_counter' => 0]);
 
-    $webhookData = buildWebhookPayload($device, 1, base64_encode('short'));
+    // Ciphertext is 5 bytes ('short') — (5 % 6 ≠ 0) so validation rejects it
+    $rawPayloadHex = bin2hex(pack('V', $device->id).pack('V', 1).'short');
+    $webhookData = buildWebhookPayload($rawPayloadHex);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
-    // Decryption may succeed but deserialization will fail (5 bytes is not a multiple of 6)
     $response->assertStatus(422);
 });
 
@@ -268,8 +262,9 @@ it('processes a real Test-LoRa-Battery hardware payload and records Battery Leve
         'uuid' => 'Battery-Level-1',
     ]);
 
-    $base64Payload = base64_encode(hex2bin('D88264C76A12'));
-    $webhookData = buildWebhookPayload($device, 801, $base64Payload, -90, 5.0);
+    // raw_payload: [device_id=3 (4B LE)] [fcnt=801 (4B LE)] [ciphertext D88264C76A12]
+    $rawPayloadHex = bin2hex(pack('V', 3).pack('V', 801).hex2bin('D88264C76A12'));
+    $webhookData = buildWebhookPayload($rawPayloadHex, -90, 5.0);
 
     $response = $this->postJson('/api/v1/lora/webhook', $webhookData);
 
@@ -298,14 +293,12 @@ it('allows sequential frame counter increments', function () {
     $plaintext = buildSensorBinary();
 
     // First packet
-    $encrypted1 = encryptLoRaPayload($device, 1, $plaintext);
-    $this->postJson('/api/v1/lora/webhook', buildWebhookPayload($device, 1, $encrypted1))
+    $this->postJson('/api/v1/lora/webhook', buildWebhookPayload(buildLoRaRawPayloadHex($device, 1, $plaintext)))
         ->assertStatus(200);
 
     // Second packet
     $device->refresh();
-    $encrypted2 = encryptLoRaPayload($device, 2, $plaintext);
-    $this->postJson('/api/v1/lora/webhook', buildWebhookPayload($device, 2, $encrypted2))
+    $this->postJson('/api/v1/lora/webhook', buildWebhookPayload(buildLoRaRawPayloadHex($device, 2, $plaintext)))
         ->assertStatus(200);
 
     $device->refresh();

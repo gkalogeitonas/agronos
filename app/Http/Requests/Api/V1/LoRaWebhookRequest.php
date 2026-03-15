@@ -16,15 +16,18 @@ class LoRaWebhookRequest extends FormRequest
      *
      * Expected format:
      * {
-     *   "username": "gateway-mqtt-username",
-     *   "payload": "{\"device_id\":\"node-uuid\",\"fcnt\":123,\"payload\":\"base64...\",\"rssi\":-85,\"snr\":7.5}"
+     *   "request": {
+     *     "username": "lora_gateway",
+     *     "payload": "{\"gateway_id\":\"lora_gateway\",\"rssi\":-46,\"snr\":13.75,\"raw_payload\":\"hex...\"}"
+     *   }
      * }
      */
     public function rules(): array
     {
         return [
-            'username' => ['required', 'string'],
-            'payload' => ['required', 'string'],
+            'request' => ['required', 'array'],
+            'request.username' => ['required', 'string'],
+            'request.payload' => ['required', 'string'],
         ];
     }
 }

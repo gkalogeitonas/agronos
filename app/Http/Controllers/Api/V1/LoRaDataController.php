@@ -21,20 +21,22 @@ class LoRaDataController extends Controller
         LoRaCryptoService $crypto,
         SensorDataService $sensorDataService,
     ) {
-        // Decode the inner JSON payload forwarded by the gateway
-        $innerPayload = json_decode($request->validated()['payload'], true);
-        if (! is_array($innerPayload)) {
+        // Decode the gateway JSON from the EMQX envelope
+        $gatewayPayload = json_decode($request->validated()['request']['payload'], true);
+        if (! is_array($gatewayPayload)) {
             return response()->json(['message' => 'Invalid inner payload JSON.'], 422);
         }
 
-        // Validate the inner payload structure
-        $innerValidator = Validator::make($innerPayload, [
-            'device_id' => ['required', 'string', 'max:255'],
-            'fcnt' => ['required', 'integer', 'min:0'],
-            'payload' => ['required', 'string'],
+
+
+        // Validate the gateway JSON structure
+        $innerValidator = Validator::make($gatewayPayload, [
+            'gateway_id' => ['required', 'string', 'max:255'],
+            'raw_payload' => ['required', 'string', 'regex:/^[0-9A-Fa-f]+$/'],
             'rssi' => ['nullable', 'integer'],
             'snr' => ['nullable', 'numeric'],
         ]);
+
 
         if ($innerValidator->fails()) {
             return response()->json([
@@ -45,9 +47,33 @@ class LoRaDataController extends Controller
 
         $validated = $innerValidator->validated();
 
-        // Look up the LoRa device by UUID
+        // Decode hex → binary and extract the embedded device ID, frame counter, and ciphertext
+        // Layout: [device_id: 4B LE][fcnt: 4B LE][encrypted payload: N×6B]
+        $rawBytes = hex2bin($validated['raw_payload']);
+        if ($rawBytes === false || strlen($rawBytes) < 8 || (strlen($rawBytes) - 8) % 6 !== 0) {
+            return response()->json(['message' => 'Invalid raw_payload structure.'], 422);
+        }
+
+        //log the incoming webhook for debugging
+        Log::info('Received LoRa webhook', [
+            'username' => $request->validated()['request']['username'],
+            'gateway_payload' => $validated,
+        ]);
+
+        $deviceId = unpack('V', substr($rawBytes, 0, 4))[1];
+        $fcnt = unpack('V', substr($rawBytes, 4, 4))[1];
+        $ciphertext = base64_encode(substr($rawBytes, 8));
+
+        //log the extracted values for debugging
+        Log::debug('Extracted LoRa payload components', [
+            'device_id' => $deviceId,
+            'frame_counter' => $fcnt,
+            'ciphertext_length' => strlen($ciphertext),
+        ]);
+
+        // Look up the LoRa device by its embedded numeric ID
         $device = Device::allTenants()
-            ->where('uuid', $validated['device_id'])
+            ->where('id', $deviceId)
             ->where('type', DeviceType::LORA->value)
             ->first();
 
@@ -57,19 +83,19 @@ class LoRaDataController extends Controller
 
         // Validate frame counter (anti-replay)
         try {
-            $crypto->validateFrameCounter($device, $validated['fcnt']);
+            $crypto->validateFrameCounter($device, $fcnt);
         } catch (LoRaReplayException $e) {
             Log::warning('LoRa replay attack blocked', [
-                'device_uuid' => $device->uuid,
-                'incoming_fcnt' => $validated['fcnt'],
+                'device_id' => $device->id,
+                'incoming_fcnt' => $fcnt,
                 'stored_fcnt' => $device->lora_frame_counter,
             ]);
 
             return response()->json(['message' => 'Replay detected.'], 409);
         } catch (LoRaFrameCounterGapException $e) {
             Log::warning('LoRa frame counter gap exceeded', [
-                'device_uuid' => $device->uuid,
-                'incoming_fcnt' => $validated['fcnt'],
+                'device_id' => $device->id,
+                'incoming_fcnt' => $fcnt,
                 'stored_fcnt' => $device->lora_frame_counter,
             ]);
 
@@ -78,10 +104,10 @@ class LoRaDataController extends Controller
 
         // Decrypt the payload
         try {
-            $rawBytes = $crypto->decrypt($device, $validated['fcnt'], $validated['payload']);
+            $rawBinaryDecrypted = $crypto->decrypt($device, $fcnt, $ciphertext);
         } catch (\Throwable $e) {
             Log::error('LoRa decryption failed', [
-                'device_uuid' => $device->uuid,
+                'device_id' => $device->id,
                 'error' => $e->getMessage(),
             ]);
 
@@ -90,10 +116,10 @@ class LoRaDataController extends Controller
 
         // Deserialize binary into sensor readings
         try {
-            $readings = $crypto->deserialize($rawBytes);
+            $readings = $crypto->deserialize($rawBinaryDecrypted);
         } catch (\InvalidArgumentException $e) {
             Log::error('LoRa deserialization failed', [
-                'device_uuid' => $device->uuid,
+                'device_id' => $device->id,
                 'error' => $e->getMessage(),
             ]);
 
