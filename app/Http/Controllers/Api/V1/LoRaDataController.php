@@ -22,12 +22,19 @@ class LoRaDataController extends Controller
         SensorDataService $sensorDataService,
     ) {
 
-        //log  row incoming request for debugging
-        Log::info('Received LoRa webhook', [
-            'request' => $request->all()
-        ]);
-        // Decode the gateway JSON from the EMQX envelope
-        $gatewayPayload = json_decode($request->validated()['request']['payload'], true);
+        // Log raw incoming request for debugging
+        Log::info('Received LoRa webhook', $request->all());
+
+        // Decode the gateway JSON from the EMQX envelope.
+        // Some EMQX configs send a wrapped `request` object; others send the fields at the top level.
+        $validated = $request->validated();
+
+        $payloadJson = data_get($validated, 'request.payload', data_get($validated, 'payload'));
+        if (! is_string($payloadJson)) {
+            return response()->json(['message' => 'Missing or invalid inner payload.'], 422);
+        }
+
+        $gatewayPayload = json_decode($payloadJson, true);
         if (! is_array($gatewayPayload)) {
             return response()->json(['message' => 'Invalid inner payload JSON.'], 422);
         }
@@ -69,7 +76,7 @@ class LoRaDataController extends Controller
 
         // log the incoming webhook for debugging
         Log::info('Received LoRa webhook', [
-            'username' => $request->validated()['request']['username'],
+            'username' => data_get($validated, 'request.username', data_get($validated, 'username')),
             'gateway_payload' => $validated,
         ]);
 

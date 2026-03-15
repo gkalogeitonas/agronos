@@ -25,9 +25,16 @@ class LoRaWebhookRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'request' => ['required', 'array'],
-            'request.username' => ['required', 'string'],
-            'request.payload' => ['required', 'string'],
+            // Accept either a wrapped payload (EMQX envelope) or the raw payload directly.
+            'request' => ['sometimes', 'array'],
+
+            // When using the wrapper
+            'request.username' => ['required_with:request', 'string'],
+            'request.payload' => ['required_with:request', 'string'],
+
+            // When sending the payload directly (common in some EMQX setups)
+            'username' => ['required_without:request', 'string'],
+            'payload' => ['required_without:request', 'string'],
         ];
     }
 }
