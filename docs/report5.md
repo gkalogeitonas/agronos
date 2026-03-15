@@ -68,7 +68,7 @@ public function decrypt(Device $device, int $fcnt, string $base64Ciphertext): st
 Χρησιμοποιεί AES-128-CTR με ντετερμινιστικό 16-byte nonce που παράγεται αποκλειστικά από γνωστές τιμές, χωρίς να χρειάζεται μετάδοσή του στο δίκτυο:
 
 ```
-Nonce = [4 bytes: device.id LE] [4 bytes: fcnt LE] [8 bytes: μηδενικά]
+Nonce = [4 bytes: CRC32(device.uuid) LE] [4 bytes: fcnt LE] [8 bytes: μηδενικά]
 ```
 
 Αφού αποκωδικοποιηθεί το Base64 ciphertext, εκτελείται `openssl_decrypt` με `OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING`.
@@ -88,7 +88,7 @@ public function deserialize(string $binary): array // array<string, float>
 
 Η μέθοδος επιστρέφει `array<string, float>` με κλειδί το 4-χαρακτηρο prefix και τιμή διαιρεμένη διά 100. Η δομή αυτή είναι αγνωστική ως προς τον τύπο αισθητήρα — το backend δεν χρειάζεται να γνωρίζει εκ των προτέρων ποιοι αισθητήρες θα στείλουν δεδομένα, αρκεί να υπάρχουν pre-registered στη βάση με το αντίστοιχο UUID.
 
-
+Η επιλογή να στέλνονται μόνο οι 4 πρώτοι χαρακτήρες και όχι ολόκληρο το UUID έγινε για εξοικονόμηση δεδομένων που αποστέλλονται από το σχετικό άργο LoRa, με σκοπό να ελαχιστοποιηθεί ο χρόνος που κάθε συσκευή δεσμεύει το κανάλι.
 ---
 
 ### Webhook Controller: `LoRaDataController`
@@ -105,7 +105,6 @@ public function deserialize(string $binary): array // array<string, float>
 - **Multi-tenant lookup**: `Device::allTenants()->where('uuid', ...)->where('type', DeviceType::LORA->value)` εξασφαλίζει ότι μόνο LoRa συσκευές ανιχνεύονται.
 - **Sensor mapping by UUID prefix**: Αντιστοιχίζει τα deserialized readings στους pre-registered αισθητήρες μέσω `substr($sensor->uuid, 0, 4)`.
 - **Χρήση υπάρχουσας υποδομής**: Μετά την αποκρυπτογράφηση, τα δεδομένα τροφοδοτούνται στην `SensorDataService::processSensorData()` — η ίδια υπηρεσία που χρησιμοποιούν οι WiFi συσκευές. Αυτό σημαίνει ότι οι εγγραφές InfluxDB, οι ενημερώσεις μοντέλου αισθητήρα και τα WebSocket broadcasts (μέσω `SensorReadingEvent`) λειτουργούν αυτόματα για LoRa συσκευές χωρίς επιπλέον κώδικα.
-- **Gateway metrics**: Τα RSSI/SNR αποδεκτά αλλά δεν αποθηκεύονται στη συσκευή, καθώς αντιπροσωπεύουν μετρήσεις του gateway και όχι του κόμβου.
 
 ---
 
