@@ -12,7 +12,6 @@
 
 ## Υποστήριξη LoRa Συσκευών — Zero-Trust Αποκρυπτογράφηση & Dedicated Webhook
 
-Πραγματοποιήθηκε πλήρης υλοποίηση υποστήριξης LoRa συσκευών στην πλατφόρμα Agronos (Laravel). Ο στόχος ήταν η ενσωμάτωση LoRa κόμβων σε υπάρχουσα υποδομή (EMQX Broker, InfluxDB, SensorDataService) με ασφαλή αποκρυπτογράφηση δεδομένων στο backend, χωρίς να απαιτείται αλλαγή στον data ingestion pipeline.
 
 ---
 
