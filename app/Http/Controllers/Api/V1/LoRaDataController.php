@@ -21,6 +21,11 @@ class LoRaDataController extends Controller
         LoRaCryptoService $crypto,
         SensorDataService $sensorDataService,
     ) {
+
+        //log  row incoming request for debugging
+        Log::info('Received LoRa webhook', [
+            'request' => $request->all()
+        ]);
         // Decode the gateway JSON from the EMQX envelope
         $gatewayPayload = json_decode($request->validated()['request']['payload'], true);
         if (! is_array($gatewayPayload)) {
