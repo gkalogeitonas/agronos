@@ -95,7 +95,7 @@ class SensorController extends Controller
             // defer recent readings and stats (resolved asynchronously by Inertia)
             'recentReadings' => Inertia::defer(fn () => $ts->recentReadings($sensor->id, $range, 20)),
             'stats' => Inertia::defer(fn () => $ts->stats($sensor->id, $range)),
-            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, $range)), // Για το γράφημα
+            'chartData' => Inertia::defer(fn () => $ts->chartReadings($sensor->id, $range)), // For chart, we want all readings in range
         ]);
     }
 
