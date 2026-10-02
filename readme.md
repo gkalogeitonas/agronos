@@ -99,6 +99,32 @@ Notes:
 - If you see private channel authentication failures, ensure the app is reachable at the host/port used by Reverb and that `REVERB_HOST`/`REVERB_SERVER_HOST` in `.env` is correct. Private channel auth requests are made to your Laravel app via `/broadcasting/auth` and require session/cookie or token auth.
 - For production, run Reverb and queue workers under a process supervisor (supervisord/systemd) and ensure you secure the Reverb endpoint and scale workers appropriately.
 
+## Production deployment (Docker Compose)
+
+`docker-compose.yml` runs the whole stack in one go: app (PHP-FPM), web (nginx), queue workers, Reverb, EMQX and MariaDB. Code, dependencies and frontend assets are built into the images, so no host PHP or Node is needed.
+
+```bash
+cp .env.production.example .env        # fill in every empty value
+docker compose run --rm --no-deps app php artisan key:generate --show   # paste into APP_KEY
+docker compose up -d --build
+docker compose exec app php artisan db:seed --force   # optional demo data
+```
+
+- The app is served on `WEB_PORT` (default `8000`), and Reverb on `REVERB_PUBLIC_PORT` (default `8080`). Put a TLS reverse proxy in front for production.
+- `VITE_*` values are compiled into the frontend, so rebuild (`--build`) after changing them.
+- Migrations run automatically every time the `app` container starts.
+- MQTT devices connect to ports `1883`/`8883`. The EMQX dashboard is on `18083`.
+
+### Dokploy (shared database)
+
+`docker-compose.dokploy.yml` is an override for a Dokploy server. It disables the bundled MariaDB in favour of a shared one on `dokploy-network`, removes the HTTP host ports (Dokploy's Traefik routes the domains) and keeps only the MQTT ports. Set the Compose service's custom command to:
+
+```
+compose -p agronos -f docker-compose.yml -f docker-compose.dokploy.yml up -d --build --remove-orphans
+```
+
+Then point `DB_HOST` at the shared MariaDB's internal hostname, and add these domains in the Dokploy UI: `web:80`, `reverb:8080`, `emqx:18083` (dashboard) and `emqx:8083` (MQTT over WebSocket).
+
 ## Project structure (high level)
 - app/ — Laravel application code (Models, Http controllers, Policies, Services)
 - config/ — Environment and service configuration

@@ -1,0 +1,41 @@
+# Dokploy override: use the shared MariaDB on dokploy-network instead of the
+# bundled one, and let Dokploy's Traefik handle HTTP(S) instead of host ports.
+#
+# Dokploy custom command:
+#   compose -p agronos -f docker-compose.yml -f docker-compose.dokploy.yml up -d --build --remove-orphans
+#
+# Domains (configured in the Dokploy UI):
+#   agronos.kalogeitonas.xyz   -> web:80
+#   websocket.kalogeitonas.xyz -> reverb:8080
+#   mqtt.kalogeitonas.xyz      -> emqx:18083
+#   mqtt-ws.kalogeitonas.xyz   -> emqx:8083
+
+services:
+  db:
+    profiles: ["bundled-db"]
+
+  app:
+    depends_on: !reset []
+    networks: [default, dokploy-network]
+
+  web:
+    ports: !reset []
+
+  worker:
+    networks: [default, dokploy-network]
+
+  sensor-worker:
+    networks: [default, dokploy-network]
+
+  reverb:
+    ports: !reset []
+    networks: [default, dokploy-network]
+
+  emqx:
+    ports: !override
+      - "1883:1883"
+      - "8883:8883"
+
+networks:
+  dokploy-network:
+    external: true

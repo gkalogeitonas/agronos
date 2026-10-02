@@ -15,11 +15,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create the test user
-        $user = User::factory()->create([
-            'name' => 'john Doe',
-            'email' => 'johndoe@gmail.com',
-            'password' => bcrypt('password'), // Use bcrypt for password hashing
-        ]);
+        $user = User::unguarded(fn () => User::query()->firstOrCreate(
+            ['email' => 'johndoe@gmail.com'],
+            [
+                'name' => 'john Doe',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ],
+        ));
 
         // Create 2 farms for the test user, each with 1 device, each device with 3 sensors
         // Farm::factory(2)->create(['user_id' => $user->id])->each(function ($farm) use ($user) {

@@ -1,217 +1,135 @@
+# Self-contained production stack: app, web, workers, Reverb, EMQX and MariaDB.
+#
+#   cp .env.production.example .env   # then fill in the values
+#   docker compose up -d --build
+#
+# On the Dokploy VPS this file is combined with docker-compose.dokploy.yml,
+# which drops the bundled database in favour of a shared MariaDB.
+
+x-build-args: &build-args
+  VITE_APP_NAME: ${APP_NAME:-Agronos}
+  VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
+  VITE_REVERB_APP_KEY: ${REVERB_APP_KEY:-}
+  VITE_REVERB_HOST: ${VITE_REVERB_HOST:-localhost}
+  VITE_REVERB_PORT: ${VITE_REVERB_PORT:-8080}
+  VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
+
+x-app: &app
+  image: agronos-app:latest
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: app
+    args: *build-args
+  env_file: .env
+  restart: unless-stopped
+  volumes:
+    - storage:/var/www/storage
+
 services:
   app:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: agronos_app
-    volumes:
-      - ./:/var/www
-    environment:
-      APP_ENV: "production"
-      APP_DEBUG: "false"
-      DB_CONNECTION: ${DB_CONNECTION}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+    <<: *app
     depends_on:
-      - db
-    networks:
-      - agronos_net
-      - proxy
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q php-fpm /proc/1/cmdline"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
 
   web:
-    image: nginx:alpine
-    container_name: agronos_web
-    volumes:
-      - ./:/var/www
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-    # ports:  # Comment this out or remove when using Traefik
-    #  - "8080:80"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.agronos.rule=Host(`agronos.kalogeitonas.xyz`)"
-      - "traefik.http.routers.agronos.entrypoints=websecure"
-      - "traefik.http.routers.agronos.tls.certresolver=letsencrypt"
-      - "traefik.http.services.agronos.loadbalancer.server.port=80"
-      # Add these headers to ensure proper HTTPS handling
-      - "traefik.http.middlewares.agronos-headers.headers.customResponseHeaders.X-Forwarded-Proto=https"
-      - "traefik.http.middlewares.agronos-headers.headers.frameDeny=true"
-      - "traefik.http.middlewares.agronos-headers.headers.sslRedirect=true"
-      - "traefik.http.routers.agronos.middlewares=agronos-headers"
-    depends_on:
-      - app
-    networks:
-      - agronos_net
-      - proxy
-
-  db:
-    image: mysql:8
-    container_name: agronos_db
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: web
+      args: *build-args
     restart: unless-stopped
-    volumes:
-      - agronos_db_data:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    networks:
-      - agronos_net
+    ports:
+      - "${WEB_PORT:-8000}:80"
+    depends_on:
+      app:
+        condition: service_healthy
 
   worker:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: agronos_worker
-    command: >
-      bash -lc "php /var/www/artisan queue:work database --sleep=3 --tries=3 --timeout=0 --queue=sensor-data,default"
-    volumes:
-      - ./:/var/www
-    environment:
-      APP_ENV: ${APP_ENV}
-      APP_DEBUG: ${APP_DEBUG}
-      DB_CONNECTION: ${DB_CONNECTION}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      QUEUE_CONNECTION: ${QUEUE_CONNECTION}
+    <<: *app
+    user: www-data
+    command: php artisan queue:work database --sleep=3 --tries=3 --timeout=0 --queue=sensor-data,default
     depends_on:
-      - db
-      - app
-    restart: unless-stopped
-    networks:
-      - agronos_net
+      app:
+        condition: service_healthy
 
   sensor-worker:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: agronos_sensor_worker
-    command: >
-      bash -lc "php /var/www/artisan queue:work database --sleep=1 --tries=3 --timeout=30 --queue=sensor-data"
-    volumes:
-      - ./:/var/www
-    environment:
-      APP_ENV: ${APP_ENV}
-      APP_DEBUG: ${APP_DEBUG}
-      DB_CONNECTION: ${DB_CONNECTION}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      QUEUE_CONNECTION: ${QUEUE_CONNECTION}
+    <<: *app
+    user: www-data
+    command: php artisan queue:work database --sleep=1 --tries=3 --timeout=30 --queue=sensor-data
     depends_on:
-      - db
-      - app
-    restart: unless-stopped
-    networks:
-      - agronos_net
+      app:
+        condition: service_healthy
 
   reverb:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: agronos_reverb
-    command: >
-      bash -lc "php /var/www/artisan reverb:start --host=0.0.0.0 --port=${REVERB_PORT:-8080}"
-    volumes:
-      - ./:/var/www
-    environment:
-      APP_ENV: ${APP_ENV}
-      APP_DEBUG: ${APP_DEBUG}
-      REVERB_HOST: ${REVERB_HOST}
-      REVERB_PORT: ${REVERB_PORT}
-      REVERB_SCHEME: ${REVERB_SCHEME}
-      DB_CONNECTION: ${DB_CONNECTION}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+    <<: *app
+    user: www-data
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    ports:
+      - "${REVERB_PUBLIC_PORT:-8080}:8080"
     depends_on:
-      - db
-      - app
+      app:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11.4
     restart: unless-stopped
-    # No direct port binding - Traefik handles external access
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.reverb.rule=Host(`websocket.kalogeitonas.xyz`)"
-      - "traefik.http.routers.reverb.entrypoints=websecure"
-      - "traefik.http.routers.reverb.tls.certresolver=letsencrypt"
-      - "traefik.http.services.reverb.loadbalancer.server.port=8080"
-      - "traefik.http.middlewares.reverb-headers.headers.customResponseHeaders.X-Forwarded-Proto=https"
-      - "traefik.http.routers.reverb.middlewares=reverb-headers"
-    networks:
-      - agronos_net
-      - proxy
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   emqx:
     image: emqx/emqx:5.7.0
-    container_name: agronos_emqx
     restart: unless-stopped
     ports:
-      - "1883:1883"   # MQTT port
-      - "8883:8883"   # MQTT SSL port
-      - "8083:8083"   # MQTT WebSocket port
-      - "8084:8084"   # MQTT WebSocket SSL port
-      - "18083:18083" # Management Console (Dashboard)
+      - "1883:1883"   # MQTT
+      - "8883:8883"   # MQTT over TLS
+      - "8083:8083"   # MQTT over WebSocket
+      - "18083:18083" # Dashboard
     environment:
-      # Basic configuration
       EMQX_NAME: emqx
       EMQX_HOST: 127.0.0.1
-
       EMQX_API_KEY__BOOTSTRAP_FILE: etc/default_api_key.conf
-
-      # Dashboard authentication
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${MQTT_DASHBOARD_USERNAME:-admin}
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:-agronos123}
-
-      # basic authentication, username/password
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_DASHBOARD_PASSWORD:?Set MQTT_DASHBOARD_PASSWORD}
       EMQX_AUTHENTICATION__1__MECHANISM: password_based
       EMQX_AUTHENTICATION__1__BACKEND: built_in_database
-
-
-      # Logging
       EMQX_LOG__CONSOLE__LEVEL: info
       EMQX_LOG__FILE__LEVEL: info
+    configs:
+      - source: emqx_api_keys
+        target: /opt/emqx/etc/default_api_key.conf
+      - source: emqx_acl
+        target: /opt/emqx/etc/acl.conf
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
       - emqx_etc:/opt/emqx/etc
-      # Mount host bootstrap file for API keys (create via scripts/generate_emqx_api_keys.sh)
-      - ./docker/emqx/default_api_key.conf:/opt/emqx/etc/default_api_key.conf:ro
-        # Mount host ACL file for topic access control (create via scripts/generate_emqx_acl.sh)
-      - ./docker/emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
-    networks:
-      - agronos_net
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      # MQTT Dashboard
-      - "traefik.http.routers.emqx-dashboard.rule=Host(`mqtt.kalogeitonas.xyz`)"
-      - "traefik.http.routers.emqx-dashboard.entrypoints=websecure"
-      - "traefik.http.routers.emqx-dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.emqx-dashboard.service=emqx-dashboard"
-      - "traefik.http.services.emqx-dashboard.loadbalancer.server.port=18083"
-      # MQTT WebSocket
-      - "traefik.http.routers.emqx-ws.rule=Host(`mqtt-ws.kalogeitonas.xyz`)"
-      - "traefik.http.routers.emqx-ws.entrypoints=websecure"
-      - "traefik.http.routers.emqx-ws.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.emqx-ws.service=emqx-ws"
-      - "traefik.http.services.emqx-ws.loadbalancer.server.port=8083"
 
-networks:
-  agronos_net:
-  proxy:
-    external: true
+configs:
+  emqx_api_keys:
+    content: "${MQTT_API_KEY:?Set MQTT_API_KEY}:${MQTT_API_SECRET:?Set MQTT_API_SECRET}"
+  emqx_acl:
+    file: ./docker/emqx/acl.conf
 
 volumes:
-  agronos_db_data:
+  storage:
+  db_data:
   emqx_data:
   emqx_log:
   emqx_etc:

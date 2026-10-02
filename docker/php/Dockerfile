@@ -1,69 +1,82 @@
-FROM php:8.5-fpm
+# syntax=docker/dockerfile:1
 
-# Install PHP extensions and dependencies
-RUN apt-get update && apt-get install -y \
+# ---------------------------------------------------------------------------
+# base: PHP runtime with the extensions the app needs
+# ---------------------------------------------------------------------------
+FROM php:8.5-fpm AS base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     zip unzip curl libpng-dev libonig-dev libxml2-dev \
     libzip-dev libjpeg-dev libfreetype6-dev \
-    gnupg \
     && docker-php-ext-install pdo_mysql zip gd pcntl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js and npm
-RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Add production PHP settings
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY docker/php/production.ini /usr/local/etc/php/conf.d/production.ini
 
 WORKDIR /var/www
 
-COPY . /var/www
+# ---------------------------------------------------------------------------
+# vendor: composer dependencies (cached separately from the source code)
+# ---------------------------------------------------------------------------
+FROM base AS vendor
 
-# Create required directories for Laravel
-RUN mkdir -p /var/www/bootstrap/cache \
-    && mkdir -p /var/www/storage/logs \
-    && mkdir -p /var/www/storage/framework/views \
-    && mkdir -p /var/www/storage/framework/cache \
-    && mkdir -p /var/www/storage/framework/sessions \
-    && chmod -R 775 /var/www/storage \
-    && chmod -R 775 /var/www/bootstrap/cache
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --prefer-dist
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+# ---------------------------------------------------------------------------
+# assets: Vite production build. VITE_* values are baked into the bundle,
+# so they must be passed as build args.
+# ---------------------------------------------------------------------------
+FROM node:22-alpine AS assets
 
-# Install Node dependencies and build frontend at container start (not during image build)
-# (removed the previous "RUN npm install && npm run build" to avoid hidden artifacts when using bind-mounts)
+WORKDIR /var/www
 
-# Create a script to fix permissions and run Laravel commands
-RUN echo '#!/bin/bash\n\
-# Set proper ownership for runtime\n\
-chown -R www-data:www-data /var/www/storage\n\
-chown -R www-data:www-data /var/www/bootstrap/cache\n\
-\n\
-# Build frontend if package.json exists (run after host bind-mount is applied)\n\
-if [ -f /var/www/package.json ]; then\n\
-  cd /var/www\n\
-  if command -v npm >/dev/null 2>&1; then\n\
-    npm ci --silent || npm install --silent\n\
-    npm run build --silent || true\n\
-    chown -R www-data:www-data /var/www/public || true\n\
-  fi\n\
-fi\n\
-\n\
-# Run Laravel optimizations and migrations\n\
-if [ -f /var/www/artisan ]; then\n\
-  php /var/www/artisan migrate --force\n\
-  php /var/www/artisan config:cache\n\
-  php /var/www/artisan route:cache\n\
-  php /var/www/artisan view:cache\n\
-fi\n\
-\n\
-php-fpm\n\
-' > /usr/local/bin/start-container && chmod +x /usr/local/bin/start-container
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+ARG VITE_APP_NAME=Agronos
+ARG VITE_MAPBOX_TOKEN=
+ARG VITE_REVERB_APP_KEY=
+ARG VITE_REVERB_HOST=localhost
+ARG VITE_REVERB_PORT=8080
+ARG VITE_REVERB_SCHEME=http
+ENV VITE_APP_NAME=$VITE_APP_NAME \
+    VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN \
+    VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY \
+    VITE_REVERB_HOST=$VITE_REVERB_HOST \
+    VITE_REVERB_PORT=$VITE_REVERB_PORT \
+    VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
+RUN npm run build
+
+# ---------------------------------------------------------------------------
+# app: PHP-FPM image used by app, workers and reverb
+# ---------------------------------------------------------------------------
+FROM base AS app
+
+COPY --from=vendor /var/www/vendor ./vendor
+COPY . .
+COPY --from=assets /var/www/public/build ./public/build
+
+RUN mkdir -p bootstrap/cache storage/logs storage/app/public \
+       storage/framework/cache storage/framework/sessions storage/framework/views \
+    && composer dump-autoload --optimize --no-dev --no-interaction \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+COPY docker/php/start-container.sh /usr/local/bin/start-container
+RUN chmod +x /usr/local/bin/start-container
 
 CMD ["/usr/local/bin/start-container"]
+
+# ---------------------------------------------------------------------------
+# web: nginx serving public/ and proxying PHP to the app service
+# ---------------------------------------------------------------------------
+FROM nginx:alpine AS web
+
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY public /var/www/public
+COPY --from=assets /var/www/public/build /var/www/public/build
