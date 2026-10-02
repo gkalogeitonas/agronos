@@ -1,5 +1,10 @@
 # Agronos — Smart Agriculture IoT Platform
 
+> ## 🎓 Thesis release
+> This repository contains the source code of the thesis **"Σχεδιασμός και Υλοποίηση Πλατφόρμας Έξυπνης Γεωργίας με Ενσωμάτωση IoT Κόμβων"** (*Design and Implementation of a Smart Agriculture Platform with IoT Node Integration*) by Γεώργιος Καλογείτονας, Hellenic Open University (Ελληνικό Ανοικτό Πανεπιστήμιο), School of Science and Technology, Patras, May 2026. Supervisor: Νικόλαος Σκλάβος.
+>
+> The code exactly as referenced in the thesis text is frozen at the tag [`thesis-v1.0`](https://github.com/gkalogeitonas/agronos/tree/thesis-v1.0) ([release](https://github.com/gkalogeitonas/agronos/releases/tag/thesis-v1.0)). Browse that tag to see the code matching the submitted document; `main` may continue to evolve.
+
 A platform for collecting, storing and visualizing sensor data from agricultural devices. Agronos provides device registration, time-series ingestion (InfluxDB), multi-tenant data separation, and a REST API for accessing farms, devices and sensors.
 
 ## Key features
