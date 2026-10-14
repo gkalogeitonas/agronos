@@ -8,6 +8,7 @@ import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { formatReading } from '@/lib/format';
 import { sampleActivity, sampleAlerts, sampleZoneCount } from '@/lib/sampleData';
 import { farmStatusLabels } from '@/lib/theme';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
@@ -29,8 +30,6 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Overview', href: '/dashboard' }];
 
 const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.status === 'warning' || farm.status === 'offline').length);
-
-const formatReading = (value: number | null, unit: string): string => (value === null ? '–' : `${value} ${unit}`);
 </script>
 
 <template>

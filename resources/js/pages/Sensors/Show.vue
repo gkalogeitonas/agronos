@@ -14,9 +14,9 @@
             <section aria-label="Readings" class="flex flex-wrap gap-4">
                 <StatTile
                     label="Latest"
-                    :value="formatReading(sensor.last_reading, '', 2)"
+                    :value="formatReading(latestReading.value, '', 2)"
                     :unit="unit"
-                    :note="sensor.last_reading_at ? formatTimestamp(sensor.last_reading_at) : 'No readings yet'"
+                    :note="latestReading.time ? formatTimestamp(latestReading.time) : 'No readings yet'"
                 />
                 <template v-if="props.stats !== undefined">
                     <StatTile :label="`Min · ${rangeLabel}`" :value="formatReading(stats.min, '', 2)" :unit="unit" />
@@ -53,9 +53,9 @@
             <div class="flex flex-wrap items-stretch gap-4">
                 <SectionCard v-if="sensor.lat && sensor.lon" title="Location" class="flex-[2_1_480px]">
                     <FarmMapbox
-                        :center="[parseFloat(sensor.lon), parseFloat(sensor.lat)]"
+                        :center="[Number(sensor.lon), Number(sensor.lat)]"
                         :farm-polygon="sensor.farm?.coordinates"
-                        :sensors="[{ lat: parseFloat(sensor.lat), lon: parseFloat(sensor.lon), name: sensor.name }]"
+                        :sensors="[{ lat: Number(sensor.lat), lon: Number(sensor.lon), name: sensor.name ?? undefined }]"
                         :zoom="15"
                     />
                 </SectionCard>
@@ -119,55 +119,83 @@ import { sensorColors, sensorTypeLabel, signalColors } from '@/lib/theme';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
+import type { Polygon } from 'geojson';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
+/** Shape of App\Http\Resources\SensorResource with `farm` and `device` loaded. */
+interface SensorDetail {
+    id: number;
+    name: string | null;
+    uuid: string;
+    type: string;
+    device: { id: number; uuid: string } | null;
+    farm: { id: number; name: string; coordinates: Polygon | null } | null;
+    lat: number | string | null;
+    lon: number | string | null;
+    last_reading: number | string | null;
+    last_reading_at: string | null;
+    unit: string;
+}
+
+interface Reading {
+    time: string;
+    value: number | string;
+}
+
 const props = defineProps<{
-    sensor: any;
-    recentReadings?: Array<{ time: string; value: number }>;
+    sensor: SensorDetail;
+    recentReadings?: Reading[];
     stats?: { min: number | null; max: number | null; avg: number | null; count?: number };
-    // chartData may be provided as an array of [ms, value] pairs from the backend
-    chartData?: Array<any>;
+    /** InfluxDB chart readings as [ms, value] pairs. */
+    chartData?: [number, number][];
     rangeOptions?: Array<{ value: string; label: string }>;
     selectedRange?: string;
 }>();
 
-// local reactive copies so we can mutate on realtime events
-const sensor = ref(props.sensor);
-// keep a local mutable copy for realtime updates, but sync when the deferred prop resolves
-const recentReadings = ref(props.recentReadings ?? []);
+const MAX_RECENT_READINGS = 50;
+
+/** Latest reading, kept separate from the prop so realtime events never mutate Inertia props. */
+const latestReading = ref<{ value: number | string | null; time: string | null }>({ value: null, time: null });
+
+/** Mutable copy of the deferred readings, so realtime events can prepend to it. */
+const readings = ref<Reading[]>([]);
+
 watch(
-    () => props.recentReadings,
-    (val) => {
-        recentReadings.value = val ?? [];
+    () => props.sensor,
+    (sensor) => {
+        latestReading.value = { value: sensor.last_reading, time: sensor.last_reading_at };
     },
     { immediate: true },
 );
 
-// use a computed directly from props so Deferred updates are reflected automatically
+watch(
+    () => props.recentReadings,
+    (recent) => {
+        readings.value = recent ?? [];
+    },
+    { immediate: true },
+);
+
 const stats = computed(() => props.stats ?? { min: null, max: null, avg: null, count: 0 });
 
 const { formatTimestamp } = useTimestamp();
 
-const breadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: 'Sensors', href: '/sensors' },
-    { title: sensor.value?.name || 'Sensor', href: route('sensors.show', sensor.value.id) },
-];
+    { title: props.sensor.name || 'Sensor', href: route('sensors.show', props.sensor.id) },
+]);
 
-const unit = computed<string>(() => sensor.value.unit ?? '');
+const unit = computed(() => props.sensor.unit ?? '');
 const rangeLabel = computed(() => props.rangeOptions?.find((option) => option.value === selectedRange.value)?.label ?? 'Selected range');
 
-/** Chart data comes from InfluxDB as [ms, value] pairs. */
-const series = computed(() => {
-    const points = Array.isArray(props.chartData) ? (props.chartData as Array<[number, number]>) : [];
-    return [
-        {
-            name: sensorTypeLabel(props.sensor.type),
-            color: sensorColors[props.sensor.type] ?? signalColors.ink,
-            data: points.map(([x, y]) => ({ x, y })),
-        },
-    ];
-});
+const series = computed(() => [
+    {
+        name: sensorTypeLabel(props.sensor.type),
+        color: sensorColors[props.sensor.type] ?? signalColors.ink,
+        data: (props.chartData ?? []).map(([x, y]) => ({ x, y })),
+    },
+]);
 
 const readingColumns: DataTableColumn[] = [
     { key: 'time', label: 'Time', mono: true, width: '2fr' },
@@ -175,44 +203,30 @@ const readingColumns: DataTableColumn[] = [
 ];
 
 const readingRows = computed(() =>
-    recentReadings.value.map((row) => ({ time: formatTimestamp(row.time), value: formatReading(row.value, unit.value, 2) })),
+    readings.value.map((row) => ({ time: formatTimestamp(row.time), value: formatReading(row.value, unit.value, 2) })),
 );
 
-// Selected range — initialize from server-provided selectedRange or URL param
 const urlRange = new URL(window.location.href).searchParams.get('range');
-const selectedRange = ref<string>(props.selectedRange ?? urlRange ?? (props.rangeOptions && props.rangeOptions[1]?.value) ?? '-24h');
+const selectedRange = ref<string>(props.selectedRange ?? urlRange ?? props.rangeOptions?.[1]?.value ?? '-24h');
 
-function applyRange() {
-    // Use Inertia to visit the same sensor show route with the new range param.
-    // This performs an XHR and replaces Inertia props without a full browser reload.
-    router.get(route('sensors.show', sensor.value.id), { range: selectedRange.value }, { replace: true, preserveScroll: true });
+/**
+ * Reloads the page props for the chosen range without a full browser reload.
+ */
+function applyRange(): void {
+    router.get(route('sensors.show', props.sensor.id), { range: selectedRange.value }, { replace: true, preserveScroll: true });
 }
 
-function deleteSensor() {
-    if (confirm(`Are you sure you want to delete ${sensor.value.name || 'this sensor'}?`)) {
-        router.delete(route('sensors.destroy', sensor.value.id));
+function deleteSensor(): void {
+    if (confirm(`Are you sure you want to delete ${props.sensor.name || 'this sensor'}?`)) {
+        router.delete(route('sensors.destroy', props.sensor.id));
     }
 }
 
-// Subscribe to private sensor channel (only authorized users can listen)
-useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
-    try {
-        if (payload.time && payload.value !== undefined) {
-            const arr = recentReadings.value.slice();
-            arr.unshift({ time: payload.time, value: payload.value });
-            if (arr.length > 50) arr.pop();
-            recentReadings.value = arr;
-
-            // update local sensor latest reading
-            sensor.value = sensor.value || {};
-            sensor.value.last_reading = payload.value;
-            sensor.value.last_reading_at = payload.time;
-
-            // push to chart data (live update)
-            //try { pushToChartData(payload.time, payload.value); } catch { /* ignore */ }
-        }
-    } catch {
-        // ignore
+useEcho<{ value?: number | string; time?: string }>(`sensor.${props.sensor.id}`, 'SensorReadingEvent', (payload) => {
+    if (!payload?.time || payload.value === undefined) {
+        return;
     }
+    latestReading.value = { value: payload.value, time: payload.time };
+    readings.value = [{ time: payload.time, value: payload.value }, ...readings.value].slice(0, MAX_RECENT_READINGS);
 });
 </script>

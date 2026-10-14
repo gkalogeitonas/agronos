@@ -20,7 +20,7 @@ export function useTimestamp() {
 
     // Format a timestamp into "YYYY-MM-DD HH:MM:SS" in the user's browser timezone (default)
     function formatTimestamp(input: any, timeZone?: string): string {
-        if (!input && input !== 0) return '—';
+        if (!input && input !== 0) return '–';
         const d = parseAsUTCDate(input);
         if (!d) return String(input);
 
@@ -52,7 +52,7 @@ export function useTimestamp() {
      */
     function formatAge(input: any, now: Date = new Date()): string {
         const d = parseAsUTCDate(input);
-        if (!d) return '—';
+        if (!d) return '–';
         const minutes = Math.max(0, Math.round((now.getTime() - d.getTime()) / 60000));
         if (minutes < 1) return 'now';
         if (minutes < 60) return `${minutes} min`;

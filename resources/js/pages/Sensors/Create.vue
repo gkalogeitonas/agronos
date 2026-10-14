@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sensorTypeLabel } from '@/lib/theme';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ScanLine } from 'lucide-vue-next';
-import { computed, reactive, ref, watch, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { QrcodeStream, type DetectedBarcode } from 'vue-qrcode-reader';
 import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
 import Switch from '@/components/ui/switch/Switch.vue';
@@ -28,17 +28,15 @@ const props = defineProps<{
     SensorTypes: string[];
 }>();
 
-const page = usePage();
 const SensorTypes = computed(() => props.SensorTypes ?? []);
 const farms = computed(() => props.farms ?? []);
-const errors = computed(() => page.props.errors as Record<string, string | undefined>);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sensors', href: '/sensors' },
     { title: 'Add sensor', href: route('sensors.create') },
 ];
 
-const form = reactive({
+const form = useForm({
     name: '',
     farm_id: '' as number | '',
     type: '',
@@ -55,9 +53,8 @@ const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const allowEdit = ref(false);
 
-function submit() {
-    //router.post(route('sensors.store'), form);
-    router.post(route('sensors.scan'), form);
+function submit(): void {
+    form.post(route('sensors.scan'));
 }
 
 function onDetect(detectedCodes: DetectedBarcode[]) {
@@ -96,14 +93,7 @@ function getLocation() {
     }
 }
 
-// Optionally, get location on mount
-getLocation();
-
-onMounted(() => {
-    if (props.selectedFarm) {
-        form.farm_id = props.selectedFarm.id;
-    }
-});
+onMounted(getLocation);
 
 watch(
     () => props.selectedFarm,
@@ -112,6 +102,7 @@ watch(
             form.farm_id = selectedFarm.id;
         }
     },
+    { immediate: true },
 );
 </script>
 
@@ -138,7 +129,7 @@ watch(
                         <div class="flex flex-col gap-2">
                             <Label for="name">Name</Label>
                             <Input id="name" v-model="form.name" placeholder="Zone A soil probe" />
-                            <InputError :message="errors.name" />
+                            <InputError :message="form.errors.name" />
                         </div>
                         <div class="flex flex-col gap-2">
                             <Label for="farm_id">Farm</Label>
@@ -147,7 +138,7 @@ watch(
                                 <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
                             </NativeSelect>
                             <Input v-else id="farm_id" :model-value="selectedFarm.name" readonly class="bg-muted" />
-                            <InputError :message="errors.farm_id" />
+                            <InputError :message="form.errors.farm_id" />
                         </div>
                         <div class="flex items-center gap-3">
                             <Switch id="allow-edit-switch" v-model="allowEdit" />
@@ -160,17 +151,17 @@ watch(
                                 <option v-for="t in SensorTypes" :key="t" :value="t">{{ sensorTypeLabel(t) }}</option>
                             </NativeSelect>
                             <Input v-else id="type" :model-value="form.type ? sensorTypeLabel(form.type) : 'Scan the QR code'" disabled />
-                            <InputError :message="errors.type" />
+                            <InputError :message="form.errors.type" />
                         </div>
                         <div class="flex flex-col gap-2">
                             <Label for="uuid">Sensor UUID</Label>
                             <Input id="uuid" v-model="form.uuid" :disabled="!allowEdit" required class="font-mono" />
-                            <InputError :message="errors.uuid" />
+                            <InputError :message="form.errors.uuid" />
                         </div>
                         <div class="flex flex-col gap-2">
                             <Label for="device_uuid">Device UUID</Label>
                             <Input id="device_uuid" v-model="form.device_uuid" :disabled="!allowEdit" required class="font-mono" />
-                            <InputError :message="errors.device_uuid" />
+                            <InputError :message="form.errors.device_uuid" />
                         </div>
                     </SectionCard>
 
@@ -195,12 +186,12 @@ watch(
                             <div class="flex flex-col gap-2">
                                 <Label for="lat">Latitude</Label>
                                 <Input id="lat" v-model="form.lat" type="number" step="any" required class="font-mono" />
-                                <InputError :message="errors.lat" />
+                                <InputError :message="form.errors.lat" />
                             </div>
                             <div class="flex flex-col gap-2">
                                 <Label for="lon">Longitude</Label>
                                 <Input id="lon" v-model="form.lon" type="number" step="any" required class="font-mono" />
-                                <InputError :message="errors.lon" />
+                                <InputError :message="form.errors.lon" />
                             </div>
                         </div>
                     </SectionCard>
@@ -208,7 +199,7 @@ watch(
 
                 <div class="flex justify-end gap-3">
                     <Button variant="outline" as-child><Link :href="route('sensors.index')">Cancel</Link></Button>
-                    <Button type="submit">Add sensor</Button>
+                    <Button type="submit" :disabled="form.processing">Add sensor</Button>
                 </div>
             </form>
         </div>
