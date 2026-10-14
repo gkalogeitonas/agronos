@@ -92,7 +92,13 @@ function submit(): void {
             </SectionCard>
 
             <SectionCard title="Boundary" class="flex-[2_1_480px]">
-                <p class="m-0 text-sm text-muted-foreground">Draw the farm's outline on the map. The area is calculated from it.</p>
+                <p v-if="form.coordinates" class="m-0 text-sm text-muted-foreground" role="status">
+                    Boundary closed. Click the shape to adjust its points, or use the bin icon on the map to start over.
+                </p>
+                <p v-else class="m-0 text-sm text-muted-foreground" role="status">
+                    Draw the farm's outline on the map: click to add points, then click the first point or double-click the last one to finish. The
+                    area is calculated from it.
+                </p>
                 <FarmBoundaryEditor :lng="center.lng" :lat="center.lat" :polygon="form.coordinates" @update:polygon="form.coordinates = $event" />
                 <div class="flex items-baseline gap-2 font-mono text-sm">
                     <span class="eyebrow text-xs">Area</span>
