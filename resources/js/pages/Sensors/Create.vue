@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import QrScanCard, { type QrPayload } from '@/components/agronos/QrScanCard.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
@@ -13,7 +14,6 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ScanLine } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
-import { QrcodeStream, type DetectedBarcode } from 'vue-qrcode-reader';
 import { MapboxMap, MapboxMarker } from '@studiometa/vue-mapbox-gl';
 import Switch from '@/components/ui/switch/Switch.vue';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -48,7 +48,6 @@ const form = useForm({
 });
 
 const showScanner = ref(false);
-const scanError = ref<string | null>(null);
 const locationError = ref<string | null>(null);
 const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -58,24 +57,11 @@ function submit(): void {
     form.post(route('sensors.scan'));
 }
 
-function onDetect(detectedCodes: DetectedBarcode[]) {
-    if (detectedCodes.length === 0) {
-        return;
-    }
-    try {
-        const data = JSON.parse(detectedCodes[0].rawValue);
-        if (data.uuid) form.uuid = data.uuid;
-        if (data.device_uuid) form.device_uuid = data.device_uuid;
-        if (data.type) form.type = data.type;
-        showScanner.value = false;
-        scanError.value = null;
-    } catch {
-        scanError.value = 'That QR code is not an Agronos sensor code.';
-    }
-}
-
-function onQrError(error: Error) {
-    scanError.value = `The camera could not start: ${error.message}`;
+function onScan(data: QrPayload): void {
+    if (data.uuid) form.uuid = data.uuid;
+    if (data.device_uuid) form.device_uuid = data.device_uuid;
+    if (data.type) form.type = data.type;
+    showScanner.value = false;
 }
 
 function getLocation() {
@@ -119,10 +105,12 @@ watch(
                 </template>
             </PageHeader>
 
-            <SectionCard v-if="showScanner" title="Scan the code on the sensor" class="max-w-2xl">
-                <QrcodeStream class="overflow-hidden rounded-md" @detect="onDetect" @error="onQrError" />
-            </SectionCard>
-            <p v-if="scanError" role="alert" class="m-0 max-w-2xl rounded-md bg-danger-soft p-3 text-sm text-danger-ink">{{ scanError }}</p>
+            <QrScanCard
+                v-if="showScanner"
+                title="Scan the code on the sensor"
+                invalid-message="That QR code is not an Agronos sensor code."
+                @scan="onScan"
+            />
 
             <form class="flex flex-col gap-6" @submit.prevent="submit">
                 <div class="flex flex-wrap items-start gap-4">

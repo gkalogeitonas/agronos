@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import AlertList from '@/components/agronos/AlertList.vue';
-import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
+import DeviceTable from '@/components/agronos/DeviceTable.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import SensorTable from '@/components/agronos/SensorTable.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
-import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import FarmMapbox from '@/components/FarmMapbox.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
-import { useTimestamp } from '@/composables/useTimestamp';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { deviceTypeLabel, formatBattery, formatReading, formatSignal, isLowBattery } from '@/lib/format';
+import { formatReading } from '@/lib/format';
 import { sampleAlerts, sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
 import { sensorColors, sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
@@ -57,7 +56,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: props.farm.name, href: route('farms.show', props.farm.id) },
 ];
 
-const { formatAge } = useTimestamp();
 const liveReadings = useLiveSensorReadings(props.sensors);
 
 const devicesOnline = computed(() => props.devices.filter((device) => device.status === 'online').length);
@@ -87,42 +85,6 @@ const readingTiles = computed(() => {
 
 const moistureSeries = computed(() =>
     sampleMoistureSeries().map((series, index) => ({ ...series, color: index === 0 ? signalColors.leaf : signalColors.water, dashed: index === 1 })),
-);
-
-const deviceColumns: DataTableColumn[] = [
-    { key: 'name', label: 'Device', width: '2fr' },
-    { key: 'type', label: 'Link', mono: true },
-    { key: 'signal', label: 'Signal', mono: true },
-    { key: 'battery', label: 'Battery', mono: true },
-    { key: 'seen', label: 'Last seen', mono: true },
-    { key: 'status', label: 'Status', width: '1.2fr' },
-];
-
-const deviceRows = computed(() =>
-    props.devices.map((device) => ({
-        ...device,
-        type: deviceTypeLabel(device.type),
-        signal: formatSignal(device.signal_strength),
-        battery: formatBattery(device.battery_level),
-        seen: formatAge(device.last_seen_at),
-    })),
-);
-
-const sensorColumns: DataTableColumn[] = [
-    { key: 'name', label: 'Sensor', width: '2fr' },
-    { key: 'type', label: 'Type' },
-    { key: 'latest', label: 'Latest', mono: true },
-    { key: 'seen', label: 'Last seen', mono: true },
-];
-
-const sensorRows = computed(() =>
-    props.sensors.map((sensor) => ({
-        id: sensor.id,
-        name: sensor.name,
-        type: sensorTypeLabel(sensor.type),
-        latest: formatReading(liveReadings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
-        seen: formatAge(liveReadings[sensor.id]?.time),
-    })),
 );
 
 const farmInfo = computed<DescriptionItem[]>(() => [
@@ -199,17 +161,7 @@ const deleteFarm = () => {
             </div>
 
             <SectionCard title="Devices">
-                <DataTable :columns="deviceColumns" :rows="deviceRows" row-key="id" empty-text="No devices report to this farm yet.">
-                    <template #cell-name="{ row }">
-                        <Link :href="route('devices.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
-                    </template>
-                    <template #cell-battery="{ row }">
-                        <span :class="{ 'text-danger-ink': isLowBattery(row.battery_level) }">{{ row.battery }}</span>
-                    </template>
-                    <template #cell-status="{ row }">
-                        <StatusBadge :status="row.status" />
-                    </template>
-                </DataTable>
+                <DeviceTable :devices="devices" empty-text="No devices report to this farm yet." />
             </SectionCard>
 
             <div class="flex flex-wrap items-stretch gap-4">
@@ -230,11 +182,7 @@ const deleteFarm = () => {
                 <template #actions>
                     <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
                 </template>
-                <DataTable :columns="sensorColumns" :rows="sensorRows" row-key="id" empty-text="No sensors on this farm yet.">
-                    <template #cell-name="{ row }">
-                        <Link :href="route('sensors.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
-                    </template>
-                </DataTable>
+                <SensorTable :sensors="sensors" :readings="liveReadings" empty-text="No sensors on this farm yet." />
             </SectionCard>
         </PageContainer>
     </AppLayout>

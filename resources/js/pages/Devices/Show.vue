@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import ActivityFeed from '@/components/agronos/ActivityFeed.vue';
-import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import DescriptionList from '@/components/agronos/DescriptionList.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import SensorTable from '@/components/agronos/SensorTable.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageContainer from '@/components/PageContainer.vue';
@@ -84,23 +84,6 @@ const info = computed(() => [
     { mono: true, label: 'Last seen', value: props.device.last_seen_at ? `${formatAge(props.device.last_seen_at)} ago` : 'Never' },
     { mono: true, label: 'Registered', value: formatTimestamp(props.device.created_at).slice(0, 10) },
 ]);
-
-const sensorColumns: DataTableColumn[] = [
-    { key: 'name', label: 'Sensor', width: '1.8fr' },
-    { key: 'type', label: 'Type', width: '1.2fr' },
-    { key: 'latest', label: 'Latest', mono: true },
-    { key: 'seen', label: 'Last seen', mono: true },
-];
-
-const sensorRows = computed(() =>
-    props.sensors.map((sensor) => ({
-        id: sensor.id,
-        name: sensor.name,
-        type: sensorTypeLabel(sensor.type),
-        latest: formatReading(liveReadings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
-        seen: formatAge(liveReadings[sensor.id]?.time),
-    })),
-);
 
 const showMqttPassword = ref(false);
 const mqttCredentials = computed(() => (page.props as { mqtt_credentials?: { created?: boolean } }).mqtt_credentials ?? null);
@@ -192,11 +175,7 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                     <template #actions>
                         <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
                     </template>
-                    <DataTable :columns="sensorColumns" :rows="sensorRows" row-key="id" min-width="520px" empty-text="No sensors on this device yet.">
-                        <template #cell-name="{ row }">
-                            <Link :href="route('sensors.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
-                        </template>
-                    </DataTable>
+                    <SensorTable :sensors="sensors" :readings="liveReadings" min-width="520px" empty-text="No sensors on this device yet." />
                 </SectionCard>
 
                 <SectionCard title="Irrigation valve" class="flex-[1_1_280px]">

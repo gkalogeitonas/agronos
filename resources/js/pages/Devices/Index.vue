@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import DeviceTable from '@/components/agronos/DeviceTable.vue';
 import EmptyState from '@/components/agronos/EmptyState.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
 import FilterSelect from '@/components/agronos/FilterSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
-import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useTimestamp } from '@/composables/useTimestamp';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { deviceTypeLabel, formatBattery, formatSignal, isLowBattery } from '@/lib/format';
+import { deviceTypeLabel } from '@/lib/format';
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -24,8 +22,6 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: '/devices' }];
-
-const { formatAge } = useTimestamp();
 
 const status = ref<StatusFilter>('all');
 const search = ref('');
@@ -44,32 +40,14 @@ const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
 const farmOptions = computed(() => [...new Set(props.devices.flatMap((device) => device.farms))].sort());
 const linkOptions = computed(() => [...new Set(props.devices.map((device) => device.type))].sort());
 
-const columns: DataTableColumn[] = [
-    { key: 'name', label: 'Device', width: '1.8fr' },
-    { key: 'farm', label: 'Farm', width: '1.4fr' },
-    { key: 'link', label: 'Link', mono: true, width: '0.8fr' },
-    { key: 'signal', label: 'Signal', mono: true, width: '0.9fr' },
-    { key: 'battery', label: 'Battery', mono: true },
-    { key: 'seen', label: 'Last seen', mono: true, width: '0.9fr' },
-    { key: 'status', label: 'Status' },
-];
-
-const rows = computed(() => {
+const filteredDevices = computed(() => {
     const query = search.value.trim().toLowerCase();
 
     return props.devices
         .filter((device) => status.value === 'all' || device.status === status.value)
         .filter((device) => farm.value === 'all' || device.farms.includes(farm.value))
         .filter((device) => link.value === 'all' || device.type === link.value)
-        .filter((device) => query === '' || `${device.name} ${device.uuid}`.toLowerCase().includes(query))
-        .map((device) => ({
-            ...device,
-            farm: device.farms.length === 0 ? '–' : device.farms.join(', '),
-            link: deviceTypeLabel(device.type),
-            signal: formatSignal(device.signal_strength),
-            battery: formatBattery(device.battery_level),
-            seen: formatAge(device.last_seen_at),
-        }));
+        .filter((device) => query === '' || `${device.name} ${device.uuid}`.toLowerCase().includes(query));
 });
 </script>
 
@@ -110,19 +88,9 @@ const rows = computed(() => {
 
                 <SectionCard>
                     <div class="font-mono text-[13px] text-muted-foreground" aria-live="polite">
-                        Showing {{ rows.length }} of {{ devices.length }} devices
+                        Showing {{ filteredDevices.length }} of {{ devices.length }} devices
                     </div>
-                    <DataTable :columns="columns" :rows="rows" row-key="id" min-width="860px" empty-text="No devices match these filters.">
-                        <template #cell-name="{ row }">
-                            <Link :href="route('devices.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
-                        </template>
-                        <template #cell-battery="{ row }">
-                            <span :class="{ 'text-danger-ink': isLowBattery(row.battery_level) }">{{ row.battery }}</span>
-                        </template>
-                        <template #cell-status="{ row }">
-                            <StatusBadge :status="row.status" />
-                        </template>
-                    </DataTable>
+                    <DeviceTable :devices="filteredDevices" show-farm min-width="860px" empty-text="No devices match these filters." />
                 </SectionCard>
             </template>
 

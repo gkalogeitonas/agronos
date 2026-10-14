@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import QrScanCard, { type QrPayload } from '@/components/agronos/QrScanCard.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
@@ -11,7 +12,6 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ScanLine } from 'lucide-vue-next';
 import { ref } from 'vue';
-import { QrcodeStream, type DetectedBarcode } from 'vue-qrcode-reader';
 
 defineProps<{
     deviceTypes: { value: string; label: string }[];
@@ -31,30 +31,16 @@ const form = useForm({
 });
 
 const showScanner = ref(false);
-const scanError = ref<string | null>(null);
 
 function submit() {
     form.post(route('devices.store'));
 }
 
-function onDetect(detectedCodes: DetectedBarcode[]) {
-    if (detectedCodes.length === 0) {
-        return;
-    }
-    try {
-        const data = JSON.parse(detectedCodes[0].rawValue);
-        if (data.uuid) form.uuid = data.uuid;
-        if (data.secret) form.secret = data.secret;
-        if (data.type) form.type = data.type;
-        showScanner.value = false;
-        scanError.value = null;
-    } catch {
-        scanError.value = 'That QR code is not an Agronos device code.';
-    }
-}
-
-function onQrError(error: Error) {
-    scanError.value = `The camera could not start: ${error.message}`;
+function onScan(data: QrPayload): void {
+    if (data.uuid) form.uuid = data.uuid;
+    if (data.secret) form.secret = data.secret;
+    if (data.type) form.type = data.type;
+    showScanner.value = false;
 }
 </script>
 
@@ -70,10 +56,12 @@ function onQrError(error: Error) {
                 </template>
             </PageHeader>
 
-            <SectionCard v-if="showScanner" title="Scan the code on the device" class="max-w-2xl">
-                <QrcodeStream class="overflow-hidden rounded-md" @detect="onDetect" @error="onQrError" />
-            </SectionCard>
-            <p v-if="scanError" role="alert" class="m-0 max-w-2xl rounded-md bg-danger-soft p-3 text-sm text-danger-ink">{{ scanError }}</p>
+            <QrScanCard
+                v-if="showScanner"
+                title="Scan the code on the device"
+                invalid-message="That QR code is not an Agronos device code."
+                @scan="onScan"
+            />
 
             <SectionCard title="Device details" class="max-w-2xl">
                 <form class="flex flex-col gap-6" @submit.prevent="submit">
