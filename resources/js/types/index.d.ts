@@ -38,3 +38,16 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export interface FarmSummary {
+    id: number;
+    name: string;
+    location: string | null;
+    center: { lng: number; lat: number } | null;
+    status: 'ok' | 'warning' | 'offline' | 'unknown';
+    sensors: number;
+    devicesOnline: number;
+    devicesTotal: number;
+    moisture: number | null;
+    temperature: number | null;
+}

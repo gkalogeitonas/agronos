@@ -1,8 +1,12 @@
 <?php
 
+use App\Events\FirstEvent;
+use App\Events\SensorReadingEvent;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
 use App\Http\Controllers\SensorController;
+use App\Models\Sensor;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -26,27 +30,26 @@ Route::get('/', function () {
 
 // Quick test route to dispatch FirstEvent (used to validate broadcasting)
 Route::get('/test-first-event', function () {
-    event(new \App\Events\FirstEvent('test from /test-first-event', ['time' => now()->toDateTimeString()]));
+    event(new FirstEvent('test from /test-first-event', ['time' => now()->toDateTimeString()]));
 
     return 'event dispatched';
 });
 
 // Quick test route to dispatch a private sensor event (requires auth)
-Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', function (\App\Models\Sensor $sensor) {
+Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', function (Sensor $sensor) {
     $payload = [
         'value' => 50,
         'time' => now()->toDateTimeString(),
         'message' => 'private test',
     ];
 
-    event(new \App\Events\SensorReadingEvent($sensor->id, $payload));
+    event(new SensorReadingEvent($sensor->id, $payload));
 
     return 'sensor private event dispatched';
 })->name('test.sensor.event');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
 // Farm resource routes
 Route::resource('farms', FarmController::class)
@@ -90,7 +93,7 @@ Route::middleware(['auth', 'verified'])->post('/sensors/scan', [SensorController
 Route::middleware(['auth', 'verified'])->resource('sensors', SensorController::class);
 
 // Dedicated route for creating a sensor for a specific farm (uses the same create method)
-Route::middleware(['auth', 'verified'])->get('/farms/{farm}/sensors/create', [App\Http\Controllers\SensorController::class, 'create'])->name('farms.sensors.create');
+Route::middleware(['auth', 'verified'])->get('/farms/{farm}/sensors/create', [SensorController::class, 'create'])->name('farms.sensors.create');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
