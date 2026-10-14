@@ -1,12 +1,9 @@
 <?php
 
-use App\Events\FirstEvent;
-use App\Events\SensorReadingEvent;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
 use App\Http\Controllers\SensorController;
-use App\Models\Sensor;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -27,26 +24,6 @@ Route::get('/', function () {
         'canRegister' => Route::has('register'),
     ]);
 })->name('home');
-
-// Quick test route to dispatch FirstEvent (used to validate broadcasting)
-Route::get('/test-first-event', function () {
-    event(new FirstEvent('test from /test-first-event', ['time' => now()->toDateTimeString()]));
-
-    return 'event dispatched';
-});
-
-// Quick test route to dispatch a private sensor event (requires auth)
-Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', function (Sensor $sensor) {
-    $payload = [
-        'value' => 50,
-        'time' => now()->toDateTimeString(),
-        'message' => 'private test',
-    ];
-
-    event(new SensorReadingEvent($sensor->id, $payload));
-
-    return 'sensor private event dispatched';
-})->name('test.sensor.event');
 
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])->name('dashboard');
