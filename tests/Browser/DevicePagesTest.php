@@ -33,6 +33,15 @@ it('registers a device from the form', function () {
     $this->assertDatabaseHas('devices', ['uuid' => 'node-01-uuid', 'name' => 'Sensor node 01', 'user_id' => $this->user->id]);
 });
 
-// RegisterDeviceRequest::failedValidation() always answers with JSON, so the Inertia form shows a raw JSON modal
-// instead of "The uuid has already been taken." under the field.
-it('shows the validation error under the field when the device uuid is already taken')->todo();
+it('shows the validation error under the field when the device uuid is already taken', function () {
+    Device::factory()->create(['user_id' => $this->user->id, 'uuid' => 'duplicate-uuid']);
+
+    visit(route('devices.create', absolute: false))
+        ->fill('#uuid', 'duplicate-uuid')
+        ->fill('#secret', 'a-long-secret')
+        ->select('#type', 'wifi')
+        ->press('Register device')
+        ->assertPathIs(route('devices.create', absolute: false))
+        ->assertSee('The uuid has already been taken.')
+        ->assertDontSee('All Inertia requests must receive a valid Inertia response');
+});
