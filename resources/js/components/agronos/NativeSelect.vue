@@ -14,7 +14,7 @@ const model = defineModel<string | number>();
         v-model="model"
         :class="
             cn(
-                'h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive',
+                'h-11 rounded-md border border-input bg-card px-3 text-body text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive',
                 props.class,
             )
         "

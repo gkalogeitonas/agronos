@@ -45,7 +45,7 @@ const closeModal = () => {
 <template>
     <div class="space-y-6">
         <HeadingSmall title="Delete account" description="Delete your account and all of its resources" />
-        <div class="space-y-4 rounded-lg border border-danger-soft bg-[#F8E3DE] p-4">
+        <div class="space-y-4 rounded-lg border border-danger-soft bg-danger-surface p-4">
             <div class="relative space-y-0.5 text-danger-ink">
                 <p class="font-medium">Warning</p>
                 <p class="text-sm">Please proceed with caution, this cannot be undone.</p>

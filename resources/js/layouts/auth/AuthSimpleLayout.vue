@@ -20,7 +20,7 @@ defineProps<{
             <div class="flex flex-col gap-8 rounded-xl border bg-card p-8">
                 <div class="flex flex-col gap-2 text-center">
                     <h1 class="m-0 text-2xl font-bold">{{ title }}</h1>
-                    <p v-if="description" class="m-0 text-[15px] text-muted-foreground">{{ description }}</p>
+                    <p v-if="description" class="m-0 text-body text-muted-foreground">{{ description }}</p>
                 </div>
                 <slot />
             </div>

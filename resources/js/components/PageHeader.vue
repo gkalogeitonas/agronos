@@ -17,9 +17,9 @@ withDefaults(defineProps<Props>(), {
         <slot name="breadcrumb" />
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex min-w-0 flex-col gap-1">
-                <div v-if="eyebrow" class="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase">{{ eyebrow }}</div>
+                <div v-if="eyebrow" class="eyebrow text-xs">{{ eyebrow }}</div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <h1 class="m-0 text-[30px] leading-tight font-bold">{{ title }}</h1>
+                    <h1 class="m-0 text-title leading-tight font-bold">{{ title }}</h1>
                     <slot name="meta" />
                 </div>
             </div>

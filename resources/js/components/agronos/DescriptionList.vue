@@ -26,7 +26,7 @@ defineProps<{
             <dt class="text-sm text-muted-foreground">{{ item.label }}</dt>
             <dd
                 class="m-0 min-w-0"
-                :class="[item.mono ? 'truncate font-mono text-sm' : 'text-[15px]', { 'text-right': !item.stacked }]"
+                :class="[item.mono ? 'truncate font-mono text-sm' : 'text-body', { 'text-right': !item.stacked }]"
                 :title="item.mono && item.value != null ? String(item.value) : undefined"
             >
                 <slot :name="`value-${item.key ?? item.label}`" :item="item">{{ item.value == null || item.value === '' ? '–' : item.value }}</slot>

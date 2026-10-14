@@ -9,6 +9,7 @@ export const signalColors = {
     water: '#1F6FA8',
     threshold: '#B7791F',
     alert: '#9B2C1C',
+    caution: '#8A4B00',
     grid: '#DDE4D9',
     muted: '#4A6455',
 } as const;
@@ -36,6 +37,15 @@ export function statusTone(status: string | null | undefined): StatusTone {
             return 'neutral';
     }
 }
+
+/** Raw colour per status tone, for places that cannot use the CSS tokens such as map markers. */
+export const toneColors: Record<StatusTone, string> = {
+    success: signalColors.canopy,
+    warning: signalColors.caution,
+    danger: signalColors.alert,
+    info: signalColors.water,
+    neutral: signalColors.muted,
+};
 
 /** Display labels for the derived farm status from FarmOverviewService. */
 export const farmStatusLabels = {

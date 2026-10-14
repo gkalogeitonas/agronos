@@ -11,6 +11,14 @@
     --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
+    /* Type scale for the redesign: micro labels, meta text, body copy, metric values, page titles and stat tiles */
+    --text-micro: 11px;
+    --text-meta: 13px;
+    --text-body: 15px;
+    --text-metric: 22px;
+    --text-title: 30px;
+    --text-stat: 38px;
+
     --radius-xl: var(--radius);
     --radius-lg: calc(var(--radius) - 2px);
     --radius-md: calc(var(--radius) - 4px);
@@ -51,6 +59,9 @@
     --color-info-soft: var(--info-soft);
     --color-danger-soft: var(--danger-soft);
     --color-danger-ink: var(--danger-ink);
+    --color-danger-surface: var(--danger-surface);
+    --color-warning-surface: var(--warning-surface);
+    --color-ink-soft: var(--ink-soft);
     --color-row: var(--row);
     --color-sun: var(--sun);
     --color-threshold: var(--threshold);
@@ -104,6 +115,9 @@
     --info-soft: #e1eef7;
     --danger-soft: #f3d6d0;
     --danger-ink: #7a1f12;
+    --danger-surface: #f8e3de;
+    --warning-surface: #fbf0d4;
+    --ink-soft: #3c5446;
     --row: #ecf0e9;
     --sun: #e0a526;
     --threshold: #b7791f;
@@ -125,6 +139,14 @@
     --sidebar-border: #1e3a2b;
     --sidebar-ring: #1f7a4d;
     --sidebar: #12261c;
+}
+
+/* Small uppercase mono label used above values and in table headers. Pair with a text size. */
+@utility eyebrow {
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
 }
 
 @layer base {

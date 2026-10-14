@@ -35,7 +35,7 @@ const comingSoon = 'Coming soon: actuator control is not available yet';
                 </template>
             </PageHeader>
 
-            <p class="m-0 max-w-3xl text-[15px] text-muted-foreground">
+            <p class="m-0 max-w-3xl text-body text-muted-foreground">
                 Actuators such as irrigation valves and vent motors will be controlled from here, manually or by schedule. This feature is proposed
                 and the rows below are examples.
             </p>

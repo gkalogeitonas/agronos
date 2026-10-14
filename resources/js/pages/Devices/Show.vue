@@ -115,7 +115,7 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                 </template>
                 <template #meta>
                     <StatusBadge :status="device.status" />
-                    <span v-if="farms.length > 0" class="text-[15px] text-muted-foreground">
+                    <span v-if="farms.length > 0" class="text-body text-muted-foreground">
                         <template v-for="(farm, index) in farms" :key="farm.id"
                             ><template v-if="index > 0">, </template
                             ><Link :href="route('farms.show', farm.id)" class="text-muted-foreground hover:text-info">{{ farm.name }}</Link></template
@@ -159,7 +159,7 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                     />
                     <div
                         v-else
-                        class="flex h-[240px] items-center justify-center rounded-md bg-muted/60 p-6 text-center text-[15px] text-muted-foreground"
+                        class="flex h-[240px] items-center justify-center rounded-md bg-muted/60 p-6 text-center text-body text-muted-foreground"
                     >
                         No battery readings in the last 24 hours.
                     </div>
@@ -180,9 +180,9 @@ const comingSoon = 'Coming soon: device commands are not available yet';
 
                 <SectionCard title="Irrigation valve" class="flex-[1_1_280px]">
                     <template #title-extra>
-                        <span class="rounded-full bg-sun px-2 py-0.5 font-mono text-[11px] text-foreground">PROPOSED</span>
+                        <span class="rounded-full bg-sun px-2 py-0.5 font-mono text-micro text-foreground">PROPOSED</span>
                     </template>
-                    <p class="m-0 text-[15px] text-[#3C5446]">
+                    <p class="m-0 text-body text-ink-soft">
                         Closed. A manual or agent-controlled irrigation run could be started here once actuators are supported.
                     </p>
                     <div class="flex flex-wrap gap-3">
@@ -211,7 +211,7 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                     </dl>
                 </template>
                 <div v-else-if="!hasMqttCredentials" class="flex flex-wrap items-center justify-between gap-3">
-                    <p class="m-0 text-[15px] text-muted-foreground">No MQTT credentials are set for this device.</p>
+                    <p class="m-0 text-body text-muted-foreground">No MQTT credentials are set for this device.</p>
                     <Button variant="outline" :disabled="mqttForm.processing" @click="createMqttCredentials">Set MQTT credentials</Button>
                 </div>
             </SectionCard>

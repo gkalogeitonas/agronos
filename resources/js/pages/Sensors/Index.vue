@@ -119,13 +119,13 @@ const columns = computed<DataTableColumn[]>(() => [
                     </div>
                 </section>
 
-                <div v-if="groups.length === 0" class="rounded-xl border bg-card p-8 text-center text-[15px] text-muted-foreground">
+                <div v-if="groups.length === 0" class="rounded-xl border bg-card p-8 text-center text-body text-muted-foreground">
                     No sensors match these filters.
                 </div>
 
                 <SectionCard v-for="group in groups" :key="group.title" :title="group.title">
                     <template #title-extra>
-                        <span class="font-mono text-[13px] text-muted-foreground">{{ group.count }}</span>
+                        <span class="font-mono text-meta text-muted-foreground">{{ group.count }}</span>
                     </template>
                     <DataTable :columns="columns" :rows="group.rows" row-key="id">
                         <template #cell-name="{ row }">

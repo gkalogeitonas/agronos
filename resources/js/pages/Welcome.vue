@@ -50,9 +50,9 @@ const features = [
 
         <main class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6 py-12 md:py-20">
             <section class="flex max-w-3xl flex-col gap-5">
-                <div class="font-mono text-[13px] tracking-[0.1em] text-muted-foreground uppercase">Smart agriculture IoT platform</div>
+                <div class="font-mono text-meta tracking-[0.1em] text-muted-foreground uppercase">Smart agriculture IoT platform</div>
                 <h1 class="m-0 text-4xl leading-tight font-bold md:text-[56px]">Know your fields before you walk them.</h1>
-                <p class="m-0 text-lg leading-relaxed text-[#3C5446]">
+                <p class="m-0 text-lg leading-relaxed text-ink-soft">
                     Agronos collects readings from the sensors on your farms and garden beds, shows them as they happen and keeps their history, so a
                     change is noticed before it becomes a problem.
                 </p>
@@ -72,7 +72,7 @@ const features = [
                         <component :is="feature.icon" class="size-5" aria-hidden="true" />
                     </span>
                     <h2 class="m-0 text-lg font-semibold">{{ feature.title }}</h2>
-                    <p class="m-0 text-[15px] leading-relaxed text-muted-foreground">{{ feature.text }}</p>
+                    <p class="m-0 text-body leading-relaxed text-muted-foreground">{{ feature.text }}</p>
                 </article>
             </section>
         </main>

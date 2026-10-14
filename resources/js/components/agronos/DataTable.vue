@@ -30,11 +30,7 @@ const gridTemplate = computed(() => props.columns.map((column) => column.width ?
 <template>
     <div class="overflow-x-auto">
         <div role="table" class="flex flex-col" :style="{ minWidth }">
-            <div
-                role="row"
-                class="grid gap-4 border-b px-3 pb-2.5 font-mono text-xs tracking-[0.06em] text-muted-foreground uppercase"
-                :style="{ gridTemplateColumns: gridTemplate }"
-            >
+            <div role="row" class="grid gap-4 border-b px-3 pb-2.5 eyebrow text-xs" :style="{ gridTemplateColumns: gridTemplate }">
                 <span v-for="column in columns" :key="column.key" role="columnheader" :class="{ 'text-right': column.align === 'end' }">{{
                     column.label
                 }}</span>
@@ -43,7 +39,7 @@ const gridTemplate = computed(() => props.columns.map((column) => column.width ?
                 v-for="row in rows"
                 :key="String(row[rowKey])"
                 role="row"
-                class="grid items-center gap-4 border-b border-row px-3 py-3.5 text-[15px]"
+                class="grid items-center gap-4 border-b border-row px-3 py-3.5 text-body"
                 :style="{ gridTemplateColumns: gridTemplate }"
             >
                 <span
@@ -51,12 +47,12 @@ const gridTemplate = computed(() => props.columns.map((column) => column.width ?
                     :key="column.key"
                     role="cell"
                     class="min-w-0"
-                    :class="{ 'font-mono text-[13px]': column.mono, 'justify-self-end text-right': column.align === 'end' }"
+                    :class="{ 'font-mono text-meta': column.mono, 'justify-self-end text-right': column.align === 'end' }"
                 >
                     <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]">{{ row[column.key] ?? '–' }}</slot>
                 </span>
             </div>
-            <div v-if="rows.length === 0" class="px-3 py-8 text-center text-[15px] text-muted-foreground">
+            <div v-if="rows.length === 0" class="px-3 py-8 text-center text-body text-muted-foreground">
                 <slot name="empty">{{ emptyText }}</slot>
             </div>
         </div>

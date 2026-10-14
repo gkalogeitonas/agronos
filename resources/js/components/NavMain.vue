@@ -19,7 +19,7 @@ const isActive = (item: NavItem): boolean => page.url === item.href || page.url.
     <SidebarGroup class="px-3 py-0">
         <SidebarMenu class="gap-1">
             <SidebarMenuItem v-for="item in items" :key="item.title">
-                <SidebarMenuButton as-child :is-active="isActive(item)" :tooltip="item.title" class="h-11 text-[15px]">
+                <SidebarMenuButton as-child :is-active="isActive(item)" :tooltip="item.title" class="h-11 text-body">
                     <Link :href="item.href">
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
@@ -27,7 +27,7 @@ const isActive = (item: NavItem): boolean => page.url === item.href || page.url.
                 </SidebarMenuButton>
                 <SidebarMenuBadge
                     v-if="item.badge"
-                    class="top-3 right-2 rounded-full bg-sun px-2 font-mono text-[11px] font-medium text-sidebar peer-hover/menu-button:text-sidebar"
+                    class="top-3 right-2 rounded-full bg-sun px-2 font-mono text-micro font-medium text-sidebar peer-hover/menu-button:text-sidebar"
                 >
                     {{ item.badge }}
                 </SidebarMenuBadge>

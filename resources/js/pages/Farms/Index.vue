@@ -69,7 +69,7 @@ const rows = computed(() => {
                         <option value="all">All statuses</option>
                         <option v-for="(label, value) in farmStatusLabels" :key="value" :value="value">{{ label }}</option>
                     </FilterSelect>
-                    <span class="font-mono text-[13px] text-muted-foreground">{{ rows.length }} of {{ farms.length }} farms</span>
+                    <span class="font-mono text-meta text-muted-foreground">{{ rows.length }} of {{ farms.length }} farms</span>
                 </div>
 
                 <DataTable :columns="columns" :rows="rows" row-key="id" min-width="760px" empty-text="No farms match these filters.">
@@ -86,13 +86,13 @@ const rows = computed(() => {
                         <span class="flex items-center gap-4">
                             <Link
                                 :href="route('farms.edit', row.id)"
-                                class="inline-flex min-h-11 items-center text-[15px] font-medium text-muted-foreground hover:text-foreground"
+                                class="inline-flex min-h-11 items-center text-body font-medium text-muted-foreground hover:text-foreground"
                             >
                                 Edit
                             </Link>
                             <Link
                                 :href="route('farms.show', row.id)"
-                                class="inline-flex min-h-11 items-center text-[15px] font-semibold text-info hover:text-foreground"
+                                class="inline-flex min-h-11 items-center text-body font-semibold text-info hover:text-foreground"
                             >
                                 Open farm
                             </Link>

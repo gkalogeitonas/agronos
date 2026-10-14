@@ -82,7 +82,7 @@ const footerNavItems: NavItem[] = [
 
         <SidebarFooter class="gap-3 px-3 pb-4">
             <NavFooter :items="footerNavItems" />
-            <div class="px-2 text-[13px] leading-normal text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
+            <div class="px-2 text-meta leading-normal text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
                 Organisation<br />
                 <span class="font-semibold text-white">{{ sampleOrganisation.name }}</span>
             </div>

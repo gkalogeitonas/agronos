@@ -33,7 +33,7 @@ const alerts = computed(() => sampleAlerts.filter((alert) => tone.value === 'all
         <PageContainer>
             <PageHeader eyebrow="Monitor" title="Alerts" sample-data />
 
-            <p class="m-0 max-w-3xl text-[15px] text-muted-foreground">
+            <p class="m-0 max-w-3xl text-body text-muted-foreground">
                 Alerts will be raised automatically when soil moisture crosses a threshold, a device stops reporting or a battery runs low. The alerts
                 below are examples of what this page will show.
             </p>

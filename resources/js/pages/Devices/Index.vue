@@ -87,7 +87,7 @@ const filteredDevices = computed(() => {
                 </section>
 
                 <SectionCard>
-                    <div class="font-mono text-[13px] text-muted-foreground" aria-live="polite">
+                    <div class="font-mono text-meta text-muted-foreground" aria-live="polite">
                         Showing {{ filteredDevices.length }} of {{ devices.length }} devices
                     </div>
                     <DeviceTable :devices="filteredDevices" show-farm min-width="860px" empty-text="No devices match these filters." />

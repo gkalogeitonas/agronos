@@ -94,23 +94,23 @@ const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.s
                         </div>
                         <dl class="m-0 grid grid-cols-3 gap-3">
                             <div class="flex flex-col gap-0.5">
-                                <dt class="font-mono text-[11px] tracking-[0.06em] text-muted-foreground uppercase">Moisture</dt>
-                                <dd class="m-0 font-mono text-[22px] font-medium">{{ formatReading(farm.moisture, '%') }}</dd>
+                                <dt class="eyebrow text-micro">Moisture</dt>
+                                <dd class="m-0 font-mono text-metric font-medium">{{ formatReading(farm.moisture, '%') }}</dd>
                             </div>
                             <div class="flex flex-col gap-0.5">
-                                <dt class="font-mono text-[11px] tracking-[0.06em] text-muted-foreground uppercase">Air temp</dt>
-                                <dd class="m-0 font-mono text-[22px] font-medium">{{ formatReading(farm.temperature, '°C') }}</dd>
+                                <dt class="eyebrow text-micro">Air temp</dt>
+                                <dd class="m-0 font-mono text-metric font-medium">{{ formatReading(farm.temperature, '°C') }}</dd>
                             </div>
                             <div class="flex flex-col gap-0.5">
-                                <dt class="font-mono text-[11px] tracking-[0.06em] text-muted-foreground uppercase">Devices</dt>
-                                <dd class="m-0 font-mono text-[22px] font-medium">{{ farm.devicesOnline }} / {{ farm.devicesTotal }}</dd>
+                                <dt class="eyebrow text-micro">Devices</dt>
+                                <dd class="m-0 font-mono text-metric font-medium">{{ farm.devicesOnline }} / {{ farm.devicesTotal }}</dd>
                             </div>
                         </dl>
                         <div class="flex items-center justify-between gap-3 border-t border-row pt-3.5">
                             <span class="text-sm text-muted-foreground">{{ farm.sensors }} sensors</span>
                             <Link
                                 :href="route('farms.show', farm.id)"
-                                class="inline-flex min-h-11 items-center text-[15px] font-semibold text-info hover:text-foreground"
+                                class="inline-flex min-h-11 items-center text-body font-semibold text-info hover:text-foreground"
                             >
                                 Open farm
                             </Link>

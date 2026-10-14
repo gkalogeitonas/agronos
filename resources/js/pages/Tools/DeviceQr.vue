@@ -66,7 +66,7 @@ const pretty = (json: string): string => JSON.stringify(JSON.parse(json), null, 
                 </template>
             </PageHeader>
 
-            <p class="m-0 max-w-3xl text-[15px] text-muted-foreground">
+            <p class="m-0 max-w-3xl text-body text-muted-foreground">
                 Print these codes and stick them on a new device and its sensors. Scanning them on the Add device and Add sensor pages fills in the
                 IDs.
             </p>

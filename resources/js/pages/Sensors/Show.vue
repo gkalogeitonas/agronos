@@ -42,7 +42,7 @@
                     :height="320"
                     :label="`Line chart of ${sensorTypeLabel(sensor.type).toLowerCase()} readings, ${rangeLabel.toLowerCase()}`"
                 />
-                <div v-else class="flex h-[200px] items-center justify-center rounded-md bg-muted/60 text-[15px] text-muted-foreground">
+                <div v-else class="flex h-[200px] items-center justify-center rounded-md bg-muted/60 text-body text-muted-foreground">
                     No readings in the selected range.
                 </div>
             </SectionCard>

@@ -72,7 +72,7 @@ watch(
                 <p class="m-0 text-sm text-muted-foreground">Draw the farm's outline on the map. The area is calculated from it.</p>
                 <FarmBoundaryEditor :lng="defaultLng" :lat="defaultLat" :polygon="polygon" @update:polygon="onUpdatePolygon" />
                 <div class="flex items-baseline gap-2 font-mono text-sm">
-                    <span class="text-xs tracking-[0.06em] text-muted-foreground uppercase">Area</span>
+                    <span class="eyebrow text-xs">Area</span>
                     <span>{{
                         calculatedArea !== null ? `${calculatedArea.toLocaleString(undefined, { maximumFractionDigits: 2 })} m²` : 'No boundary yet'
                     }}</span>
