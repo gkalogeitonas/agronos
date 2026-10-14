@@ -1,84 +1,153 @@
-<template>
-  <Head title="Sensors" />
-  <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col h-full gap-6 p-4">
-      <!-- Header -->
-      <div class="flex justify-between items-center gap-4">
-        <h1 class="text-2xl font-bold">Sensors Management</h1>
-        <Link :href="route('sensors.create')">
-          <Button>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 00-1 1v5H4a1 1 0 100 2h5v5a1 1 0 102 0v-5h5a1 1 0 100-2h-5V4a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-            Add Sensor
-          </Button>
-        </Link>
-      </div>
-      <!-- Farm Filter -->
-      <div class="flex items-center gap-2 mb-2">
-        <label for="farm-filter" class="text-sm font-medium">Farm:</label>
-        <select id="farm-filter" v-model="selectedFarmId" class="border rounded px-2 py-1 text-sm">
-          <option value="">All Farms</option>
-          <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
-        </select>
-      </div>
-      <!-- Sensor List -->
-      <div v-if="filteredSensors.length > 0" class="flex flex-col gap-4">
-        <SensorCard v-for="sensor in filteredSensors" :key="sensor.id" :sensor="sensor" />
-      </div>
-      <!-- Empty State -->
-      <div v-else class="flex flex-col items-center justify-center p-8 border rounded-lg border-dashed text-center">
-        <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium mb-2">No sensors found</h3>
-        <p class="text-sm text-muted-foreground mb-4">Get started by adding your first sensor.</p>
-
-        <Link :href="route('sensors.create')">
-          <Button>Add Your First Sensor</Button>
-        </Link>
-
-      </div>
-    </div>
-  </AppLayout>
-</template>
-
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
+import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { ref, computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import SensorCard from '@/components/SensorCard.vue';
+import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
+import { useTimestamp } from '@/composables/useTimestamp';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { formatReading } from '@/lib/format';
+import { sensorTypeLabel, sensorUnits } from '@/lib/theme';
+import { type BreadcrumbItem } from '@/types';
 import type { Sensor } from '@/types/sensor';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-const page = usePage();
-const sensors = computed(() => page.props.sensors as Sensor[] ?? []);
-const farms = computed(() => page.props.farms ?? []);
-const selectedFarmId = ref('');
+const props = defineProps<{
+    sensors: Sensor[];
+    farms: { id: number; name: string }[];
+}>();
 
-const filteredSensors = computed(() => {
-  if (!selectedFarmId.value) return sensors.value;
-  return sensors.value.filter(sensor => String(sensor.farm_id) === String(selectedFarmId.value));
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Sensors', href: '/sensors' }];
+
+const { formatAge } = useTimestamp();
+const liveReadings = useLiveSensorReadings(props.sensors);
+
+const type = ref('all');
+const farmId = ref('all');
+const status = ref('all');
+const groupBy = ref<'farm' | 'type'>('farm');
+
+const farmName = (id: number | null): string => props.farms.find((farm) => farm.id === id)?.name ?? 'No farm';
+const sensorStatus = (sensor: Sensor): string => sensor.device?.status ?? 'unknown';
+
+const typeOptions = computed<FilterChipOption[]>(() => {
+    const types = [...new Set(props.sensors.map((sensor) => sensor.type))].sort();
+    return [
+        { value: 'all', label: 'All', count: props.sensors.length },
+        ...types.map((value) => ({ value, label: sensorTypeLabel(value), count: props.sensors.filter((sensor) => sensor.type === value).length })),
+    ];
 });
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-  },
-  {
-    title: 'Sensors',
-    href: '/sensors',
-  },
+const groupOptions: FilterChipOption<'farm' | 'type'>[] = [
+    { value: 'farm', label: 'Farm' },
+    { value: 'type', label: 'Type' },
 ];
+
+const filtered = computed(() =>
+    props.sensors
+        .filter((sensor) => type.value === 'all' || sensor.type === type.value)
+        .filter((sensor) => farmId.value === 'all' || String(sensor.farm_id) === farmId.value)
+        .filter((sensor) => status.value === 'all' || sensorStatus(sensor) === status.value),
+);
+
+const groups = computed(() => {
+    const keyOf = (sensor: Sensor) => (groupBy.value === 'farm' ? farmName(sensor.farm_id) : sensorTypeLabel(sensor.type));
+    const titles = [...new Set(filtered.value.map(keyOf))].sort();
+
+    return titles.map((title) => {
+        const rows = filtered.value
+            .filter((sensor) => keyOf(sensor) === title)
+            .map((sensor) => ({
+                id: sensor.id,
+                name: sensor.name,
+                context: groupBy.value === 'farm' ? sensorTypeLabel(sensor.type) : farmName(sensor.farm_id),
+                latest: formatReading(liveReadings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
+                seen: formatAge(liveReadings[sensor.id]?.time),
+                status: sensorStatus(sensor),
+            }));
+        return { title, rows, count: rows.length === 1 ? '1 sensor' : `${rows.length} sensors` };
+    });
+});
+
+const columns = computed<DataTableColumn[]>(() => [
+    { key: 'name', label: 'Sensor', width: '2fr' },
+    { key: 'context', label: groupBy.value === 'farm' ? 'Type' : 'Farm', width: '1.4fr' },
+    { key: 'latest', label: 'Latest', mono: true },
+    { key: 'seen', label: 'Last seen', mono: true },
+    { key: 'status', label: 'Status' },
+]);
 </script>
 
-<style scoped>
-.container {
-  max-width: 900px;
-}
-</style>
+<template>
+    <Head title="Sensors" />
+
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader eyebrow="Manage" title="Sensors">
+                <template #actions>
+                    <Button as-child>
+                        <Link :href="route('sensors.create')">Add sensor</Link>
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <template v-if="sensors.length > 0">
+                <section aria-label="Filters" class="flex flex-col gap-4">
+                    <FilterChips v-model="type" :options="typeOptions" label="Filter by sensor type" />
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
+                            Farm
+                            <select v-model="farmId" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                                <option value="all">All farms</option>
+                                <option v-for="farm in farms" :key="farm.id" :value="String(farm.id)">{{ farm.name }}</option>
+                            </select>
+                        </label>
+                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
+                            Status
+                            <select v-model="status" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                                <option value="all">All statuses</option>
+                                <option value="online">Online</option>
+                                <option value="registered">Registered</option>
+                                <option value="offline">Offline</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </label>
+                        <div class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
+                            Group by
+                            <FilterChips v-model="groupBy" :options="groupOptions" label="Group sensors by" />
+                        </div>
+                    </div>
+                </section>
+
+                <div v-if="groups.length === 0" class="rounded-xl border bg-card p-8 text-center text-[15px] text-muted-foreground">
+                    No sensors match these filters.
+                </div>
+
+                <SectionCard v-for="group in groups" :key="group.title" :title="group.title">
+                    <template #title-extra>
+                        <span class="font-mono text-[13px] text-muted-foreground">{{ group.count }}</span>
+                    </template>
+                    <DataTable :columns="columns" :rows="group.rows" row-key="id">
+                        <template #cell-name="{ row }">
+                            <Link :href="route('sensors.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
+                        </template>
+                        <template #cell-status="{ row }">
+                            <StatusBadge :status="row.status" />
+                        </template>
+                    </DataTable>
+                </SectionCard>
+            </template>
+
+            <div v-else class="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
+                <h2 class="m-0 text-lg font-semibold">No sensors yet</h2>
+                <p class="m-0 text-[15px] text-muted-foreground">Add a sensor to a device and a farm to start collecting readings.</p>
+                <Button as-child>
+                    <Link :href="route('sensors.create')">Add your first sensor</Link>
+                </Button>
+            </div>
+        </div>
+    </AppLayout>
+</template>
