@@ -2,12 +2,16 @@
     "agents": [
         "copilot"
     ],
+    "cloud": true,
     "guidelines": true,
     "herd_mcp": false,
     "mcp": true,
     "sail": false,
     "skills": [
-        "pest-testing",
+        "infer-conventions",
+        "deploying-to-cloud",
+        "laravel-best-practices",
+        "testing-best-practices",
         "inertia-vue-development",
         "tailwindcss-development"
     ]
