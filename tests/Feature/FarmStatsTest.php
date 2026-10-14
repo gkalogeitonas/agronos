@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\SensorType;
+use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
@@ -63,9 +65,9 @@ it('provides last reading average per sensor type from sensors table', function 
     $farm = Farm::factory()->create(['user_id' => $user->id]);
 
     // Create devices that are online and attach sensors to them
-    $device1 = \App\Models\Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
-    $device2 = \App\Models\Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
-    $device3 = \App\Models\Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
+    $device1 = Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
+    $device2 = Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
+    $device3 = Device::factory()->create(['user_id' => $user->id, 'status' => 'online']);
 
     // Create temperature sensors with explicit last_reading values attached to online devices
     Sensor::factory()->create(['farm_id' => $farm->id, 'user_id' => $user->id, 'device_id' => $device1->id, 'type' => 'temperature', 'last_reading' => 10.0]);
@@ -109,16 +111,16 @@ it('farm service provides reading statistics per sensor type', function () {
 });
 
 it('farmRelevant scope excludes battery sensors', function () {
-    $farm = \App\Models\Farm::factory()->create();
+    $farm = Farm::factory()->create();
 
-    $battery = \App\Models\Sensor::factory()->create([
+    $battery = Sensor::factory()->create([
         'farm_id' => $farm->id,
-        'type' => \App\Enums\SensorType::BATTERY->value,
+        'type' => SensorType::BATTERY->value,
     ]);
 
-    $moisture = \App\Models\Sensor::factory()->count(2)->create([
+    $moisture = Sensor::factory()->count(2)->create([
         'farm_id' => $farm->id,
-        'type' => \App\Enums\SensorType::MOISTURE->value,
+        'type' => SensorType::MOISTURE->value,
     ]);
 
     expect($farm->sensors()->count())->toBe(3);
@@ -126,4 +128,20 @@ it('farmRelevant scope excludes battery sensors', function () {
     $relevant = $farm->sensors()->farmRelevant()->get();
     expect($relevant)->toHaveCount(2);
     expect($relevant->pluck('id'))->not->toContain($battery->id);
+});
+
+it('lists the devices whose sensors are on the farm', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $device = Device::factory()->create(['user_id' => $user->id]);
+    Sensor::factory()->count(2)->create(['user_id' => $user->id, 'farm_id' => $farm->id, 'device_id' => $device->id, 'type' => 'moisture']);
+    Sensor::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->has('devices', 1)
+            ->where('devices.0.id', $device->id)
+            ->missing('devices.0.secret')
+        );
 });

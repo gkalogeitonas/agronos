@@ -52,3 +52,13 @@ export interface FarmSummary {
     moisture: number | null;
     temperature: number | null;
 }
+
+export interface DeviceSummary {
+    id: number;
+    name: string;
+    type: string;
+    status: 'registered' | 'online' | 'offline' | 'error';
+    signal_strength: number | null;
+    battery_level: number | null;
+    last_seen_at: string | null;
+}

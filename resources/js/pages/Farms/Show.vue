@@ -1,276 +1,252 @@
 <script setup lang="ts">
-import { Head, Deferred } from '@inertiajs/vue3'
-import AppLayout from '@/layouts/AppLayout.vue'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { router } from '@inertiajs/vue3'
-import { Pencil, Trash2 } from 'lucide-vue-next'
-import { type BreadcrumbItem } from '@/types'
-import { Link } from '@inertiajs/vue3'
-import SensorCard from '@/components/SensorCard.vue'
-import FarmMapbox from '@/components/FarmMapbox.vue'
-import type { Sensor } from '@/types/sensor'
+import AlertList from '@/components/agronos/AlertList.vue';
+import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import LineChart from '@/components/agronos/LineChart.vue';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import StatTile from '@/components/agronos/StatTile.vue';
+import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import FarmMapbox from '@/components/FarmMapbox.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Button } from '@/components/ui/button';
+import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
+import { useTimestamp } from '@/composables/useTimestamp';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { deviceTypeLabel, formatBattery, formatReading, formatSignal, isLowBattery } from '@/lib/format';
+import { sampleAlerts, sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
+import { sensorColors, sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
+import { type BreadcrumbItem, type DeviceSummary } from '@/types';
+import type { Sensor } from '@/types/sensor';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
-// Props
+interface ReadingStats {
+    avgReading: number | null;
+    minReading: number | null;
+    maxReading: number | null;
+}
+
 const props = defineProps<{
     farm: {
         id: number;
         name: string;
-        location: string;
-        size: number;
+        location: string | null;
+        size: number | null;
         description: string | null;
-        coordinates: any; // GeoJSON object or null
+        coordinates: { type: string; coordinates: number[][][] } | null;
         created_at: string;
         updated_at: string;
-        center: {
-            lng: number;
-            lat: number;
-        } | null;
+        center: { lng: number; lat: number } | null;
     };
     sensors: Sensor[];
-    // backward-compatible whole object
-    farmStats?: {
-        totalSensors: number;
-        sensorTypeStats: Record<string, number>;
-        readingStatsByType: Record<string, {
-            avgReading: number | null;
-            minReading: number | null;
-            maxReading: number | null;
-        }>;
-        lastAvgByType?: Record<string, number | null>;
-    };
-    // separated props to allow deferred loading / polling
+    devices: DeviceSummary[];
     sensorDbStats?: {
         totalSensors: number;
         sensorTypeStats: Record<string, number>;
         lastAvgByType?: Record<string, number | null>;
     };
     timeSeriesStats?: {
-        readingStatsByType?: Record<string, {
-            avgReading: number | null;
-            minReading: number | null;
-            maxReading: number | null;
-        }>;
+        readingStatsByType?: Record<string, ReadingStats>;
     };
-}>()
+}>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
-    {
-        title: 'Farms',
-        href: '/farms',
-    },
-    {
-        title: props.farm.name,
-        href: route('farms.show', props.farm.id),
-    },
-]
+    { title: 'Farms', href: '/farms' },
+    { title: props.farm.name, href: route('farms.show', props.farm.id) },
+];
 
-// Delete farm handler
+const { formatAge } = useTimestamp();
+const liveReadings = useLiveSensorReadings(props.sensors);
+
+const devicesOnline = computed(() => props.devices.filter((device) => device.status === 'online').length);
+
+/** One tile per sensor type the farm has a recent average for, in a fixed signal order. */
+const readingTiles = computed(() => {
+    const averages = props.sensorDbStats?.lastAvgByType ?? {};
+    const order = ['moisture', 'temperature', 'humidity', 'light'];
+
+    return order
+        .filter((type) => type in averages)
+        .slice(0, 3)
+        .map((type) => {
+            const range = props.timeSeriesStats?.readingStatsByType?.[type];
+            return {
+                type,
+                label: type === 'temperature' ? 'Air temperature' : sensorTypeLabel(type),
+                value: formatReading(averages[type]),
+                unit: sensorUnits[type] ?? '',
+                note:
+                    range && range.minReading !== null
+                        ? `24 h range ${formatReading(range.minReading)}–${formatReading(range.maxReading, sensorUnits[type])}`
+                        : 'Average of online sensors',
+            };
+        });
+});
+
+const moistureSeries = computed(() =>
+    sampleMoistureSeries().map((series, index) => ({ ...series, color: index === 0 ? signalColors.leaf : signalColors.water, dashed: index === 1 })),
+);
+
+const deviceColumns: DataTableColumn[] = [
+    { key: 'name', label: 'Device', width: '2fr' },
+    { key: 'type', label: 'Link', mono: true },
+    { key: 'signal', label: 'Signal', mono: true },
+    { key: 'battery', label: 'Battery', mono: true },
+    { key: 'seen', label: 'Last seen', mono: true },
+    { key: 'status', label: 'Status', width: '1.2fr' },
+];
+
+const deviceRows = computed(() =>
+    props.devices.map((device) => ({
+        ...device,
+        type: deviceTypeLabel(device.type),
+        signal: formatSignal(device.signal_strength),
+        battery: formatBattery(device.battery_level),
+        seen: formatAge(device.last_seen_at),
+    })),
+);
+
+const sensorColumns: DataTableColumn[] = [
+    { key: 'name', label: 'Sensor', width: '2fr' },
+    { key: 'type', label: 'Type' },
+    { key: 'latest', label: 'Latest', mono: true },
+    { key: 'seen', label: 'Last seen', mono: true },
+];
+
+const sensorRows = computed(() =>
+    props.sensors.map((sensor) => ({
+        id: sensor.id,
+        name: sensor.name,
+        type: sensorTypeLabel(sensor.type),
+        latest: formatReading(liveReadings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
+        seen: formatAge(liveReadings[sensor.id]?.time),
+    })),
+);
+
 const deleteFarm = () => {
     if (confirm(`Are you sure you want to delete ${props.farm.name}?`)) {
-        router.delete(route('farms.destroy', props.farm.id))
+        router.delete(route('farms.destroy', props.farm.id));
     }
-}
+};
 </script>
 
 <template>
-
     <Head :title="farm.name" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="container py-8">
-            <div class="flex justify-between items-center mb-6">
-                <Link :href="route('farms.show', farm.id)" class="text-3xl font-bold pl-3 hover:underline">
-                {{ farm.name }}
-                </Link>
-                <div class="space-x-2">
-                    <Link :href="route('farms.edit', farm.id)">
-                    <Button variant="outline" size="sm">
-                        <Pencil class="h-4 w-4 mr-2" />
-                        Edit
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader eyebrow="Farm detail" :title="farm.name" sample-data>
+                <template #actions>
+                    <Button variant="outline" as-child>
+                        <Link :href="route('farms.edit', farm.id)"><Pencil /> Edit</Link>
                     </Button>
-                    </Link>
-                    <Button variant="destructive" size="sm" @click="deleteFarm">
-                        <Trash2 class="h-4 w-4 mr-2" />
-                        Delete
+                    <Button variant="outline" class="text-destructive hover:text-destructive" @click="deleteFarm"><Trash2 /> Delete</Button>
+                    <Button as-child>
+                        <Link :href="route('farms.sensors.create', { farm: farm.id })"><Plus /> Add sensor</Link>
                     </Button>
-                    <Link :href="route('farms.sensors.create', { farm: farm.id })">
-                    <Button variant="default" size="sm">
-                        Add Sensor
-                    </Button>
-                    </Link>
-                </div>
-            </div>
+                </template>
+            </PageHeader>
 
-            <div class="mb-6">
-                <FarmMapbox :center="farm.center ? [farm.center.lng, farm.center.lat] : [0, 0]"
-                    :farmPolygon="farm.coordinates"
-                    :sensors="sensors.map(s => ({ lat: Number(s.lat), lon: Number(s.lon), name: s.name }))" />
-            </div>
+            <section aria-label="Key readings" class="flex flex-wrap gap-4">
+                <StatTile
+                    v-for="tile in readingTiles"
+                    :key="tile.type"
+                    :label="tile.label"
+                    :value="tile.value"
+                    :unit="tile.unit"
+                    :note="tile.note"
+                    :trend="sampleTrends[tile.type]"
+                    :trend-color="sensorColors[tile.type]"
+                    :trend-label="`${tile.label} trend, sample data`"
+                />
+                <StatTile
+                    label="Devices online"
+                    :value="devicesOnline"
+                    :unit="`/ ${devices.length}`"
+                    :note="devices.length - devicesOnline === 0 ? 'All reporting' : `${devices.length - devicesOnline} need attention`"
+                    :trend="sampleTrends.devices"
+                    :trend-color="signalColors.ink"
+                    trend-label="Devices online trend, sample data"
+                />
+            </section>
 
-            <Card class="mb-6">
-                <CardHeader>
-                    <CardTitle>Farm Details</CardTitle>
-                    <CardDescription>Information about this farm</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Location</h3>
-                            <p>{{ farm.location }}</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Size</h3>
-                            <p>{{ farm.size }} m²</p>
-                        </div>
-                        <div class="col-span-1 md:col-span-2">
-                            <h3 class="text-sm font-medium text-muted-foreground">Description</h3>
-                            <p>{{ farm.description || 'No description available' }}</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Created</h3>
-                            <p>{{ new Date(farm.created_at).toLocaleDateString() }}</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Last Updated</h3>
-                            <p>{{ new Date(farm.updated_at).toLocaleDateString() }}</p>
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter class="flex justify-between">
-                    <Link :href="route('farms.index')">
-                    <Button variant="outline">
-                        Back to Farms
-                    </Button>
-                    </Link>
-                </CardFooter>
-            </Card>
+            <div class="flex flex-wrap items-stretch gap-4">
+                <SectionCard title="Soil moisture, last 24 h" class="flex-[2_1_480px]">
+                    <LineChart
+                        :series="moistureSeries"
+                        unit="%"
+                        :threshold="{ value: sampleIrrigationThreshold, label: 'Irrigation threshold' }"
+                        label="Line chart of soil moisture for Zone A and Zone B over the last 24 hours, sample data"
+                    />
+                </SectionCard>
 
-            <!-- Farm Statistics -->
-            <div v-if="(sensorDbStats || timeSeriesStats)" class="mb-6">
-                <!-- Sensor Overview: split into Counts and Last Avg Reading cards -->
-                <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Counts Card -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Sensor Overview</CardTitle>
-                            <CardDescription>Total sensors and distribution by type</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="space-y-4">
-                                <div class="flex justify-between">
-                                    <span class="text-sm text-muted-foreground">Total Sensors</span>
-                                    <span class="font-semibold">{{ sensorDbStats?.totalSensors ?? 0 }}</span>
-                                </div>
-
-                                <div v-if="(sensorDbStats?.sensorTypeStats) && Object.keys(sensorDbStats?.sensorTypeStats ?? {}).length > 0"
-                                    class="border-t pt-4">
-                                    <h4 class="text-sm font-medium text-muted-foreground mb-3">By Type</h4>
-                                    <div class="space-y-2">
-                                        <div v-for="(count, type) in (sensorDbStats?.sensorTypeStats)" :key="type"
-                                            class="flex justify-between items-center">
-                                            <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
-                                            <span class="font-medium">{{ count }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Last Average Readings Card -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Last Avg Readings</CardTitle>
-                            <CardDescription>Average of sensors' last readings by type</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="space-y-2">
-                                <div v-if="(sensorDbStats?.lastAvgByType) && Object.keys(sensorDbStats?.lastAvgByType ?? {}).length > 0"
-                                    class="space-y-2">
-                                    <div v-for="(avg, type) in (sensorDbStats?.lastAvgByType)" :key="type"
-                                        class="flex justify-between items-center">
-                                        <span class="text-sm capitalize">{{ type || 'Unknown' }}</span>
-                                        <span class="font-medium">{{ avg != null ? Number(avg).toFixed(2) : '—'
-                                            }}</span>
-                                    </div>
-                                </div>
-                                <div v-else class="text-sm text-muted-foreground">No last readings available</div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <!-- Reading Statistics by Type -->
-                <Deferred data="timeSeriesStats">
-                    <template #fallback>
-                        <div class="flex justify-center items-center text-sm text-muted-foreground h-24">
-                            <span>Loading statistics...</span>
-                        </div>
+                <SectionCard title="Needs attention" class="flex-[1_1_280px]">
+                    <template #actions>
+                        <Link href="/alerts" class="text-sm font-medium text-info hover:text-foreground">View all</Link>
                     </template>
-                    <Card v-if="(timeSeriesStats?.readingStatsByType) && Object.keys(timeSeriesStats?.readingStatsByType ?? {}).length > 0"
-                        class="mb-6">
-                        <CardHeader>
-                            <CardTitle>Reading Statistics by Sensor Type</CardTitle>
-                            <CardDescription>Aggregated min / max / avg readings for the selected time range</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <Card v-for="(stats, type) in (timeSeriesStats?.readingStatsByType)" :key="type">
-                                    <CardHeader>
-                                        <CardTitle class="capitalize text-base">{{ type }} Sensors</CardTitle>
-                                        <CardDescription>Sensor readings statistics</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div class="grid grid-cols-3 gap-3">
-                                            <div>
-                                                <h4 class="text-xs font-medium text-muted-foreground">Min</h4>
-                                                <p class="text-sm font-semibold">{{ stats.minReading ?? '—' }}</p>
-                                            </div>
-                                            <div>
-                                                <h4 class="text-xs font-medium text-muted-foreground">Max</h4>
-                                                <p class="text-sm font-semibold">{{ stats.maxReading ?? '—' }}</p>
-                                            </div>
-                                            <div>
-                                                <h4 class="text-xs font-medium text-muted-foreground">Avg</h4>
-                                                <p class="text-sm font-semibold">{{ stats.avgReading != null ?
-                                                    stats.avgReading.toFixed(2) : '—' }}</p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Deferred>
+                    <AlertList :alerts="sampleAlerts.slice(1, 4)" />
+                </SectionCard>
             </div>
 
-            <Card class="mb-6">
-                <CardHeader>
-                    <CardTitle>Sensors</CardTitle>
-                    <CardDescription>All sensors registered to this farm</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div v-if="sensors.length === 0" class="text-muted-foreground">No sensors found for this farm.</div>
-                    <div v-else class="grid grid-cols-1 gap-4">
-                        <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
-                    </div>
-                </CardContent>
-            </Card>
+            <SectionCard title="Devices">
+                <DataTable :columns="deviceColumns" :rows="deviceRows" row-key="id" empty-text="No devices report to this farm yet.">
+                    <template #cell-name="{ row }">
+                        <Link :href="route('devices.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
+                    </template>
+                    <template #cell-battery="{ row }">
+                        <span :class="{ 'text-danger-ink': isLowBattery(row.battery_level) }">{{ row.battery }}</span>
+                    </template>
+                    <template #cell-status="{ row }">
+                        <StatusBadge :status="row.status" />
+                    </template>
+                </DataTable>
+            </SectionCard>
+
+            <div class="flex flex-wrap items-stretch gap-4">
+                <SectionCard title="Map" class="flex-[2_1_480px]">
+                    <FarmMapbox
+                        :center="farm.center ? [farm.center.lng, farm.center.lat] : [0, 0]"
+                        :farm-polygon="farm.coordinates"
+                        :sensors="sensors.map((sensor) => ({ lat: Number(sensor.lat), lon: Number(sensor.lon), name: sensor.name }))"
+                    />
+                </SectionCard>
+
+                <SectionCard title="Farm information" class="flex-[1_1_280px]">
+                    <dl class="m-0 flex flex-col">
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Location</dt>
+                            <dd class="m-0 text-right text-[15px]">{{ farm.location ?? '–' }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Size</dt>
+                            <dd class="m-0 font-mono text-sm">{{ farm.size !== null ? `${farm.size} m²` : '–' }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Sensors</dt>
+                            <dd class="m-0 font-mono text-sm">{{ sensorDbStats?.totalSensors ?? sensors.length }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Updated</dt>
+                            <dd class="m-0 font-mono text-sm">{{ new Date(farm.updated_at).toLocaleDateString() }}</dd>
+                        </div>
+                        <div class="flex flex-col gap-1 pt-3">
+                            <dt class="text-sm text-muted-foreground">Description</dt>
+                            <dd class="m-0 text-[15px]">{{ farm.description || 'No description yet.' }}</dd>
+                        </div>
+                    </dl>
+                </SectionCard>
+            </div>
+
+            <SectionCard title="Sensors">
+                <template #actions>
+                    <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
+                </template>
+                <DataTable :columns="sensorColumns" :rows="sensorRows" row-key="id" empty-text="No sensors on this farm yet.">
+                    <template #cell-name="{ row }">
+                        <Link :href="route('sensors.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
+                    </template>
+                </DataTable>
+            </SectionCard>
         </div>
     </AppLayout>
 </template>
-
-<style scoped>
-.map-container {
-    width: 100%;
-    height: 300px;
-    border-radius: 0.5rem;
-    border: 1px solid #e5e7eb;
-    overflow: hidden;
-}
-</style>

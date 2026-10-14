@@ -34,3 +34,28 @@ export const sampleZoneCount = 4;
 
 /** Follow-up: alerts. Stable fake open-alert count per farm until alerts exist. */
 export const sampleOpenAlertsForFarm = (farmId: number): number => farmId % 3;
+
+/** Follow-up: sparkline trends from InfluxDB. Shape of a 24 h trend per sensor type. */
+export const sampleTrends: Record<string, number[]> = {
+    moisture: [46, 45, 45.5, 43, 43.5, 41, 41.5, 40, 39.5],
+    temperature: [17, 18, 19, 21, 23, 24, 25, 24, 24.5],
+    humidity: [64, 65, 63.5, 64.5, 64, 65.5, 64.5, 65, 64.5],
+    devices: [12, 12, 12, 12, 12, 10, 10, 12, 12],
+};
+
+/**
+ * Follow-up: per-zone time series. 24 h of hourly soil moisture for two zones, ending now.
+ */
+export function sampleMoistureSeries(now: Date = new Date()): { name: string; data: { x: number; y: number }[] }[] {
+    const zoneA = [44, 43.5, 44, 42.5, 43, 41.5, 42, 41, 40, 40.5, 39, 39.5, 38, 38.5, 37.5, 38, 37, 36.5, 37, 36, 35.5, 36, 35, 35.5];
+    const zoneB = [38, 37.5, 38, 36.5, 36, 36.5, 35, 35.5, 34.5, 34, 34.5, 33.5, 34, 33, 33.5, 32.5, 33, 32, 32.5, 31.5, 32, 31, 31.5, 31];
+    const point = (y: number, index: number) => ({ x: now.getTime() - (23 - index) * 3600_000, y });
+
+    return [
+        { name: 'Zone A', data: zoneA.map(point) },
+        { name: 'Zone B', data: zoneB.map(point) },
+    ];
+}
+
+/** Follow-up: irrigation threshold per farm or zone. */
+export const sampleIrrigationThreshold = 32;

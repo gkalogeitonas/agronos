@@ -44,3 +44,23 @@ export const farmStatusLabels = {
     offline: 'Offline',
     unknown: 'No devices',
 } as const;
+
+/** Units per sensor type. Mirrors App\\Enums\\SensorType::unit(). */
+export const sensorUnits: Record<string, string> = {
+    moisture: '%',
+    temperature: '°C',
+    humidity: '%',
+    light: 'lux',
+    battery: '%',
+    other: '',
+};
+
+/** Trend line colour per sensor type, one colour per signal. */
+export const sensorColors: Record<string, string> = {
+    moisture: signalColors.water,
+    temperature: signalColors.threshold,
+    humidity: signalColors.leaf,
+    light: signalColors.ink,
+};
+
+export const sensorTypeLabel = (type: string | null | undefined): string => (type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown');
