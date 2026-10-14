@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import FarmBoundaryEditor from '@/components/FarmBoundaryEditor.vue';
 import FormField from '@/components/FormField.vue';
 import InputError from '@/components/InputError.vue';
-import MapboxMap from '@/components/MapboxMap.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -70,7 +70,7 @@ watch(
 
             <SectionCard title="Boundary" class="flex-[2_1_480px]">
                 <p class="m-0 text-sm text-muted-foreground">Draw the farm's outline on the map. The area is calculated from it.</p>
-                <MapboxMap :lng="defaultLng" :lat="defaultLat" :polygon="polygon" :editable="true" @update:polygon="onUpdatePolygon" />
+                <FarmBoundaryEditor :lng="defaultLng" :lat="defaultLat" :polygon="polygon" @update:polygon="onUpdatePolygon" />
                 <div class="flex items-baseline gap-2 font-mono text-sm">
                     <span class="text-xs tracking-[0.06em] text-muted-foreground uppercase">Area</span>
                     <span>{{

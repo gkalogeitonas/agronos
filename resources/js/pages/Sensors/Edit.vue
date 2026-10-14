@@ -5,6 +5,7 @@ import SectionCard from '@/components/agronos/SectionCard.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import SensorLocationPicker from '@/components/SensorLocationPicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -12,9 +13,7 @@ import { sensorTypeLabel } from '@/lib/theme';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed } from 'vue';
 
 interface FarmOption {
     id: number;
@@ -62,140 +61,7 @@ function submit() {
     form.put(route('sensors.update', sensor.id));
 }
 
-function addFarmPolygon(farm: FarmOption) {
-    if (!map || !farm.coordinates) return;
-
-    // Remove existing farm polygon if it exists
-    if (map.getSource('farm-area')) {
-        map.removeLayer('farm-fill');
-        map.removeLayer('farm-outline');
-        map.removeSource('farm-area');
-    }
-
-    // Add farm polygon
-    map.addSource('farm-area', {
-        type: 'geojson',
-        data: {
-            type: 'Feature',
-            properties: {},
-            geometry: farm.coordinates!,
-        },
-    });
-
-    map.addLayer({
-        id: 'farm-fill',
-        type: 'fill',
-        source: 'farm-area',
-        layout: {},
-        paint: {
-            'fill-color': '#1F7A4D',
-            'fill-opacity': 0.2,
-        },
-    });
-
-    map.addLayer({
-        id: 'farm-outline',
-        type: 'line',
-        source: 'farm-area',
-        layout: {},
-        paint: {
-            'line-color': '#1F7A4D',
-            'line-width': 2,
-        },
-    });
-
-    // Fit the map to show the farm polygon
-    const bounds = new mapboxgl.LngLatBounds();
-    farm.coordinates!.coordinates[0].forEach((coord) => bounds.extend(coord as [number, number]));
-    map.fitBounds(bounds, { padding: 40, maxZoom: 17 });
-}
-
-const mapContainer = ref<HTMLElement | null>(null);
-let map: mapboxgl.Map | null = null;
-let marker: mapboxgl.Marker | null = null;
-
-onMounted(() => {
-    if (!mapContainer.value) {
-        console.error('Map container not found');
-        return;
-    }
-
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
-
-    map = new mapboxgl.Map({
-        container: mapContainer.value,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: [parseFloat(form.lon) || 0, parseFloat(form.lat) || 0],
-        zoom: 15,
-    });
-
-    // Add navigation controls
-    map.addControl(new mapboxgl.NavigationControl());
-    map.addControl(new mapboxgl.FullscreenControl());
-
-    // Add farm polygon if available
-    map.on('load', () => {
-        const selectedFarm = farms.value.find((f) => f.id == form.farm_id);
-        if (selectedFarm && selectedFarm.coordinates && selectedFarm.coordinates.type === 'Polygon') {
-            addFarmPolygon(selectedFarm);
-        }
-    });
-
-    // Add marker at sensor location
-    if (form.lat && form.lon) {
-        marker = new mapboxgl.Marker({ draggable: true, color: '#1F6FA8' }).setLngLat([parseFloat(form.lon), parseFloat(form.lat)]).addTo(map);
-
-        // Update form when marker is dragged
-        marker.on('dragend', () => {
-            const lngLat = marker!.getLngLat();
-            form.lat = lngLat.lat.toString();
-            form.lon = lngLat.lng.toString();
-        });
-    }
-
-    // Move marker when map is clicked
-    map.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
-        form.lat = lat.toString();
-        form.lon = lng.toString();
-
-        if (marker) {
-            marker.setLngLat([lng, lat]);
-        } else {
-            marker = new mapboxgl.Marker({ draggable: true, color: '#1F6FA8' }).setLngLat([lng, lat]).addTo(map!);
-
-            marker.on('dragend', () => {
-                const lngLat = marker!.getLngLat();
-                form.lat = lngLat.lat.toString();
-                form.lon = lngLat.lng.toString();
-            });
-        }
-    });
-});
-
-onBeforeUnmount(() => {
-    if (map) {
-        map.remove();
-    }
-});
-
-// Watch for farm selection changes and update polygon
-watch(
-    () => form.farm_id,
-    (newFarmId) => {
-        if (map && map.loaded()) {
-            const selectedFarm = farms.value.find((f) => f.id == newFarmId);
-            if (selectedFarm && selectedFarm.coordinates && selectedFarm.coordinates.type === 'Polygon') {
-                addFarmPolygon(selectedFarm);
-            } else if (map.getSource('farm-area')) {
-                // Remove farm polygon if no farm is selected or farm has no coordinates
-                map.removeLayer('farm-fill');
-                map.removeLayer('farm-outline');
-                map.removeSource('farm-area');
-            }
-        }
-    },
-);
+const farmPolygon = computed(() => farms.value.find((farm) => farm.id === form.farm_id)?.coordinates ?? null);
 </script>
 
 <template>
@@ -219,7 +85,7 @@ watch(
 
                     <SectionCard title="Location" class="flex-[2_1_480px]">
                         <p class="m-0 text-sm text-muted-foreground">Click the map or drag the marker to move the sensor.</p>
-                        <div ref="mapContainer" class="h-[320px] w-full overflow-hidden rounded-md border"></div>
+                        <SensorLocationPicker v-model:lat="form.lat" v-model:lon="form.lon" :farm-polygon="farmPolygon" />
                         <div class="grid gap-4 sm:grid-cols-2">
                             <FormField id="lat" label="Latitude" :error="form.errors.lat"
                                 ><Input id="lat" v-model="form.lat" type="number" step="any" required class="font-mono"

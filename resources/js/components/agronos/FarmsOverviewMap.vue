@@ -1,17 +1,15 @@
 <script setup lang="ts">
+import { useMapbox } from '@/composables/useMapbox';
 import { statusTone } from '@/lib/theme';
 import type { FarmSummary } from '@/types';
 import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     farms: FarmSummary[];
 }>();
 
 const mapContainer = ref<HTMLElement | null>(null);
-let map: mapboxgl.Map | null = null;
-
 const locatedFarms = computed(() => props.farms.filter((farm) => farm.center !== null));
 
 const pinStyles = {
@@ -41,32 +39,24 @@ function createPin(farm: FarmSummary): HTMLAnchorElement {
     return pin;
 }
 
-onMounted(() => {
-    if (!mapContainer.value || locatedFarms.value.length === 0) {
-        return;
-    }
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
-    map = new mapboxgl.Map({
-        container: mapContainer.value,
-        style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [locatedFarms.value[0].center!.lng, locatedFarms.value[0].center!.lat],
-        zoom: 9,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }));
+const positions = locatedFarms.value.map((farm): [number, number] => [farm.center!.lng, farm.center!.lat]);
 
-    const bounds = new mapboxgl.LngLatBounds();
-    locatedFarms.value.forEach((farm) => {
-        const position: [number, number] = [farm.center!.lng, farm.center!.lat];
-        bounds.extend(position);
-        new mapboxgl.Marker({ element: createPin(farm), anchor: 'left' }).setLngLat(position).addTo(map!);
-    });
-    if (locatedFarms.value.length > 1) {
-        map.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 0 });
-    }
+const { whenLoaded } = useMapbox(mapContainer, {
+    style: 'outdoors',
+    fullscreen: false,
+    compass: false,
+    ...(positions.length > 1
+        ? {
+              bounds: positions.reduce((bounds, position) => bounds.extend(position), new mapboxgl.LngLatBounds()),
+              fitBoundsOptions: { padding: 80, maxZoom: 13 },
+          }
+        : { center: positions[0], zoom: 9 }),
 });
 
-onBeforeUnmount(() => {
-    map?.remove();
+whenLoaded((map) => {
+    locatedFarms.value.forEach((farm, index) => {
+        new mapboxgl.Marker({ element: createPin(farm), anchor: 'left' }).setLngLat(positions[index]).addTo(map);
+    });
 });
 </script>
 

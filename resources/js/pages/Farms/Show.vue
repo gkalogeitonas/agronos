@@ -18,6 +18,7 @@ import { sensorColors, sensorTypeLabel, sensorUnits, signalColors } from '@/lib/
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link, router } from '@inertiajs/vue3';
+import type { Polygon } from 'geojson';
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -34,7 +35,7 @@ const props = defineProps<{
         location: string | null;
         size: number | null;
         description: string | null;
-        coordinates: { type: string; coordinates: number[][][] } | null;
+        coordinates: Polygon | null;
         created_at: string;
         updated_at: string;
         center: { lng: number; lat: number } | null;
