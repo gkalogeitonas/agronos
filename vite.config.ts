@@ -21,6 +21,15 @@ export default defineConfig({
             },
         }),
     ],
+    server: {
+        host: '0.0.0.0',
+        port: 5173,
+        strictPort: true,
+        origin: 'https://agronos.ddev.site:5173',
+        cors: {
+            origin: /^https?:\/\/([\w-]+\.)*ddev\.site(:\d+)?$/,
+        },
+    },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, './resources/js'),
