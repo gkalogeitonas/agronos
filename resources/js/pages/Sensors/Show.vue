@@ -1,231 +1,126 @@
 <template>
-
-    <Head :title="sensor.name ? sensor.name : 'Sensor Details'" />
+    <Head :title="sensor.name ? sensor.name : 'Sensor'" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="container py-8">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold pl-3 flex items-center gap-2">
-                    <span v-if="sensor.name">{{ sensor.name }}</span>
-                    <span v-else class="text-muted-foreground">Unnamed Sensor</span>
-                    <span class="ml-2 px-2 py-1 rounded bg-muted text-xs">{{ sensor.type }}</span>
-                </h1>
-                <div class="space-x-2 flex items-center">
-                    <Link :href="route('sensors.edit', sensor.id)">
-                    <Button variant="outline" size="sm" class="flex flex-row items-center border p-2">
-                        <Pencil class="h-4 w-4 mr-2" />
-                        <span>Edit</span>
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader :eyebrow="`${sensorTypeLabel(sensor.type)} sensor`" :title="sensor.name || 'Unnamed sensor'">
+                <template #actions>
+                    <Button variant="outline" as-child>
+                        <Link :href="route('sensors.edit', sensor.id)"><Pencil /> Edit</Link>
                     </Button>
-                    </Link>
-                    <Button variant="destructive" size="sm" class="flex flex-row items-center" @click="deleteSensor">
-                        <Trash2 class="h-4 w-4 mr-2" />
-                        <span>Delete</span>
-                    </Button>
-                </div>
-            </div>
-            <div v-if="sensor.lat && sensor.lon" class="mb-6">
-                <FarmMapbox :center="[parseFloat(sensor.lon), parseFloat(sensor.lat)]"
-                    :farmPolygon="sensor.farm?.coordinates"
-                    :sensors="[{ lat: parseFloat(sensor.lat), lon: parseFloat(sensor.lon), name: sensor.name }]"
-                    :zoom="15" />
-            </div>
-            <Card class="mb-6">
-                <CardHeader>
-                    <CardTitle>Sensor Details</CardTitle>
-                    <CardDescription>Information about this sensor</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Sensor UUID</h3>
-                            <p class="font-mono break-all">{{ sensor.uuid }}</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Device UUID</h3>
-                            <p class="font-mono break-all"><Link :href="route('devices.show', sensor.device?.id)">{{ sensor.device?.uuid || '—' }}</Link></p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Sensor type</h3>
-                            <p class="font-mono break-all">{{ sensor.type || '—' }}</p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Farm</h3>
-                            <p>
-                                <template v-if="sensor.farm">
-                                    <Link :href="route('farms.show', sensor.farm.id)">{{ sensor.farm.name }}</Link>
-                                </template>
-                                <template v-else>
-                                    —
-                                </template>
-                            </p>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-medium text-muted-foreground">Location</h3>
-                            <p>Lat: {{ sensor.lat ?? '—' }}, Lon: {{ sensor.lon ?? '—' }}</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    <Button variant="outline" class="text-destructive hover:text-destructive" @click="deleteSensor"><Trash2 /> Delete</Button>
+                </template>
+            </PageHeader>
 
-            <Card class="mb-6">
-                <CardHeader>
-                    <CardTitle>Time Range</CardTitle>
-                    <CardDescription>Choose the time range for chart and statistics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="flex items-center gap-3">
-                        <label class="text-sm text-muted-foreground">Range:</label>
-                        <select v-model="selectedRange" @change="applyRange"
-                            class="border rounded px-2 py-1 text-sm">
+            <section aria-label="Readings" class="flex flex-wrap gap-4">
+                <StatTile
+                    label="Latest"
+                    :value="formatReading(sensor.last_reading, '', 2)"
+                    :unit="unit"
+                    :note="sensor.last_reading_at ? formatTimestamp(sensor.last_reading_at) : 'No readings yet'"
+                />
+                <template v-if="props.stats !== undefined">
+                    <StatTile :label="`Min · ${rangeLabel}`" :value="formatReading(stats.min, '', 2)" :unit="unit" />
+                    <StatTile :label="`Max · ${rangeLabel}`" :value="formatReading(stats.max, '', 2)" :unit="unit" />
+                    <StatTile :label="`Average · ${rangeLabel}`" :value="formatReading(stats.avg, '', 2)" :unit="unit" />
+                </template>
+                <template v-else>
+                    <div v-for="n in 3" :key="n" class="h-[132px] flex-[1_1_200px] animate-pulse rounded-xl border bg-card" aria-hidden="true"></div>
+                </template>
+            </section>
+
+            <SectionCard title="Reading history">
+                <template #actions>
+                    <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
+                        Range
+                        <NativeSelect v-model="selectedRange" @change="applyRange">
                             <option v-for="opt in rangeOptions ?? []" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </select>
-                    </div>
-                </CardContent>
-            </Card>
+                        </NativeSelect>
+                    </label>
+                </template>
+                <div v-if="chartData === undefined" class="h-[320px] animate-pulse rounded-md bg-muted" aria-label="Loading chart"></div>
+                <LineChart
+                    v-else-if="series[0].data.length > 1"
+                    :series="series"
+                    :unit="unit"
+                    :height="320"
+                    :label="`Line chart of ${sensorTypeLabel(sensor.type).toLowerCase()} readings, ${rangeLabel.toLowerCase()}`"
+                />
+                <div v-else class="flex h-[200px] items-center justify-center rounded-md bg-muted/60 text-[15px] text-muted-foreground">
+                    No readings in the selected range.
+                </div>
+            </SectionCard>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Latest Reading</CardTitle>
-                        <CardDescription>Most recent data from this sensor</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="space-y-2">
-                            <div>
-                                <h3 class="text-sm font-medium text-muted-foreground">Value</h3>
-                                <p class="text-2xl font-bold">
-                                    {{ sensor.last_reading ?? '—' }}
-                                    <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                        sensor.unit
-                                        }}</span>
-                                </p>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-medium text-muted-foreground">Last Seen</h3>
-                                <p class="text-sm">{{ formatTimestamp(sensor.last_reading_at) }}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div class="flex flex-wrap items-stretch gap-4">
+                <SectionCard v-if="sensor.lat && sensor.lon" title="Location" class="flex-[2_1_480px]">
+                    <FarmMapbox
+                        :center="[parseFloat(sensor.lon), parseFloat(sensor.lat)]"
+                        :farm-polygon="sensor.farm?.coordinates"
+                        :sensors="[{ lat: parseFloat(sensor.lat), lon: parseFloat(sensor.lon), name: sensor.name }]"
+                        :zoom="15"
+                    />
+                </SectionCard>
 
-                <Deferred data="stats">
-                    <template #fallback>
-                        <div class="flex justify-center items-center text-sm text-muted-foreground h-24">
-                            <span>Loading statistics...</span>
+                <SectionCard title="Sensor information" class="flex-[1_1_280px]">
+                    <dl class="m-0 flex flex-col">
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Sensor UUID</dt>
+                            <dd class="m-0 min-w-0 truncate font-mono text-sm" :title="sensor.uuid">{{ sensor.uuid }}</dd>
                         </div>
-                    </template>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>24h Statistics</CardTitle>
-                            <CardDescription>Min/Max/Average</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="grid grid-cols-3 gap-4">
-                                <div>
-                                    <h3 class="text-sm font-medium text-muted-foreground">Min</h3>
-                                    <p class="text-lg font-semibold">
-                                        {{ stats?.min ?? '—' }}
-                                        <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                            sensor.unit
-                                            }}</span>
-                                    </p>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-medium text-muted-foreground">Max</h3>
-                                    <p class="text-lg font-semibold">
-                                        {{ stats?.max ?? '—' }}
-                                        <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                            sensor.unit
-                                            }}</span>
-                                    </p>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-medium text-muted-foreground">Avg</h3>
-                                    <p class="text-lg font-semibold">
-                                        {{ stats?.avg != null ? stats.avg.toFixed(2) : '—' }}
-                                        <span v-if="sensor.unit" class="text-base font-normal text-muted-foreground">{{
-                                            sensor.unit
-                                            }}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Deferred>
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Device</dt>
+                            <dd class="m-0 min-w-0 truncate font-mono text-sm">
+                                <Link v-if="sensor.device" :href="route('devices.show', sensor.device.id)" class="text-info hover:text-foreground">{{
+                                    sensor.device.uuid
+                                }}</Link>
+                                <template v-else>–</template>
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Type</dt>
+                            <dd class="m-0 text-[15px]">{{ sensorTypeLabel(sensor.type) }}</dd>
+                        </div>
+                        <div class="flex justify-between gap-4 border-b border-row py-3">
+                            <dt class="text-sm text-muted-foreground">Farm</dt>
+                            <dd class="m-0 text-[15px]">
+                                <Link v-if="sensor.farm" :href="route('farms.show', sensor.farm.id)" class="text-info hover:text-foreground">{{
+                                    sensor.farm.name
+                                }}</Link>
+                                <template v-else>–</template>
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-4 py-3">
+                            <dt class="text-sm text-muted-foreground">Coordinates</dt>
+                            <dd class="m-0 font-mono text-sm">{{ sensor.lat ?? '–' }}, {{ sensor.lon ?? '–' }}</dd>
+                        </div>
+                    </dl>
+                </SectionCard>
             </div>
 
-            <Deferred data="chartData">
-                <template #fallback>
-                    <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-                        <div class="flex items-center justify-center text-sm text-muted-foreground h-32">
-                            <span>Loading chart...</span>
-                        </div>
-                    </div>
-                </template>
-
-                <template #default>
-                    <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-                        <h3 class="text-lg font-semibold mb-4">Ιστορικό Μετρήσεων</h3>
-
-                        <template v-if="series && series.length">
-                            <VueApexCharts
-                                type="line"
-                                height="350"
-                                :options="chartOptions"
-                                :series="series"
-                            />
-                        </template>
-
-                        <template v-else>
-                            <div class="flex items-center justify-center text-sm text-muted-foreground h-32">
-                                <span>No chart data for the selected range.</span>
-                            </div>
-                        </template>
-                    </div>
-                </template>
-            </Deferred>
-
-            <Card class="mb-6" v-if="recentReadings && recentReadings.length">
-                <CardHeader>
-                    <CardTitle>Recent Readings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead>
-                                <tr>
-                                    <th class="px-2 py-1 text-left">Timestamp</th>
-                                    <th class="px-2 py-1 text-left">Value</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="row in recentReadings" :key="row.time">
-                                    <td class="px-2 py-1">{{ formatTimestamp(row.time) }}</td>
-                                    <td class="px-2 py-1">
-                                        {{ row.value }}
-                                        <span v-if="sensor.unit" class="text-xs text-muted-foreground">{{ sensor.unit
-                                            }}</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
+            <SectionCard v-if="readingRows.length" title="Recent readings">
+                <DataTable :columns="readingColumns" :rows="readingRows" row-key="time" min-width="360px" />
+            </SectionCard>
         </div>
     </AppLayout>
 </template>
 
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, router, Deferred } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
-import { useEcho, useEchoPublic } from '@laravel/echo-vue';
-import { Pencil, Trash2 } from 'lucide-vue-next';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import LineChart from '@/components/agronos/LineChart.vue';
+import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import StatTile from '@/components/agronos/StatTile.vue';
+import FarmMapbox from '@/components/FarmMapbox.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import FarmMapbox from '@/components/FarmMapbox.vue'
 import useTimestamp from '@/composables/useTimestamp';
-import VueApexCharts from "vue3-apexcharts";
+import AppLayout from '@/layouts/AppLayout.vue';
+import { formatReading } from '@/lib/format';
+import { sensorColors, sensorTypeLabel, signalColors } from '@/lib/theme';
+import { type BreadcrumbItem } from '@/types';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
+import { Pencil, Trash2 } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     sensor: any;
@@ -241,47 +136,47 @@ const props = defineProps<{
 const sensor = ref(props.sensor);
 // keep a local mutable copy for realtime updates, but sync when the deferred prop resolves
 const recentReadings = ref(props.recentReadings ?? []);
-watch(() => props.recentReadings, (val) => {
-    recentReadings.value = val ?? [];
-}, { immediate: true });
+watch(
+    () => props.recentReadings,
+    (val) => {
+        recentReadings.value = val ?? [];
+    },
+    { immediate: true },
+);
 
 // use a computed directly from props so Deferred updates are reflected automatically
 const stats = computed(() => props.stats ?? { min: null, max: null, avg: null, count: 0 });
 
-const { formatTimestamp, parseAsUTCDate } = useTimestamp();
+const { formatTimestamp } = useTimestamp();
 
-const breadcrumbs = [
-    { title: 'Dashboard', href: '/dashboard' },
+const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sensors', href: '/sensors' },
-    { title: sensor.value?.name || 'Sensor Details', href: null },
+    { title: sensor.value?.name || 'Sensor', href: route('sensors.show', sensor.value.id) },
 ];
 
+const unit = computed<string>(() => sensor.value.unit ?? '');
+const rangeLabel = computed(() => props.rangeOptions?.find((option) => option.value === selectedRange.value)?.label ?? 'Selected range');
 
-// Ρυθμίσεις Γραφήματος
-const chartOptions = {
-  chart: {
-    type: 'line',
-    toolbar: { show: true },
-    zoom: { enabled: true }
-  },
-  xaxis: {
-    type: 'datetime', // native διαχείριση χρόνου
-    labels: {
-      datetimeUTC: false, // εμφάνιση τοπικής ώρας
-    }
-  },
-  stroke: {
-    curve: 'smooth', // Για "οργανική" εμφάνιση των αγροτικών μετρήσεων
-    width: 3
-  },
-  colors: ['#4f46e5'], // Indigo χρώμα για επαγγελματική εμφάνιση
-};
-
-// Chart data comes directly from the Influx-driven `props.chartData`.
+/** Chart data comes from InfluxDB as [ms, value] pairs. */
 const series = computed(() => {
-    const d = Array.isArray(props.chartData) ? (props.chartData as Array<[number, number]>) : [];
-    return [{ name: props.sensor.type, data: d.slice() }];
+    const points = Array.isArray(props.chartData) ? (props.chartData as Array<[number, number]>) : [];
+    return [
+        {
+            name: sensorTypeLabel(props.sensor.type),
+            color: sensorColors[props.sensor.type] ?? signalColors.ink,
+            data: points.map(([x, y]) => ({ x, y })),
+        },
+    ];
 });
+
+const readingColumns: DataTableColumn[] = [
+    { key: 'time', label: 'Time', mono: true, width: '2fr' },
+    { key: 'value', label: 'Value', mono: true },
+];
+
+const readingRows = computed(() =>
+    recentReadings.value.map((row) => ({ time: formatTimestamp(row.time), value: formatReading(row.value, unit.value, 2) })),
+);
 
 // Selected range — initialize from server-provided selectedRange or URL param
 const urlRange = new URL(window.location.href).searchParams.get('range');
@@ -298,7 +193,6 @@ function deleteSensor() {
         router.delete(route('sensors.destroy', sensor.value.id));
     }
 }
-
 
 // Subscribe to private sensor channel (only authorized users can listen)
 useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
@@ -322,13 +216,3 @@ useEcho(`sensor.${sensor.value.id}`, 'SensorReadingEvent', (payload: any) => {
     }
 });
 </script>
-
-<style scoped>
-.text-muted-foreground {
-    color: #6b7280;
-}
-
-.bg-muted {
-    background: #f3f4f6;
-}
-</style>

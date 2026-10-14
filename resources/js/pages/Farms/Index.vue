@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -64,10 +65,10 @@ const rows = computed(() => {
                     <Input v-model="search" type="search" aria-label="Search farms" placeholder="Search farms" class="min-w-0 flex-[1_1_240px]" />
                     <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                         Status
-                        <select v-model="status" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                        <NativeSelect v-model="status">
                             <option value="all">All statuses</option>
                             <option v-for="(label, value) in farmStatusLabels" :key="value" :value="value">{{ label }}</option>
-                        </select>
+                        </NativeSelect>
                     </label>
                     <span class="font-mono text-[13px] text-muted-foreground">{{ rows.length }} of {{ farms.length }} farms</span>
                 </div>

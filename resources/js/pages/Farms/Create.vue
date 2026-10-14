@@ -1,57 +1,48 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useForm, Head } from '@inertiajs/vue3';
+import FarmForm, { type FarmFormData } from '@/components/farms/FarmForm.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
-import FarmForm from '@/components/farms/FarmForm.vue';
 import { type BreadcrumbItem } from '@/types';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import type { Polygon } from 'geojson';
+import { ref } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Dashboard', href: '/dashboard' },
-  { title: 'Farms', href: '/farms' },
-  { title: 'Create', href: route('farms.create'), current: true },
+    { title: 'Farms', href: '/farms' },
+    { title: 'Add farm', href: route('farms.create') },
 ];
 
-const form = useForm({
-  name: '',
-  location: '',
-  size: '',
-  coordinates: '',
-  description: '',
+const form = useForm<FarmFormData>({
+    name: '',
+    location: '',
+    size: '',
+    coordinates: null,
+    description: '',
 });
 
-const defaultLng = 23.7275; // Example: Athens
-const defaultLat = 37.9838;
+const polygon = ref<Polygon | null>(null);
 
-const polygon = ref<any>(null);
-
-const handleMapPolygon = (poly: any) => {
-  polygon.value = poly;
-  form.coordinates = poly || null;
-};
-
-const resetPolygon = () => {
-  polygon.value = null;
-  form.coordinates = null;
+const handleMapPolygon = (value: Polygon | null) => {
+    polygon.value = value;
+    form.coordinates = value;
 };
 
 const submit = () => {
-  form.post(route('farms.store'));
+    form.post(route('farms.store'));
 };
 </script>
 
 <template>
-  <Head title="Create Farm" />
-  <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="container py-8 max-w-7xl mx-auto">
-      <FarmForm
-        :form="form"
-        :polygon="polygon"
-        :onUpdatePolygon="handleMapPolygon"
-        :onResetPolygon="resetPolygon"
-        :onSubmit="submit"
-        :defaultLng="defaultLng"
-        :defaultLat="defaultLat"
-      />
-    </div>
-  </AppLayout>
+    <Head title="Add farm" />
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader eyebrow="Farms" title="Add farm" />
+            <FarmForm :form="form" :polygon="polygon" :on-update-polygon="handleMapPolygon" :on-submit="submit">
+                <template #cancel>
+                    <Button variant="outline" as-child><Link :href="route('farms.index')">Cancel</Link></Button>
+                </template>
+            </FarmForm>
+        </div>
+    </AppLayout>
 </template>

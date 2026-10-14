@@ -43,7 +43,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Settings',
-        href: '/settings/app',
+        href: '/settings',
         icon: Settings,
     },
 ];

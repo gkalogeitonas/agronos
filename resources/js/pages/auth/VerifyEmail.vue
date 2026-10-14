@@ -20,7 +20,10 @@ const submit = () => {
     <AuthLayout title="Verify email" description="Please verify your email address by clicking on the link we just emailed to you.">
         <Head title="Email verification" />
 
-        <div v-if="status === 'verification-link-sent'" class="mb-4 text-center text-sm font-medium text-green-600">
+        <div
+            v-if="status === 'verification-link-sent'"
+            class="mb-4 rounded-md bg-success-soft p-3 text-center text-sm font-medium text-success-foreground"
+        >
             A new verification link has been sent to the email address you provided during registration.
         </div>
 

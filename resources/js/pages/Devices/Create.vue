@@ -1,128 +1,122 @@
 <script setup lang="ts">
+import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import InputError from '@/components/InputError.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { computed, ref } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import { QrcodeStream } from 'vue-qrcode-reader';
+import { ScanLine } from 'lucide-vue-next';
+import { ref } from 'vue';
+import { QrcodeStream, type DetectedBarcode } from 'vue-qrcode-reader';
+
+defineProps<{
+    deviceTypes: { value: string; label: string }[];
+}>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Dashboard', href: '/dashboard' },
-  { title: 'Devices', href: '/devices' },
-  { title: 'Register Device', href: '/devices/create', current: true },
+    { title: 'Devices', href: '/devices' },
+    { title: 'Add device', href: '/devices/create' },
 ];
 
 const form = useForm({
-  name: '',
-  uuid: '',
-  secret: '',
-  type: '',
-  lora_aes_key: '',
+    name: '',
+    uuid: '',
+    secret: '',
+    type: '',
+    lora_aes_key: '',
 });
 
-const page = usePage();
-const deviceTypes = computed(() => page.props.deviceTypes ?? []);
 const showScanner = ref(false);
+const scanError = ref<string | null>(null);
 
 function submit() {
-  form.post(route('devices.store'));
+    form.post(route('devices.store'));
 }
 
-function onDetect(detectedCodes) {
-  if (detectedCodes && detectedCodes.length > 0) {
-    try {
-      const data = JSON.parse(detectedCodes[0].rawValue);
-      if (data.uuid) form.uuid = data.uuid;
-      if (data.secret) form.secret = data.secret;
-      if (data.type) form.type = data.type;
-      showScanner.value = false;
-    } catch (e) {
-      alert('Invalid QR code format.');
+function onDetect(detectedCodes: DetectedBarcode[]) {
+    if (detectedCodes.length === 0) {
+        return;
     }
-  }
+    try {
+        const data = JSON.parse(detectedCodes[0].rawValue);
+        if (data.uuid) form.uuid = data.uuid;
+        if (data.secret) form.secret = data.secret;
+        if (data.type) form.type = data.type;
+        showScanner.value = false;
+        scanError.value = null;
+    } catch {
+        scanError.value = 'That QR code is not an Agronos device code.';
+    }
 }
 
-function onQrError(error) {
-  alert('QR Scanner Error: ' + error.message);
+function onQrError(error: Error) {
+    scanError.value = `The camera could not start: ${error.message}`;
 }
 </script>
 
 <template>
-  <Head title="Register Device" />
-  <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col h-full gap-6 p-4 w-full max-w-4xl mx-auto">
-      <div class="flex justify-center mb-4">
-        <Button type="button" variant="default" class="text-lg px-6 py-3" @click="showScanner = true">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M3 5a2 2 0 012-2h2a1 1 0 110 2H5v2a1 1 0 11-2 0V5zm12-2a2 2 0 012 2v2a1 1 0 11-2 0V5h-2a1 1 0 110-2h2zm2 12a2 2 0 01-2 2h-2a1 1 0 110-2h2v-2a1 1 0 112 0v2zm-14 2a2 2 0 01-2-2v-2a1 1 0 112 0v2h2a1 1 0 110 2H5zm3-7a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-          </svg>
-          Scan Device QR
-        </Button>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Register New Device</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form @submit.prevent="submit" class="flex flex-col gap-6">
-            <div>
-              <label class="block mb-1 font-medium" for="name">Device Name</label>
-              <input v-model="form.name" id="name" type="text" class="input w-full"  />
-              <div v-if="form.errors.name" class="text-red-500 text-sm mt-1">{{ form.errors.name }}</div>
-            </div>
-            <div>
-              <label class="block mb-1 font-medium" for="uuid">UUID</label>
-              <input v-model="form.uuid" id="uuid" type="text" class="input w-full" required />
-              <div v-if="form.errors.uuid" class="text-red-500 text-sm mt-1">{{ form.errors.uuid }}</div>
-            </div>
-            <div>
-              <label class="block mb-1 font-medium" for="secret">Secret</label>
-              <input v-model="form.secret" id="secret" type="password" class="input w-full" required />
-              <div v-if="form.errors.secret" class="text-red-500 text-sm mt-1">{{ form.errors.secret }}</div>
-            </div>
-            <div>
-              <label class="block mb-1 font-medium" for="type">Type</label>
-              <select v-model="form.type" id="type" class="input w-full" required>
-                <option value="" disabled>Select type</option>
-                <option v-for="type in deviceTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
-              </select>
-              <div v-if="form.errors.type" class="text-red-500 text-sm mt-1">{{ form.errors.type }}</div>
-            </div>
-            <div v-if="form.type === 'lora'">
-              <label class="block mb-1 font-medium" for="lora_aes_key">AES Key (32-char hex)</label>
-              <input v-model="form.lora_aes_key" id="lora_aes_key" type="text" class="input w-full" placeholder="e.g. 0123456789abcdef0123456789abcdef" maxlength="32" />
-              <div v-if="form.errors.lora_aes_key" class="text-red-500 text-sm mt-1">{{ form.errors.lora_aes_key }}</div>
-            </div>
-            <div class="flex justify-end gap-2">
-              <Link :href="route('devices.index')">
-                <Button variant="outline" type="button">Cancel</Button>
-              </Link>
-              <Button type="submit" :disabled="form.processing">Register Device</Button>
-            </div>
-          </form>
-          <QrcodeStream v-if="showScanner" @detect="onDetect" @error="onQrError" class="mb-4" />
-        </CardContent>
-      </Card>
-    </div>
-  </AppLayout>
+    <Head title="Add device" />
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader eyebrow="Devices" title="Add device">
+                <template #actions>
+                    <Button variant="outline" @click="showScanner = !showScanner"
+                        ><ScanLine /> {{ showScanner ? 'Close scanner' : 'Scan device QR' }}</Button
+                    >
+                </template>
+            </PageHeader>
+
+            <SectionCard v-if="showScanner" title="Scan the code on the device" class="max-w-2xl">
+                <QrcodeStream class="overflow-hidden rounded-md" @detect="onDetect" @error="onQrError" />
+            </SectionCard>
+            <p v-if="scanError" role="alert" class="m-0 max-w-2xl rounded-md bg-danger-soft p-3 text-sm text-danger-ink">{{ scanError }}</p>
+
+            <SectionCard title="Device details" class="max-w-2xl">
+                <form class="flex flex-col gap-6" @submit.prevent="submit">
+                    <div class="flex flex-col gap-2">
+                        <Label for="name">Device name</Label>
+                        <Input id="name" v-model="form.name" placeholder="Sensor node 01" />
+                        <InputError :message="form.errors.name" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <Label for="uuid">UUID</Label>
+                        <Input id="uuid" v-model="form.uuid" required class="font-mono" />
+                        <InputError :message="form.errors.uuid" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <Label for="secret">Secret</Label>
+                        <Input id="secret" v-model="form.secret" type="password" required />
+                        <InputError :message="form.errors.secret" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <Label for="type">Type</Label>
+                        <NativeSelect id="type" v-model="form.type" required>
+                            <option value="" disabled>Select type</option>
+                            <option v-for="type in deviceTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+                        </NativeSelect>
+                        <InputError :message="form.errors.type" />
+                    </div>
+                    <div v-if="form.type === 'lora'" class="flex flex-col gap-2">
+                        <Label for="lora_aes_key">AES key (32-character hex)</Label>
+                        <Input
+                            id="lora_aes_key"
+                            v-model="form.lora_aes_key"
+                            placeholder="0123456789abcdef0123456789abcdef"
+                            maxlength="32"
+                            class="font-mono"
+                        />
+                        <InputError :message="form.errors.lora_aes_key" />
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <Button variant="outline" as-child><Link :href="route('devices.index')">Cancel</Link></Button>
+                        <Button type="submit" :disabled="form.processing">Register device</Button>
+                    </div>
+                </form>
+            </SectionCard>
+        </div>
+    </AppLayout>
 </template>
-
-<style scoped>
-.input {
-  border: 1px solid #d1d5db; /* Tailwind's gray-300 */
-  border-radius: 0.375rem; /* rounded-md */
-  padding: 0.5rem 0.75rem; /* px-3 py-2 */
-  outline: none;
-  transition: box-shadow 0.2s;
-  width: 100%;
-  background: var(--color-background, #fff);
-  color: var(--color-foreground, #111);
-}
-.input:focus {
-  box-shadow: 0 0 0 2px var(--color-primary, #2563eb33);
-}
-</style>
-
-

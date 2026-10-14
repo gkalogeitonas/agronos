@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
+import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -100,20 +101,20 @@ const columns = computed<DataTableColumn[]>(() => [
                     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
                         <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Farm
-                            <select v-model="farmId" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                            <NativeSelect v-model="farmId">
                                 <option value="all">All farms</option>
                                 <option v-for="farm in farms" :key="farm.id" :value="String(farm.id)">{{ farm.name }}</option>
-                            </select>
+                            </NativeSelect>
                         </label>
                         <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Status
-                            <select v-model="status" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                            <NativeSelect v-model="status">
                                 <option value="all">All statuses</option>
                                 <option value="online">Online</option>
                                 <option value="registered">Registered</option>
                                 <option value="offline">Offline</option>
                                 <option value="error">Error</option>
-                            </select>
+                            </NativeSelect>
                         </label>
                         <div class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Group by

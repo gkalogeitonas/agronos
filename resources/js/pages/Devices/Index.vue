@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
+import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -96,17 +97,17 @@ const rows = computed(() => {
                         />
                         <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Farm
-                            <select v-model="farm" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                            <NativeSelect v-model="farm">
                                 <option value="all">All farms</option>
                                 <option v-for="name in farmOptions" :key="name" :value="name">{{ name }}</option>
-                            </select>
+                            </NativeSelect>
                         </label>
                         <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Link
-                            <select v-model="link" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                            <NativeSelect v-model="link">
                                 <option value="all">All links</option>
                                 <option v-for="type in linkOptions" :key="type" :value="type">{{ deviceTypeLabel(type) }}</option>
-                            </select>
+                            </NativeSelect>
                         </label>
                     </div>
                 </section>

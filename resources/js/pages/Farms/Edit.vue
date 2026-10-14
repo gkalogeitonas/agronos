@@ -1,73 +1,69 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useForm, Head, router } from '@inertiajs/vue3';
+import FarmForm, { type FarmFormData } from '@/components/farms/FarmForm.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
-import FarmForm from '@/components/farms/FarmForm.vue';
-import MapboxMap from '@/components/MapboxMap.vue'
-
 import { type BreadcrumbItem } from '@/types';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import type { Polygon } from 'geojson';
+import { ref } from 'vue';
 
 const props = defineProps<{
-  farm: {
-    id: number,
-    name: string,
-    location: string,
-    size: number,
-    coordinates: any,
-    description: string | null,
-  }
+    farm: {
+        id: number;
+        name: string;
+        location: string;
+        size: number;
+        coordinates: Polygon | null;
+        description: string | null;
+        center: { lng: number; lat: number } | null;
+    };
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Dashboard', href: '/dashboard' },
-  { title: 'Farms', href: '/farms' },
-  { title: props.farm.name, href: route('farms.show', props.farm.id) },
-  { title: 'Edit', href: route('farms.edit', props.farm.id), current: true },
+    { title: 'Farms', href: '/farms' },
+    { title: props.farm.name, href: route('farms.show', props.farm.id) },
+    { title: 'Edit', href: route('farms.edit', props.farm.id) },
 ];
 
-const form = useForm({
-  name: props.farm.name,
-  location: props.farm.location,
-  size: props.farm.size,
-  coordinates: props.farm.coordinates,
-  description: props.farm.description,
+const form = useForm<FarmFormData>({
+    name: props.farm.name,
+    location: props.farm.location,
+    size: props.farm.size,
+    coordinates: props.farm.coordinates,
+    description: props.farm.description ?? '',
 });
 
-const polygon = ref<any>(props.farm.coordinates);
+const polygon = ref<Polygon | null>(props.farm.coordinates);
 
-const handleMapPolygon = (poly: any) => {
-  polygon.value = poly;
-  form.coordinates = poly || null;
-};
-
-const resetPolygon = () => {
-  polygon.value = null;
-  form.coordinates = null;
+const handleMapPolygon = (value: Polygon | null) => {
+    polygon.value = value;
+    form.coordinates = value;
 };
 
 const submit = () => {
-  form.put(route('farms.update', props.farm.id));
+    form.put(route('farms.update', props.farm.id));
 };
-
-// Get center of polygon for map view
-const lng = props.farm.center?.lng ?? 23.7275;
-const lat = props.farm.center?.lat ?? 37.9838;
 </script>
 
 <template>
-  <Head :title="`Edit ${props.farm.name}`" />
-  <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="container py-8 max-w-7xl mx-auto">
-      <FarmForm
-        :form="form"
-        :polygon="farm.coordinates"
-        :onUpdatePolygon="handleMapPolygon"
-        :onResetPolygon="resetPolygon"
-        :onSubmit="submit"
-        :isEdit="true"
-        :defaultLng="lng"
-        :defaultLat="lat"
-      />
-    </div>
-  </AppLayout>
+    <Head :title="`Edit ${farm.name}`" />
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader eyebrow="Edit farm" :title="farm.name" />
+            <FarmForm
+                :form="form"
+                :polygon="polygon"
+                :on-update-polygon="handleMapPolygon"
+                :on-submit="submit"
+                is-edit
+                :default-lng="farm.center?.lng"
+                :default-lat="farm.center?.lat"
+            >
+                <template #cancel>
+                    <Button variant="outline" as-child><Link :href="route('farms.show', farm.id)">Cancel</Link></Button>
+                </template>
+            </FarmForm>
+        </div>
+    </AppLayout>
 </template>

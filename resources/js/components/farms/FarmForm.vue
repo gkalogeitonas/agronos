@@ -1,84 +1,100 @@
 <script setup lang="ts">
-import { ref, watch, toRefs } from 'vue';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import InputError from '@/components/InputError.vue';
 import MapboxMap from '@/components/MapboxMap.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import type { InertiaForm } from '@inertiajs/vue3';
 import { area } from '@turf/turf';
+import type { Polygon } from 'geojson';
+import { ref, watch } from 'vue';
 
-const props = defineProps<{
-  form: any,
-  polygon: any,
-  onUpdatePolygon: (poly: any) => void,
-  onSubmit: () => void,
-  isEdit?: boolean,
-  defaultLng?: number,
-  defaultLat?: number,
-}>();
+export interface FarmFormData {
+    name: string;
+    location: string;
+    size: number | string;
+    coordinates: Polygon | null;
+    description: string;
+}
 
-const { form, polygon, onUpdatePolygon, onSubmit, isEdit, defaultLng, defaultLat } = toRefs(props);
+const props = withDefaults(
+    defineProps<{
+        form: InertiaForm<FarmFormData>;
+        polygon: Polygon | null;
+        onUpdatePolygon: (polygon: Polygon | null) => void;
+        onSubmit: () => void;
+        isEdit?: boolean;
+        defaultLng?: number;
+        defaultLat?: number;
+    }>(),
+    {
+        isEdit: false,
+        defaultLng: 23.7275,
+        defaultLat: 37.9838,
+    },
+);
 
 const calculatedArea = ref<number | null>(null);
 
 watch(
-  () => polygon.value,
-  (newPolygon) => {
-    if (newPolygon && newPolygon.type === 'Polygon') {
-      calculatedArea.value = area({ type: 'Feature', geometry: newPolygon });
-      form.value.size = calculatedArea.value; // still set for backend
-    } else {
-      calculatedArea.value = null;
-      form.value.size = '';
-    }
-  },
-  { immediate: true }
+    () => props.polygon,
+    (polygon) => {
+        if (polygon && polygon.type === 'Polygon') {
+            calculatedArea.value = area({ type: 'Feature', properties: {}, geometry: polygon });
+            props.form.size = calculatedArea.value;
+        } else {
+            calculatedArea.value = null;
+            props.form.size = '';
+        }
+    },
+    { immediate: true },
 );
 </script>
 
 <template>
-  <Card>
-    <CardHeader>
-      <CardTitle>{{ isEdit ? 'Edit Farm' : 'Create New Farm' }}</CardTitle>
-      <CardDescription>
-        {{ isEdit ? 'Update the details of your farm.' : 'Fill in the details to add a new farm.' }}
-      </CardDescription>
-    </CardHeader>
-    <form @submit.prevent="onSubmit">
-      <CardContent class="space-y-6">
-        <div>
-          <label class="block mb-1 font-medium">Name</label>
-          <Input v-model="form.name" required placeholder="Farm name" />
-          <div v-if="form.errors.name" class="text-red-500 text-sm mt-1">{{ form.errors.name }}</div>
+    <form class="flex flex-col gap-6" @submit.prevent="onSubmit">
+        <div class="flex flex-wrap items-start gap-4">
+            <SectionCard title="Details" class="flex-[1_1_320px]">
+                <div class="flex flex-col gap-2">
+                    <Label for="farm-name">Name</Label>
+                    <Input id="farm-name" v-model="form.name" required placeholder="North Orchard" />
+                    <InputError :message="form.errors.name" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <Label for="farm-location">Location</Label>
+                    <Input id="farm-location" v-model="form.location" required placeholder="Town or region" />
+                    <InputError :message="form.errors.location" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <Label for="farm-description">Description</Label>
+                    <Textarea
+                        id="farm-description"
+                        v-model="form.description"
+                        placeholder="Crops, soil, anything worth remembering"
+                        class="bg-card"
+                    />
+                    <InputError :message="form.errors.description" />
+                </div>
+            </SectionCard>
+
+            <SectionCard title="Boundary" class="flex-[2_1_480px]">
+                <p class="m-0 text-sm text-muted-foreground">Draw the farm's outline on the map. The area is calculated from it.</p>
+                <MapboxMap :lng="defaultLng" :lat="defaultLat" :polygon="polygon" :editable="true" @update:polygon="onUpdatePolygon" />
+                <div class="flex items-baseline gap-2 font-mono text-sm">
+                    <span class="text-xs tracking-[0.06em] text-muted-foreground uppercase">Area</span>
+                    <span>{{
+                        calculatedArea !== null ? `${calculatedArea.toLocaleString(undefined, { maximumFractionDigits: 2 })} m²` : 'No boundary yet'
+                    }}</span>
+                </div>
+                <InputError :message="form.errors.coordinates" />
+            </SectionCard>
         </div>
-        <div>
-          <label class="block mb-1 font-medium">Location</label>
-          <Input v-model="form.location" required placeholder="Location" />
-          <div v-if="form.errors.location" class="text-red-500 text-sm mt-1">{{ form.errors.location }}</div>
+
+        <div class="flex justify-end gap-3">
+            <slot name="cancel" />
+            <Button type="submit" :disabled="form.processing">{{ isEdit ? 'Save changes' : 'Create farm' }}</Button>
         </div>
-        <!-- Map and area display -->
-        <div>
-          <label class="block mb-1 font-medium">Farm Area</label>
-          <MapboxMap
-            :lng="defaultLng"
-            :lat="defaultLat"
-            :polygon="polygon"
-            :editable="true"
-            @update:polygon="onUpdatePolygon"
-          />
-          <div v-if="calculatedArea !== null" class="mt-2 text-sm text-gray-600">
-            <span class="font-semibold">Calculated Area:</span>
-            {{ calculatedArea.toLocaleString(undefined, { maximumFractionDigits: 2 }) }} m²
-          </div>
-        </div>
-        <div>
-          <label class="block mb-1 font-medium">Description</label>
-          <Textarea v-model="form.description" placeholder="Description" />
-        </div>
-      </CardContent>
-      <CardFooter class="flex justify-end gap-2">
-        <Button type="submit">{{ isEdit ? 'Update' : 'Create' }}</Button>
-      </CardFooter>
     </form>
-  </Card>
 </template>
