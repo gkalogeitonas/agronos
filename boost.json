@@ -1,15 +1,16 @@
 {
     "agents": [
-        "copilot"
+        "copilot",
+        "claude_code",
+        "antigravity"
     ],
-    "cloud": true,
+    "cloud": false,
     "guidelines": true,
-    "herd_mcp": false,
     "mcp": true,
+    "nightwatch": false,
     "sail": false,
     "skills": [
         "infer-conventions",
-        "deploying-to-cloud",
         "laravel-best-practices",
         "testing-best-practices",
         "inertia-vue-development",
