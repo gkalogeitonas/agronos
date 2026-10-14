@@ -6,6 +6,7 @@ use App\Models\Sensor;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -85,8 +86,16 @@ it('creates a farm from a drawn boundary and calculates its area', function () {
         ->and($farm->coordinates['type'])->toBe('Polygon');
 })->group('maps');
 
-// farms.size is NOT NULL, but the form allows leaving the boundary out and sends an empty size, so saving fails with a 500.
-it('creates a farm without a drawn boundary')->todo();
+it('creates a farm without a drawn boundary', function () {
+    visit(route('farms.create', absolute: false))
+        ->fill('Name', 'Hilltop')
+        ->fill('Location', 'Crete')
+        ->press('Create farm')
+        ->assertSee('Hilltop')
+        ->assertNoJavaScriptErrors();
+
+    assertDatabaseHas('farms', ['name' => 'Hilltop', 'size' => null]);
+});
 
 it('keeps the farm when the delete confirmation is cancelled', function () {
     $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
