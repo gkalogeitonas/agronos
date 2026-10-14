@@ -17,7 +17,7 @@ class FarmOverviewService
      * and Unknown for a farm without devices.
      *
      * @param  EloquentCollection<int, Farm>  $farms
-     * @return Collection<int, array{id: int, name: string, location: string|null, center: array{lng: float, lat: float}|null, status: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
+     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, status: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
      */
     public function summarize(EloquentCollection $farms): Collection
     {
@@ -31,6 +31,7 @@ class FarmOverviewService
                 'id' => $farm->id,
                 'name' => $farm->name,
                 'location' => $farm->location,
+                'size' => $farm->size !== null ? (float) $farm->size : null,
                 'center' => $farm->center,
                 'status' => $this->status($devicesOnline, $devices->count()),
                 'sensors' => $farm->sensors->count(),

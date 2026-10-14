@@ -36,3 +36,11 @@ export function statusTone(status: string | null | undefined): StatusTone {
             return 'neutral';
     }
 }
+
+/** Display labels for the derived farm status from FarmOverviewService. */
+export const farmStatusLabels = {
+    ok: 'OK',
+    warning: 'Warning',
+    offline: 'Offline',
+    unknown: 'No devices',
+} as const;

@@ -43,6 +43,7 @@ export interface FarmSummary {
     id: number;
     name: string;
     location: string | null;
+    size: number | null;
     center: { lng: number; lat: number } | null;
     status: 'ok' | 'warning' | 'offline' | 'unknown';
     sensors: number;

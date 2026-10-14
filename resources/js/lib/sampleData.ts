@@ -31,3 +31,6 @@ export const sampleActivity: ActivityItem[] = [
 
 /** Follow-up: farm zones. */
 export const sampleZoneCount = 4;
+
+/** Follow-up: alerts. Stable fake open-alert count per farm until alerts exist. */
+export const sampleOpenAlertsForFarm = (farmId: number): number => farmId % 3;

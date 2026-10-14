@@ -9,6 +9,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sampleActivity, sampleAlerts, sampleZoneCount } from '@/lib/sampleData';
+import { farmStatusLabels } from '@/lib/theme';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -28,13 +29,6 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Overview', href: '/dashboard' }];
 
 const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.status === 'warning' || farm.status === 'offline').length);
-
-const statusLabels: Record<FarmSummary['status'], string> = {
-    ok: 'OK',
-    warning: 'Warning',
-    offline: 'Offline',
-    unknown: 'No devices',
-};
 
 const formatReading = (value: number | null, unit: string): string => (value === null ? '–' : `${value} ${unit}`);
 </script>
@@ -95,7 +89,7 @@ const formatReading = (value: number | null, unit: string): string => (value ===
                                     {{ farm.location ?? 'No location' }} · {{ sampleZoneCount }} zones
                                 </div>
                             </div>
-                            <StatusBadge :status="statusLabels[farm.status]" />
+                            <StatusBadge :status="farmStatusLabels[farm.status]" />
                         </div>
                         <dl class="m-0 grid grid-cols-3 gap-3">
                             <div class="flex flex-col gap-0.5">

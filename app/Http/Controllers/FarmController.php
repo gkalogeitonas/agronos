@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\FarmRequest;
 use App\Models\Farm;
+use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -18,13 +19,13 @@ class FarmController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(FarmOverviewService $farmOverview)
     {
         $this->authorize('viewAny', Farm::class);
-        $farms = Farm::where('user_id', Auth::id())->get();
+        $farms = Farm::where('user_id', Auth::id())->orderBy('name')->get();
 
         return Inertia::render('Farms/Index', [
-            'farms' => $farms,
+            'farms' => $farmOverview->summarize($farms),
         ]);
     }
 
