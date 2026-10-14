@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\SensorType;
 use App\Models\Farm;
+use App\Models\Sensor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -55,6 +57,19 @@ describe('Index (Viewing Farms List)', function () {
             ->component('Farms/Index')
             ->has('farms', 0)
         );
+    });
+
+    test('a farm can be created without a boundary', function () {
+        actingAs($this->user);
+
+        post(route('farms.store'), [
+            'name' => 'No Boundary Farm',
+            'location' => 'Athens, Greece',
+            'size' => '',
+            'coordinates' => null,
+        ])->assertRedirect();
+
+        assertDatabaseHas('farms', ['name' => 'No Boundary Farm', 'user_id' => $this->user->id, 'size' => null]);
     });
 
     test('farms list shows correct farm information', function () {
@@ -148,10 +163,10 @@ describe('Show (Viewing a Single Farm)', function () {
         $farm = Farm::factory()->create([
             'user_id' => $this->user->id,
         ]);
-        $sensors = \App\Models\Sensor::factory()->count(2)->create([
+        $sensors = Sensor::factory()->count(2)->create([
             'farm_id' => $farm->id,
             'user_id' => $this->user->id,
-            'type' => \App\Enums\SensorType::MOISTURE->value,
+            'type' => SensorType::MOISTURE->value,
         ]);
 
         actingAs($this->user);
