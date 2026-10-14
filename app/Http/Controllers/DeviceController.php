@@ -77,7 +77,7 @@ class DeviceController extends Controller
     {
         $this->authorize('view', $device);
 
-        $sensors = $device->sensors()->get();
+        $sensors = $device->sensors()->with('farm:id,name')->get();
 
         // Prefer device-level battery_level if present, otherwise use battery sensor last_reading
         $batteryReading = $this->getBatteryLevel($device, $sensors);
@@ -90,6 +90,7 @@ class DeviceController extends Controller
         return Inertia::render('Devices/Show', [
             'device' => $device,
             'sensors' => $sensors,
+            'farms' => $sensors->pluck('farm')->filter()->unique('id')->map->only(['id', 'name'])->values(),
             'batteryReading' => $batteryReading,
             'batteryTimeSeries' => Inertia::defer(fn () => $batterySensorId ? $ts->recentReadings((int) $batterySensorId, '-24h', 100) : []),
         ]);

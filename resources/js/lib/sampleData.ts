@@ -59,3 +59,14 @@ export function sampleMoistureSeries(now: Date = new Date()): { name: string; da
 
 /** Follow-up: irrigation threshold per farm or zone. */
 export const sampleIrrigationThreshold = 32;
+
+/** Follow-up: device firmware reporting. */
+export const sampleFirmwareVersion = '[VERSION]';
+
+/** Follow-up: per-device activity feed. */
+export const sampleDeviceActivity: ActivityItem[] = [
+    { id: 1, when: '9 min', text: 'Last uplink received through the LoRa gateway' },
+    { id: 2, when: '42 min', text: 'Soil moisture came within 5% of the irrigation threshold' },
+    { id: 3, when: '3 h', text: 'Uplink received, signal -101 dBm' },
+    { id: 4, when: '1 day', text: 'Firmware check completed' },
+];

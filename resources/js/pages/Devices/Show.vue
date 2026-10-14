@@ -1,172 +1,248 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link, usePage, useForm } from '@inertiajs/vue3';
-import { Card, CardHeader, CardDescription, CardTitle, CardContent } from '@/components/ui/card';
+import ActivityFeed from '@/components/agronos/ActivityFeed.vue';
+import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import LineChart from '@/components/agronos/LineChart.vue';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import StatTile from '@/components/agronos/StatTile.vue';
+import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import SensorCard from '@/components/SensorCard.vue';
+import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
+import { useTimestamp } from '@/composables/useTimestamp';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { deviceTypeLabel, formatReading, isLowBattery } from '@/lib/format';
+import { sampleDeviceActivity, sampleFirmwareVersion } from '@/lib/sampleData';
+import { sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
+import { type DeviceSummary } from '@/types';
+import type { Sensor } from '@/types/sensor';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
+const props = defineProps<{
+    device: DeviceSummary & {
+        uuid: string;
+        created_at: string;
+        lora_frame_counter: number | null;
+        mqtt_username: string | null;
+        mqtt_password: string | null;
+    };
+    sensors: (Sensor & { farm?: { id: number; name: string } | null })[];
+    farms: { id: number; name: string }[];
+    batteryReading: number | string | null;
+    batteryTimeSeries?: { time: string; value: number }[];
+}>();
+
 const page = usePage();
-const device = computed<any>(() => (page.props as any).device);
-const sensors = computed<any[]>(() => (page.props as any).sensors ?? []);
-const showMqtt = ref(false);
-const toggleMqtt = () => { showMqtt.value = !showMqtt.value; };
+const { formatAge, formatTimestamp } = useTimestamp();
+const liveReadings = useLiveSensorReadings(props.sensors);
 
-const hasMqttCredentials = computed<boolean>(() => {
-    return Boolean(device.value?.mqtt_username || device.value?.mqtt_password);
+const isLoRa = computed(() => props.device.type === 'lora');
+const battery = computed<number | null>(() => {
+    const value = props.batteryReading ?? props.device.battery_level;
+    return value === null || value === '' || Number.isNaN(Number(value)) ? null : Number(value);
 });
 
-const mqttCredentials = computed<any>(() => (page.props as any).mqtt_credentials ?? null);
-const form = useForm();
-const createMqtt = () => { form.post(route('devices.mqtt.create', device.value.id)); };
+/** The two most informative sensor readings, followed by battery and signal. */
+const readingTiles = computed(() =>
+    props.sensors
+        .filter((sensor) => sensor.type !== 'battery')
+        .slice(0, 2)
+        .map((sensor) => ({
+            id: sensor.id,
+            label: sensor.type === 'temperature' ? 'Air temperature' : sensorTypeLabel(sensor.type),
+            value: formatReading(liveReadings[sensor.id]?.value),
+            unit: sensorUnits[sensor.type] ?? '',
+            note: sensor.name,
+        })),
+);
 
-const batteryReading = computed<number | null>(() => {
-    const prop = (page.props as any).batteryReading;
-    if (prop !== undefined && prop !== null) {
-        return typeof prop === 'number' ? prop : (isNaN(Number(prop)) ? null : Number(prop));
-    }
-    return device.value?.battery_level ?? null;
-});
+const batteryChart = computed(() =>
+    props.batteryTimeSeries && props.batteryTimeSeries.length > 1
+        ? [
+              {
+                  name: 'Battery',
+                  color: signalColors.leaf,
+                  data: props.batteryTimeSeries.map((point) => ({ x: new Date(point.time).getTime(), y: Number(point.value) })),
+              },
+          ]
+        : null,
+);
 
-const batterySeries = computed<any[] | null>(() => {
-    const prop = (page.props as any).batteryTimeSeries;
-    if (prop === undefined) return null; // deferred prop not resolved yet
-    return prop ?? [];
-});
+const info = computed(() => [
+    { label: 'Protocol', value: deviceTypeLabel(props.device.type) },
+    { label: 'Device ID', value: props.device.uuid },
+    ...(isLoRa.value
+        ? [
+              { label: 'Encryption', value: 'AES-128-CTR' },
+              { label: 'Frame counter', value: String(props.device.lora_frame_counter ?? 0) },
+          ]
+        : []),
+    { label: 'Firmware', value: sampleFirmwareVersion },
+    { label: 'Last seen', value: props.device.last_seen_at ? `${formatAge(props.device.last_seen_at)} ago` : 'Never' },
+    { label: 'Registered', value: formatTimestamp(props.device.created_at).slice(0, 10) },
+]);
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Devices', href: '/devices' },
-    { title: device.value?.name || 'Device', href: '#' },
+const sensorColumns: DataTableColumn[] = [
+    { key: 'name', label: 'Sensor', width: '1.8fr' },
+    { key: 'type', label: 'Type', width: '1.2fr' },
+    { key: 'latest', label: 'Latest', mono: true },
+    { key: 'seen', label: 'Last seen', mono: true },
 ];
+
+const sensorRows = computed(() =>
+    props.sensors.map((sensor) => ({
+        id: sensor.id,
+        name: sensor.name,
+        type: sensorTypeLabel(sensor.type),
+        latest: formatReading(liveReadings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
+        seen: formatAge(liveReadings[sensor.id]?.time),
+    })),
+);
+
+const showMqttPassword = ref(false);
+const mqttCredentials = computed(() => (page.props as { mqtt_credentials?: { created?: boolean } }).mqtt_credentials ?? null);
+const hasMqttCredentials = computed(() => Boolean(props.device.mqtt_username || props.device.mqtt_password));
+const mqttForm = useForm({});
+const createMqttCredentials = () => mqttForm.post(route('devices.mqtt.create', props.device.id));
+
+const comingSoon = 'Coming soon: device commands are not available yet';
 </script>
 
 <template>
+    <Head :title="device.name" />
 
-    <Head :title="device?.name ?? 'Device Details'" />
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col h-full gap-6 p-4 w-full max-w-7xl mx-auto">
-            <Card>
-                <CardHeader class="flex flex-row items-center justify-between gap-4 bg-muted/20">
-                    <div class="flex flex-col gap-1 min-w-[180px]">
-                        <span class="text-xs text-muted-foreground">UUID</span>
-                        <span class="font-mono text-sm">{{ device.uuid }}</span>
-                        <span class="text-xs text-muted-foreground mt-1">Type</span>
-                        <span class="text-sm">{{ device.type }}</span>
+    <AppLayout>
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader :title="device.name" sample-data>
+                <template #breadcrumb>
+                    <Breadcrumb>
+                        <BreadcrumbList class="text-sm">
+                            <BreadcrumbItem>
+                                <BreadcrumbLink as-child><Link :href="route('devices.index')" class="text-info">Devices</Link></BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem
+                                ><BreadcrumbPage>{{ device.name }}</BreadcrumbPage></BreadcrumbItem
+                            >
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                </template>
+                <template #meta>
+                    <StatusBadge :status="device.status" />
+                    <span v-if="farms.length > 0" class="text-[15px] text-muted-foreground">
+                        <template v-for="(farm, index) in farms" :key="farm.id"
+                            ><template v-if="index > 0">, </template
+                            ><Link :href="route('farms.show', farm.id)" class="text-muted-foreground hover:text-info">{{ farm.name }}</Link></template
+                        >
+                    </span>
+                </template>
+                <template #actions>
+                    <Button variant="outline" disabled :title="comingSoon">Restart device</Button>
+                    <Button disabled :title="comingSoon">Update firmware</Button>
+                </template>
+            </PageHeader>
+
+            <section aria-label="Latest readings" class="flex flex-wrap gap-4">
+                <StatTile v-for="tile in readingTiles" :key="tile.id" :label="tile.label" :value="tile.value" :unit="tile.unit" :note="tile.note" />
+                <StatTile
+                    label="Battery"
+                    :value="battery ?? '–'"
+                    :unit="battery !== null ? '%' : ''"
+                    :note="battery === null ? 'Not reported' : isLowBattery(battery) ? 'Low, replace soon' : 'No action needed'"
+                />
+                <StatTile
+                    label="Signal"
+                    :value="device.signal_strength ?? '–'"
+                    :unit="device.signal_strength !== null ? 'dBm' : ''"
+                    :note="device.signal_strength === null ? 'Not reported' : `Via ${deviceTypeLabel(device.type)}`"
+                />
+            </section>
+
+            <div class="flex flex-wrap items-stretch gap-4">
+                <SectionCard title="Battery, last 24 h" class="flex-[2_1_480px]">
+                    <div
+                        v-if="batteryTimeSeries === undefined"
+                        class="h-[240px] animate-pulse rounded-md bg-muted"
+                        aria-label="Loading battery readings"
+                    ></div>
+                    <LineChart
+                        v-else-if="batteryChart"
+                        :series="batteryChart"
+                        unit="%"
+                        label="Line chart of this device's battery level over the last 24 hours"
+                    />
+                    <div
+                        v-else
+                        class="flex h-[240px] items-center justify-center rounded-md bg-muted/60 p-6 text-center text-[15px] text-muted-foreground"
+                    >
+                        No battery readings in the last 24 hours.
                     </div>
-                    <div class="flex-1 flex flex-col items-start justify-center">
-                        <CardDescription class="text-lg font-semibold">{{ device.name }}</CardDescription>
-                    </div>
-                    <div class="flex flex-col items-end gap-2 min-w-[120px]">
-                        <span class="device-status" :class="device.status">{{ device.status }}</span>
-                        <div class="text-right">
-                            <div class="text-xs text-muted-foreground">Battery</div>
-                            <div class="text-sm">{{ batteryReading !== null ? batteryReading + '%' : 'N/A' }}</div>
+                </SectionCard>
+
+                <SectionCard title="Device information" class="flex-[1_1_280px]">
+                    <dl class="m-0 flex flex-col">
+                        <div v-for="item in info" :key="item.label" class="flex justify-between gap-4 border-b border-row py-3 last:border-b-0">
+                            <dt class="text-sm text-muted-foreground">{{ item.label }}</dt>
+                            <dd class="m-0 min-w-0 truncate text-right font-mono text-sm" :title="item.value">{{ item.value }}</dd>
                         </div>
+                    </dl>
+                </SectionCard>
+            </div>
+
+            <div class="flex flex-wrap items-stretch gap-4">
+                <SectionCard title="Sensors on this device" class="flex-[2_1_480px]">
+                    <template #actions>
+                        <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
+                    </template>
+                    <DataTable :columns="sensorColumns" :rows="sensorRows" row-key="id" min-width="520px" empty-text="No sensors on this device yet.">
+                        <template #cell-name="{ row }">
+                            <Link :href="route('sensors.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
+                        </template>
+                    </DataTable>
+                </SectionCard>
+
+                <SectionCard title="Irrigation valve" class="flex-[1_1_280px]">
+                    <template #title-extra>
+                        <span class="rounded-full bg-sun px-2 py-0.5 font-mono text-[11px] text-foreground">PROPOSED</span>
+                    </template>
+                    <p class="m-0 text-[15px] text-[#3C5446]">
+                        Closed. A manual or agent-controlled irrigation run could be started here once actuators are supported.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <Button disabled :title="comingSoon">Open valve</Button>
+                        <Button variant="outline" disabled :title="comingSoon">Set schedule</Button>
                     </div>
-                </CardHeader>
-                <div class="p-6">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <div class="text-xs text-muted-foreground">Created At</div>
-                            <div>{{ device.created_at }}</div>
+                </SectionCard>
+            </div>
+
+            <SectionCard v-if="!(hasMqttCredentials && mqttCredentials?.created)" title="MQTT credentials">
+                <template v-if="hasMqttCredentials">
+                    <dl class="m-0 grid gap-4 sm:grid-cols-2">
+                        <div class="flex flex-col gap-1">
+                            <dt class="text-sm text-muted-foreground">Username</dt>
+                            <dd class="m-0 font-mono text-sm">{{ device.mqtt_username ?? '–' }}</dd>
                         </div>
-                        <div>
-                            <div class="text-xs text-muted-foreground">Last Seen</div>
-                            <div>{{ device.last_seen_at || 'Never' }}</div>
+                        <div class="flex flex-col gap-1">
+                            <dt class="text-sm text-muted-foreground">Password</dt>
+                            <dd class="m-0 flex items-center gap-3 font-mono text-sm">
+                                {{ device.mqtt_password ? (showMqttPassword ? device.mqtt_password : '•'.repeat(8)) : '–' }}
+                                <Button v-if="device.mqtt_password" variant="ghost" size="sm" @click="showMqttPassword = !showMqttPassword">
+                                    {{ showMqttPassword ? 'Hide' : 'Show' }}
+                                </Button>
+                            </dd>
                         </div>
-                    </div>
+                    </dl>
+                </template>
+                <div v-else-if="!hasMqttCredentials" class="flex flex-wrap items-center justify-between gap-3">
+                    <p class="m-0 text-[15px] text-muted-foreground">No MQTT credentials are set for this device.</p>
+                    <Button variant="outline" :disabled="mqttForm.processing" @click="createMqttCredentials">Set MQTT credentials</Button>
                 </div>
-            </Card>
-            <Card v-if="hasMqttCredentials && !(mqttCredentials && mqttCredentials.created)" class="mt-2">
-                <CardHeader class="flex items-center justify-between bg-muted/10">
-                    <CardDescription class="text-lg font-semibold">MQTT Credentials</CardDescription>
-                    <div class="flex items-center gap-2">
-                        <Button variant="outline" @click="toggleMqtt">{{ showMqtt ? 'Hide' : 'Show' }}</Button>
-                    </div>
-                </CardHeader>
-                <div class="p-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <div class="text-xs text-muted-foreground">Username</div>
-                            <div class="font-mono text-sm">{{ device.mqtt_username ?? 'N/A' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-xs text-muted-foreground">Password</div>
-                            <div class="font-mono text-sm">{{ device.mqtt_password ? (showMqtt ? device.mqtt_password : '•'.repeat(8)) : 'N/A' }}</div>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-            <Card v-if="!hasMqttCredentials" class="mt-2">
-                <CardHeader>
-                    <CardTitle>MQTT Credentials</CardTitle>
-                    <CardDescription>No MQTT credentials are set for this device.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="text-right text-sm text-muted-foreground p-4">
-                        <Button variant="outline" @click="createMqtt">Set MQTT Credentials</Button>
-                    </div>
-                </CardContent>
-            </Card>
-            <Card class="mb-6">
-                <CardHeader>
-                    <CardTitle>Sensors</CardTitle>
-                    <CardDescription>All sensors registered to this device</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div v-if="sensors.length === 0" class="text-muted-foreground">No sensors found for this device.
-                    </div>
-                    <div v-else class="grid grid-cols-1 gap-4">
-                        <SensorCard v-for="sensor in sensors" :key="sensor.id" :sensor="sensor" />
-                    </div>
-                </CardContent>
-            </Card>
+            </SectionCard>
 
-            <!-- Battery Card -->
-            <Card class="mb-6">
-                <CardHeader>
-                    <CardTitle>Battery</CardTitle>
-                    <CardDescription>Device battery level and recent readings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <div class="text-xs text-muted-foreground">Current</div>
-                            <div class="text-lg font-semibold">{{ batteryReading !== null ? batteryReading + '%' : 'N/A' }}</div>
-                        </div>
-
-                        <div>
-                            <div class="text-xs text-muted-foreground">Recent readings (last 5)</div>
-                            <div class="mt-2">
-                                <template v-if="batterySeries === null">
-                                    <div>Loading...</div>
-                                </template>
-                                <template v-else-if="batterySeries.length === 0">
-                                    <div class="text-muted-foreground">No time-series data available.</div>
-                                </template>
-                                <template v-else>
-                                    <ul class="list-inside list-disc text-sm">
-                                        <li v-for="(p, i) in batterySeries.slice(0, 5)" :key="i">{{ p.time }} — {{ p.value }}</li>
-                                    </ul>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-            <Link :href="route('devices.index')">
-                <Button variant="outline">Back to List</Button>
-            </Link>
+            <SectionCard title="Device activity">
+                <ActivityFeed :items="sampleDeviceActivity" />
+            </SectionCard>
         </div>
     </AppLayout>
 </template>
-
-<style scoped lang="postcss">
-.device-status.registered { color: #16a34a; font-weight: 600; }
-.device-status.inactive,
-.device-status.offline { color: #9ca3af; font-weight: 600; }
-.device-status.error { color: #dc2626; font-weight: 600; }
-.device-status.online { color: #2563eb; font-weight: 600; }
-</style>
