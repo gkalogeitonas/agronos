@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SensorType;
+use App\Enums\TimeRange;
 use App\Http\Requests\SensorRequest\ScanSensorRequest;
 use App\Http\Requests\SensorRequest\StoreSensorRequest;
 use App\Http\Requests\SensorRequest\UpdateSensorRequest;
 use App\Http\Resources\SensorResource;
+use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Services\TimeSeries\SensorTimeSeriesService;
-use App\Enums\TimeRange;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
@@ -24,8 +25,8 @@ class SensorController extends Controller
     public function index()
     {
         $this->authorize('viewAny', Sensor::class);
-        $sensors = request()->user()->sensors;
-        $farms = request()->user()->farms;
+        $sensors = request()->user()->sensors()->with('device:id,name,status')->orderBy('name')->get();
+        $farms = request()->user()->farms()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Sensors/Index', [
             'sensors' => $sensors,
@@ -56,7 +57,7 @@ class SensorController extends Controller
         $this->authorize('create', Sensor::class);
         $validated = $request->validated();
 
-        $device = \App\Models\Device::where('uuid', $validated['device_uuid'])
+        $device = Device::where('uuid', $validated['device_uuid'])
             ->firstOrFail();
         $this->authorize('view', $device); // This uses DevicePolicy
 
@@ -145,7 +146,7 @@ class SensorController extends Controller
     {
         $validated = $request->validated();
 
-        $device = \App\Models\Device::where('uuid', $validated['device_uuid'])->firstOrFail();
+        $device = Device::where('uuid', $validated['device_uuid'])->firstOrFail();
         $sensor = Sensor::where('uuid', $validated['uuid'])->first();
         $this->authorize('view', $device); // This uses DevicePolicy
 

@@ -15,6 +15,8 @@ export interface NavItem {
     href: string;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Short label shown next to the title, e.g. PROPOSED for features not built yet. */
+    badge?: string;
 }
 
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
@@ -36,3 +38,27 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export interface FarmSummary {
+    id: number;
+    name: string;
+    location: string | null;
+    size: number | null;
+    center: { lng: number; lat: number } | null;
+    status: 'ok' | 'warning' | 'offline' | 'unknown';
+    sensors: number;
+    devicesOnline: number;
+    devicesTotal: number;
+    moisture: number | null;
+    temperature: number | null;
+}
+
+export interface DeviceSummary {
+    id: number;
+    name: string;
+    type: string;
+    status: 'registered' | 'online' | 'offline' | 'error';
+    signal_strength: number | null;
+    battery_level: number | null;
+    last_seen_at: string | null;
+}

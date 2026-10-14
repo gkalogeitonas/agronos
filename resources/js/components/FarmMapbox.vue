@@ -1,103 +1,42 @@
-<template>
-  <div ref="mapContainer" class="map-container"></div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useMapbox } from '@/composables/useMapbox';
+import { isPolygon, polygonBounds, polygonFitOptions, setFarmPolygon } from '@/lib/map';
+import { signalColors } from '@/lib/theme';
+import type { Polygon } from 'geojson';
 import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { ref } from 'vue';
 
+/**
+ * Read-only map of a farm boundary and its sensors. Fits to the boundary when there is one, otherwise centres on `center`.
+ */
 const props = defineProps<{
-  center: [number, number],
-  farmPolygon?: any, // GeoJSON Polygon
-  sensors?: Array<{ lat: number, lon: number, name?: string }>,
-  zoom?: number
+    center: [number, number];
+    farmPolygon?: Polygon | null;
+    sensors?: { lat: number; lon: number; name?: string }[];
+    zoom?: number;
 }>();
 
-const mapContainer = ref<HTMLElement | null>(null);
-let map: mapboxgl.Map | null = null;
+const container = ref<HTMLElement | null>(null);
+const polygon = isPolygon(props.farmPolygon) ? props.farmPolygon : null;
 
-function addFarmPolygon(farmPolygon: any, map: mapboxgl.Map) {
-  if (!farmPolygon) return;
-  map.addSource('farm-area', {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      properties: {},
-      geometry: farmPolygon,
-    },
-  });
-  map.addLayer({
-    id: 'farm-fill',
-    type: 'fill',
-    source: 'farm-area',
-    layout: {},
-    paint: {
-      'fill-color': '#0080ff',
-      'fill-opacity': 0.2,
-    },
-  });
-  map.addLayer({
-    id: 'farm-outline',
-    type: 'line',
-    source: 'farm-area',
-    layout: {},
-    paint: {
-      'line-color': '#0080ff',
-      'line-width': 2,
-    },
-  });
-  // Fit bounds
-  const bounds = new mapboxgl.LngLatBounds();
-  farmPolygon.coordinates[0].forEach((coord: [number, number]) => bounds.extend(coord));
-  map.fitBounds(bounds, { padding: 40, maxZoom: 17 });
-}
+const { whenLoaded } = useMapbox(
+    container,
+    polygon ? { bounds: polygonBounds(polygon), fitBoundsOptions: polygonFitOptions } : { center: props.center, zoom: props.zoom },
+);
 
-function addSensorMarkers(sensors: any[], map: mapboxgl.Map) {
-  sensors.forEach(sensor => {
-    if (sensor.lat && sensor.lon) {
-      new mapboxgl.Marker({ color: '#2563eb' })
-        .setLngLat([parseFloat(sensor.lon), parseFloat(sensor.lat)])
-        .setPopup(new mapboxgl.Popup().setText(sensor.name || 'Unnamed Sensor'))
-        .addTo(map);
-    }
-  });
-}
-
-onMounted(() => {
-  if (!mapContainer.value) return;
-  mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
-  map = new mapboxgl.Map({
-    container: mapContainer.value,
-    style: 'mapbox://styles/mapbox/satellite-streets-v12',
-    center: props.center,
-    zoom: props.zoom || 12,
-  });
-  map.addControl(new mapboxgl.NavigationControl());
-  map.addControl(new mapboxgl.FullscreenControl());
-  map.on('load', () => {
-    if (props.farmPolygon && props.farmPolygon.type === 'Polygon') {
-      addFarmPolygon(props.farmPolygon, map!);
-    }
-    if (props.sensors && props.sensors.length > 0) {
-      addSensorMarkers(props.sensors, map!);
-    }
-  });
-});
-
-onBeforeUnmount(() => {
-  if (map) {
-    map.remove();
-  }
+whenLoaded((map) => {
+    setFarmPolygon(map, polygon);
+    (props.sensors ?? [])
+        .filter((sensor) => sensor.lat && sensor.lon)
+        .forEach((sensor) => {
+            new mapboxgl.Marker({ color: signalColors.water })
+                .setLngLat([sensor.lon, sensor.lat])
+                .setPopup(new mapboxgl.Popup().setText(sensor.name || 'Unnamed sensor'))
+                .addTo(map);
+        });
 });
 </script>
 
-<style scoped>
-.map-container {
-  width: 100%;
-  height: 300px;
-  border-radius: 0.5rem;
-  border: 1px solid #e5e7eb;
-  overflow: hidden;
-}
-</style>
+<template>
+    <div ref="container" class="h-[300px] w-full overflow-hidden rounded-md border"></div>
+</template>

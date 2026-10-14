@@ -8,11 +8,21 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: Instrument Sans, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-    --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
+    /* Type scale for the redesign: micro labels, meta text, body copy, metric values, page titles and stat tiles */
+    --text-micro: 11px;
+    --text-meta: 13px;
+    --text-body: 15px;
+    --text-metric: 22px;
+    --text-title: 30px;
+    --text-stat: 38px;
+
+    --radius-xl: var(--radius);
+    --radius-lg: calc(var(--radius) - 2px);
+    --radius-md: calc(var(--radius) - 4px);
+    --radius-sm: calc(var(--radius) - 6px);
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -38,6 +48,24 @@
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
 
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning-soft: var(--warning-soft);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-info-soft: var(--info-soft);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-ink: var(--danger-ink);
+    --color-danger-surface: var(--danger-surface);
+    --color-warning-surface: var(--warning-surface);
+    --color-ink-soft: var(--ink-soft);
+    --color-row: var(--row);
+    --color-sun: var(--sun);
+    --color-threshold: var(--threshold);
+
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
@@ -58,103 +86,67 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-    *,
-    ::after,
-    ::before,
-    ::backdrop,
-    ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
-    }
-}
-
-@layer utilities {
-    body,
-    html {
-        --font-sans:
-            'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    }
-}
-
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(0 0% 3.9%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(0 0% 3.9%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(0 0% 3.9%);
-    --primary: hsl(0 0% 9%);
-    --primary-foreground: hsl(0 0% 98%);
-    --secondary: hsl(0 0% 92.1%);
-    --secondary-foreground: hsl(0 0% 9%);
-    --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
-    --accent: hsl(0 0% 96.1%);
-    --accent-foreground: hsl(0 0% 9%);
-    --destructive: hsl(0 84.2% 60.2%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 92.8%);
-    --input: hsl(0 0% 89.8%);
-    --ring: hsl(0 0% 3.9%);
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
-    --radius: 0.5rem;
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 0% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 30%);
-    --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    /* Field instrument palette */
+    --background: #f2f5f0;
+    --foreground: #12261c;
+    --card: #ffffff;
+    --card-foreground: #12261c;
+    --popover: #ffffff;
+    --popover-foreground: #12261c;
+    --primary: #1f7a4d;
+    --primary-foreground: #ffffff;
+    --secondary: #e4ece0;
+    --secondary-foreground: #12261c;
+    --muted: #ecf0e9;
+    --muted-foreground: #4a6455;
+    --accent: #e4ece0;
+    --accent-foreground: #12261c;
+    --destructive: #9b2c1c;
+    --destructive-foreground: #ffffff;
+    --success: #1f7a4d;
+    --success-foreground: #14532d;
+    --success-soft: #dcefe3;
+    --warning: #8a4b00;
+    --warning-foreground: #5a3b00;
+    --warning-soft: #f6e3b4;
+    --info: #1f6fa8;
+    --info-foreground: #1f6fa8;
+    --info-soft: #e1eef7;
+    --danger-soft: #f3d6d0;
+    --danger-ink: #7a1f12;
+    --danger-surface: #f8e3de;
+    --warning-surface: #fbf0d4;
+    --ink-soft: #3c5446;
+    --row: #ecf0e9;
+    --sun: #e0a526;
+    --threshold: #b7791f;
+    --border: #dde4d9;
+    --input: #c7d2c3;
+    --ring: #1f7a4d;
+    --chart-1: #1f6fa8;
+    --chart-2: #b7791f;
+    --chart-3: #14532d;
+    --chart-4: #12261c;
+    --chart-5: #9b2c1c;
+    --radius: 0.875rem;
+    --sidebar-background: #12261c;
+    --sidebar-foreground: #c9d6c6;
+    --sidebar-primary: #1f7a4d;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e3a2b;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #1e3a2b;
+    --sidebar-ring: #1f7a4d;
+    --sidebar: #12261c;
 }
 
-.dark {
-    --background: hsl(0 0% 3.9%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(0 0% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(0 0% 3.9%);
-    --popover-foreground: 0 0% 98%;
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
-    --secondary: hsl(0 0% 14.9%);
-    --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(0 0% 16.08%);
-    --muted-foreground: hsl(0 0% 63.9%);
-    --accent: hsl(0 0% 14.9%);
-    --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
-    --ring: hsl(0 0% 83.1%);
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(0 0% 7%);
-    --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(0 0% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+/* Small uppercase mono label used above values and in table headers. Pair with a text size. */
+@utility eyebrow {
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
 }
 
 @layer base {

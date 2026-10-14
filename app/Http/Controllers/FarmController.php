@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\FarmRequest;
+use App\Models\Device;
 use App\Models\Farm;
+use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -18,13 +20,13 @@ class FarmController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(FarmOverviewService $farmOverview)
     {
         $this->authorize('viewAny', Farm::class);
-        $farms = Farm::where('user_id', Auth::id())->get();
+        $farms = Farm::where('user_id', Auth::id())->orderBy('name')->get();
 
         return Inertia::render('Farms/Index', [
-            'farms' => $farms,
+            'farms' => $farmOverview->summarize($farms),
         ]);
     }
 
@@ -93,9 +95,15 @@ class FarmController extends Controller
             'lastAvgByType' => $lastAvgByType,
         ];
 
+        $devices = Device::query()
+            ->whereIn('id', $farm->sensors()->select('device_id'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at']);
+
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
+            'devices' => $devices,
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),

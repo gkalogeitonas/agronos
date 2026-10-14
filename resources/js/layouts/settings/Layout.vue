@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Heading from '@/components/Heading.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { type NavItem } from '@/types';
@@ -15,8 +15,8 @@ const sidebarNavItems: NavItem[] = [
         href: '/settings/password',
     },
     {
-        title: 'Appearance',
-        href: '/settings/appearance',
+        title: 'Application',
+        href: '/settings/app',
     },
 ];
 
@@ -26,30 +26,30 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading title="Settings" description="Manage your profile and account settings" />
+    <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageHeader eyebrow="Account" title="Settings" />
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-12">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav class="flex flex-col space-y-1 space-x-0">
+        <div class="flex flex-col gap-6 lg:flex-row lg:gap-12">
+            <aside class="w-full lg:w-48">
+                <nav aria-label="Settings" class="flex flex-row flex-wrap gap-1 lg:flex-col">
                     <Button
                         v-for="item in sidebarNavItems"
                         :key="item.href"
                         variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
+                        :class="['justify-start lg:w-full', { 'bg-secondary font-semibold': currentPath === item.href }]"
                         as-child
                     >
-                        <Link :href="item.href">
+                        <Link :href="item.href" :aria-current="currentPath === item.href ? 'page' : undefined">
                             {{ item.title }}
                         </Link>
                     </Button>
                 </nav>
             </aside>
 
-            <Separator class="my-6 md:hidden" />
+            <Separator class="lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="flex-1 lg:max-w-2xl">
+                <section class="flex max-w-xl flex-col gap-12 rounded-xl border bg-card p-6 md:p-8">
                     <slot />
                 </section>
             </div>
