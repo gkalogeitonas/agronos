@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class DeviceController extends Controller
 {
@@ -20,9 +21,16 @@ class DeviceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): Response
     {
-        $devices = Device::all();
+        $devices = Device::query()
+            ->with('sensors.farm:id,name')
+            ->orderBy('name')
+            ->get(['id', 'name', 'uuid', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at'])
+            ->map(fn (Device $device) => [
+                ...$device->only(['id', 'name', 'uuid', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at']),
+                'farms' => $device->sensors->pluck('farm')->filter()->unique('id')->pluck('name')->values(),
+            ]);
 
         return Inertia::render('Devices/Index', [
             'devices' => $devices,

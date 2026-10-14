@@ -1,105 +1,141 @@
-<template>
-  <Head title="Devices" />
-  <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col h-full gap-6 p-4">
-      <!-- Header -->
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Devices Management</h1>
-        <Link :href="route('devices.create')">
-          <Button>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 00-1 1v5H4a1 1 0 100 2h5v5a1 1 0 102 0v-5h5a1 1 0 100-2h-5V4a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-            Add Device
-          </Button>
-        </Link>
-      </div>
-      <!-- Device List -->
-      <div v-if="devices.length > 0" class="flex flex-col gap-4">
-        <Card v-for="device in devices" :key="device.id" class="overflow-hidden">
-          <CardHeader class="bg-muted/20 flex flex-row items-center justify-between gap-4">
-            <div class="flex flex-col gap-1 min-w-[180px]">
-              <span class="text-xs text-muted-foreground">UUID</span>
-              <span class="font-mono text-sm">{{ device.uuid }}</span>
-              <span class="text-xs text-muted-foreground mt-1">Type</span>
-              <span class="text-sm">{{ device.type }}</span>
-            </div>
-            <div class="flex-1 flex flex-col items-start justify-center">
-              <CardDescription class="text-lg font-semibold">{{ device.name }}</CardDescription>
-            </div>
-            <div class="flex flex-col items-end gap-2 min-w-[120px]">
-              <span :class="statusClass(device.status)">{{ device.status }}</span>
-              <Link :href="route('devices.show', device.id)">
-                <Button variant="outline">View Details</Button>
-              </Link>
-            </div>
-          </CardHeader>
-        </Card>
-      </div>
-      <!-- Empty State -->
-      <div v-else class="flex flex-col items-center justify-center p-8 border rounded-lg border-dashed text-center">
-        <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium mb-2">No devices found</h3>
-        <p class="text-sm text-muted-foreground mb-4">Get started by adding your first device.</p>
-        <Link :href="route('devices.create')">
-          <Button>Add Your First Device</Button>
-        </Link>
-      </div>
-    </div>
-  </AppLayout>
-</template>
-
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
+import SectionCard from '@/components/agronos/SectionCard.vue';
+import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { Input } from '@/components/ui/input';
+import { useTimestamp } from '@/composables/useTimestamp';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { deviceTypeLabel, formatBattery, formatSignal, isLowBattery } from '@/lib/format';
+import { type BreadcrumbItem, type DeviceSummary } from '@/types';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-interface Device {
-  id: number;
-  name: string;
-  uuid: string;
-  type: string;
-  status: string;
-}
+type DeviceRow = DeviceSummary & { uuid: string; farms: string[] };
+type StatusFilter = 'all' | DeviceSummary['status'];
 
-const page = usePage();
-const devices = computed(() => page.props.devices as Device[] ?? []);
+const props = defineProps<{
+    devices: DeviceRow[];
+}>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-  },
-  {
-    title: 'Devices',
-    href: '/devices',
-  },
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: '/devices' }];
+
+const { formatAge } = useTimestamp();
+
+const status = ref<StatusFilter>('all');
+const search = ref('');
+const farm = ref('all');
+const link = ref('all');
+
+const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
+    { value: 'all', label: 'All', count: props.devices.length },
+    ...(['online', 'registered', 'offline', 'error'] as const).map((value) => ({
+        value,
+        label: value.charAt(0).toUpperCase() + value.slice(1),
+        count: props.devices.filter((device) => device.status === value).length,
+    })),
+]);
+
+const farmOptions = computed(() => [...new Set(props.devices.flatMap((device) => device.farms))].sort());
+const linkOptions = computed(() => [...new Set(props.devices.map((device) => device.type))].sort());
+
+const columns: DataTableColumn[] = [
+    { key: 'name', label: 'Device', width: '1.8fr' },
+    { key: 'farm', label: 'Farm', width: '1.4fr' },
+    { key: 'link', label: 'Link', mono: true, width: '0.8fr' },
+    { key: 'signal', label: 'Signal', mono: true, width: '0.9fr' },
+    { key: 'battery', label: 'Battery', mono: true },
+    { key: 'seen', label: 'Last seen', mono: true, width: '0.9fr' },
+    { key: 'status', label: 'Status' },
 ];
 
-function statusClass(status: string) {
-  switch (status) {
-    case 'registered':
-      return 'text-green-600 font-semibold';
-    case 'inactive':
-      return 'text-gray-400';
-    case 'error':
-      return 'text-red-600 font-semibold';
-    default:
-      return '';
-  }
-}
+const rows = computed(() => {
+    const query = search.value.trim().toLowerCase();
+
+    return props.devices
+        .filter((device) => status.value === 'all' || device.status === status.value)
+        .filter((device) => farm.value === 'all' || device.farms.includes(farm.value))
+        .filter((device) => link.value === 'all' || device.type === link.value)
+        .filter((device) => query === '' || `${device.name} ${device.uuid}`.toLowerCase().includes(query))
+        .map((device) => ({
+            ...device,
+            farm: device.farms.length === 0 ? '–' : device.farms.join(', '),
+            link: deviceTypeLabel(device.type),
+            signal: formatSignal(device.signal_strength),
+            battery: formatBattery(device.battery_level),
+            seen: formatAge(device.last_seen_at),
+        }));
+});
 </script>
 
-<style scoped>
-.container {
-  max-width: 900px;
-}
-</style>
+<template>
+    <Head title="Devices" />
+
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex flex-col gap-6 p-6 md:p-8">
+            <PageHeader eyebrow="Manage" title="Devices">
+                <template #actions>
+                    <Button as-child>
+                        <Link :href="route('devices.create')">Add device</Link>
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <template v-if="devices.length > 0">
+                <section aria-label="Filters" class="flex flex-col gap-4">
+                    <FilterChips v-model="status" :options="statusOptions" label="Filter by status" />
+                    <div class="flex flex-wrap items-center gap-3">
+                        <Input
+                            v-model="search"
+                            type="search"
+                            aria-label="Search devices"
+                            placeholder="Search devices"
+                            class="min-w-0 flex-[1_1_240px]"
+                        />
+                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
+                            Farm
+                            <select v-model="farm" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                                <option value="all">All farms</option>
+                                <option v-for="name in farmOptions" :key="name" :value="name">{{ name }}</option>
+                            </select>
+                        </label>
+                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
+                            Link
+                            <select v-model="link" class="h-11 rounded-md border border-input bg-card px-3 text-[15px] text-foreground">
+                                <option value="all">All links</option>
+                                <option v-for="type in linkOptions" :key="type" :value="type">{{ deviceTypeLabel(type) }}</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <SectionCard>
+                    <div class="font-mono text-[13px] text-muted-foreground" aria-live="polite">
+                        Showing {{ rows.length }} of {{ devices.length }} devices
+                    </div>
+                    <DataTable :columns="columns" :rows="rows" row-key="id" min-width="860px" empty-text="No devices match these filters.">
+                        <template #cell-name="{ row }">
+                            <Link :href="route('devices.show', row.id)" class="font-semibold text-foreground hover:text-info">{{ row.name }}</Link>
+                        </template>
+                        <template #cell-battery="{ row }">
+                            <span :class="{ 'text-danger-ink': isLowBattery(row.battery_level) }">{{ row.battery }}</span>
+                        </template>
+                        <template #cell-status="{ row }">
+                            <StatusBadge :status="row.status" />
+                        </template>
+                    </DataTable>
+                </SectionCard>
+            </template>
+
+            <div v-else class="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
+                <h2 class="m-0 text-lg font-semibold">No devices yet</h2>
+                <p class="m-0 text-[15px] text-muted-foreground">Register a device to start receiving readings.</p>
+                <Button as-child>
+                    <Link :href="route('devices.create')">Add your first device</Link>
+                </Button>
+            </div>
+        </div>
+    </AppLayout>
+</template>
