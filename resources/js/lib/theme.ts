@@ -1,0 +1,38 @@
+/**
+ * Signal colours from the Field instrument palette, for places that need raw values
+ * (SVG strokes, ApexCharts). Keep in sync with the tokens in resources/css/app.css.
+ */
+export const signalColors = {
+    ink: '#12261C',
+    canopy: '#1F7A4D',
+    leaf: '#14532D',
+    water: '#1F6FA8',
+    threshold: '#B7791F',
+    alert: '#9B2C1C',
+    grid: '#DDE4D9',
+    muted: '#4A6455',
+} as const;
+
+export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
+/**
+ * Maps any status string used across the app (device, sensor, farm) to a colour tone.
+ */
+export function statusTone(status: string | null | undefined): StatusTone {
+    switch ((status ?? '').toLowerCase()) {
+        case 'online':
+        case 'ok':
+            return 'success';
+        case 'delayed':
+        case 'warning':
+        case 'registered':
+            return 'warning';
+        case 'offline':
+        case 'error':
+            return 'danger';
+        case 'info':
+            return 'info';
+        default:
+            return 'neutral';
+    }
+}
