@@ -2,6 +2,7 @@
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -27,7 +28,7 @@ const comingSoon = 'Coming soon: actuator control is not available yet';
     <Head title="Actuators" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Proposed" title="Actuators" sample-data>
                 <template #actions>
                     <Button disabled :title="comingSoon">Add actuator</Button>
@@ -52,6 +53,6 @@ const comingSoon = 'Coming soon: actuator control is not available yet';
                     </template>
                 </DataTable>
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

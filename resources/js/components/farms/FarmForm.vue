@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import FormField from '@/components/FormField.vue';
 import InputError from '@/components/InputError.vue';
 import MapboxMap from '@/components/MapboxMap.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { InertiaForm } from '@inertiajs/vue3';
 import { area } from '@turf/turf';
@@ -57,26 +57,15 @@ watch(
     <form class="flex flex-col gap-6" @submit.prevent="onSubmit">
         <div class="flex flex-wrap items-start gap-4">
             <SectionCard title="Details" class="flex-[1_1_320px]">
-                <div class="flex flex-col gap-2">
-                    <Label for="farm-name">Name</Label>
-                    <Input id="farm-name" v-model="form.name" required placeholder="North Orchard" />
-                    <InputError :message="form.errors.name" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <Label for="farm-location">Location</Label>
-                    <Input id="farm-location" v-model="form.location" required placeholder="Town or region" />
-                    <InputError :message="form.errors.location" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <Label for="farm-description">Description</Label>
-                    <Textarea
-                        id="farm-description"
-                        v-model="form.description"
-                        placeholder="Crops, soil, anything worth remembering"
-                        class="bg-card"
-                    />
-                    <InputError :message="form.errors.description" />
-                </div>
+                <FormField id="farm-name" label="Name" :error="form.errors.name"
+                    ><Input id="farm-name" v-model="form.name" required placeholder="North Orchard"
+                /></FormField>
+                <FormField id="farm-location" label="Location" :error="form.errors.location"
+                    ><Input id="farm-location" v-model="form.location" required placeholder="Town or region"
+                /></FormField>
+                <FormField id="farm-description" label="Description" :error="form.errors.description"
+                    ><Textarea id="farm-description" v-model="form.description" placeholder="Crops, soil, anything worth remembering" class="bg-card"
+                /></FormField>
             </SectionCard>
 
             <SectionCard title="Boundary" class="flex-[2_1_480px]">

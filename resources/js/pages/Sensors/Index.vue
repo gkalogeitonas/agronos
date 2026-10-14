@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import EmptyState from '@/components/agronos/EmptyState.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import FilterSelect from '@/components/agronos/FilterSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
@@ -86,7 +88,7 @@ const columns = computed<DataTableColumn[]>(() => [
     <Head title="Sensors" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Manage" title="Sensors">
                 <template #actions>
                     <Button as-child>
@@ -99,23 +101,17 @@ const columns = computed<DataTableColumn[]>(() => [
                 <section aria-label="Filters" class="flex flex-col gap-4">
                     <FilterChips v-model="type" :options="typeOptions" label="Filter by sensor type" />
                     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
-                            Farm
-                            <NativeSelect v-model="farmId">
-                                <option value="all">All farms</option>
-                                <option v-for="farm in farms" :key="farm.id" :value="String(farm.id)">{{ farm.name }}</option>
-                            </NativeSelect>
-                        </label>
-                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
-                            Status
-                            <NativeSelect v-model="status">
-                                <option value="all">All statuses</option>
-                                <option value="online">Online</option>
-                                <option value="registered">Registered</option>
-                                <option value="offline">Offline</option>
-                                <option value="error">Error</option>
-                            </NativeSelect>
-                        </label>
+                        <FilterSelect v-model="farmId" label="Farm">
+                            <option value="all">All farms</option>
+                            <option v-for="farm in farms" :key="farm.id" :value="String(farm.id)">{{ farm.name }}</option>
+                        </FilterSelect>
+                        <FilterSelect v-model="status" label="Status">
+                            <option value="all">All statuses</option>
+                            <option value="online">Online</option>
+                            <option value="registered">Registered</option>
+                            <option value="offline">Offline</option>
+                            <option value="error">Error</option>
+                        </FilterSelect>
                         <div class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Group by
                             <FilterChips v-model="groupBy" :options="groupOptions" label="Group sensors by" />
@@ -142,13 +138,11 @@ const columns = computed<DataTableColumn[]>(() => [
                 </SectionCard>
             </template>
 
-            <div v-else class="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
-                <h2 class="m-0 text-lg font-semibold">No sensors yet</h2>
-                <p class="m-0 text-[15px] text-muted-foreground">Add a sensor to a device and a farm to start collecting readings.</p>
-                <Button as-child>
+            <EmptyState v-else title="No sensors yet" text="Add a sensor to a device and a farm to start collecting readings."
+                ><Button as-child>
                     <Link :href="route('sensors.create')">Add your first sensor</Link>
-                </Button>
-            </div>
-        </div>
+                </Button></EmptyState
+            >
+        </PageContainer>
     </AppLayout>
 </template>

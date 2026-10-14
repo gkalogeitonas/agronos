@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
-import InputError from '@/components/InputError.vue';
+import FormField from '@/components/FormField.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -61,7 +61,7 @@ function onQrError(error: Error) {
 <template>
     <Head title="Add device" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Devices" title="Add device">
                 <template #actions>
                     <Button variant="outline" @click="showScanner = !showScanner"
@@ -77,46 +77,35 @@ function onQrError(error: Error) {
 
             <SectionCard title="Device details" class="max-w-2xl">
                 <form class="flex flex-col gap-6" @submit.prevent="submit">
-                    <div class="flex flex-col gap-2">
-                        <Label for="name">Device name</Label>
-                        <Input id="name" v-model="form.name" placeholder="Sensor node 01" />
-                        <InputError :message="form.errors.name" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <Label for="uuid">UUID</Label>
-                        <Input id="uuid" v-model="form.uuid" required class="font-mono" />
-                        <InputError :message="form.errors.uuid" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <Label for="secret">Secret</Label>
-                        <Input id="secret" v-model="form.secret" type="password" required />
-                        <InputError :message="form.errors.secret" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <Label for="type">Type</Label>
-                        <NativeSelect id="type" v-model="form.type" required>
+                    <FormField id="name" label="Device name" :error="form.errors.name"
+                        ><Input id="name" v-model="form.name" placeholder="Sensor node 01"
+                    /></FormField>
+                    <FormField id="uuid" label="UUID" :error="form.errors.uuid"
+                        ><Input id="uuid" v-model="form.uuid" required class="font-mono"
+                    /></FormField>
+                    <FormField id="secret" label="Secret" :error="form.errors.secret"
+                        ><Input id="secret" v-model="form.secret" type="password" required
+                    /></FormField>
+                    <FormField id="type" label="Type" :error="form.errors.type"
+                        ><NativeSelect id="type" v-model="form.type" required>
                             <option value="" disabled>Select type</option>
                             <option v-for="type in deviceTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
-                        </NativeSelect>
-                        <InputError :message="form.errors.type" />
-                    </div>
-                    <div v-if="form.type === 'lora'" class="flex flex-col gap-2">
-                        <Label for="lora_aes_key">AES key (32-character hex)</Label>
-                        <Input
+                        </NativeSelect></FormField
+                    >
+                    <FormField v-if="form.type === 'lora'" id="lora_aes_key" label="AES key (32-character hex)" :error="form.errors.lora_aes_key"
+                        ><Input
                             id="lora_aes_key"
                             v-model="form.lora_aes_key"
                             placeholder="0123456789abcdef0123456789abcdef"
                             maxlength="32"
                             class="font-mono"
-                        />
-                        <InputError :message="form.errors.lora_aes_key" />
-                    </div>
+                    /></FormField>
                     <div class="flex justify-end gap-3">
                         <Button variant="outline" as-child><Link :href="route('devices.index')">Cancel</Link></Button>
                         <Button type="submit" :disabled="form.processing">Register device</Button>
                     </div>
                 </form>
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

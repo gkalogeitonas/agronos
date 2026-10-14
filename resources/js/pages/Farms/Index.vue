@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import EmptyState from '@/components/agronos/EmptyState.vue';
+import FilterSelect from '@/components/agronos/FilterSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +53,7 @@ const rows = computed(() => {
     <Head title="Farms" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Manage" title="Farms" sample-data>
                 <template #actions>
                     <Button as-child>
@@ -63,13 +65,10 @@ const rows = computed(() => {
             <SectionCard v-if="farms.length > 0" class="gap-5">
                 <div class="flex flex-wrap items-center gap-3">
                     <Input v-model="search" type="search" aria-label="Search farms" placeholder="Search farms" class="min-w-0 flex-[1_1_240px]" />
-                    <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
-                        Status
-                        <NativeSelect v-model="status">
-                            <option value="all">All statuses</option>
-                            <option v-for="(label, value) in farmStatusLabels" :key="value" :value="value">{{ label }}</option>
-                        </NativeSelect>
-                    </label>
+                    <FilterSelect v-model="status" label="Status">
+                        <option value="all">All statuses</option>
+                        <option v-for="(label, value) in farmStatusLabels" :key="value" :value="value">{{ label }}</option>
+                    </FilterSelect>
                     <span class="font-mono text-[13px] text-muted-foreground">{{ rows.length }} of {{ farms.length }} farms</span>
                 </div>
 
@@ -102,13 +101,11 @@ const rows = computed(() => {
                 </DataTable>
             </SectionCard>
 
-            <div v-else class="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
-                <h2 class="m-0 text-lg font-semibold">No farms yet</h2>
-                <p class="m-0 text-[15px] text-muted-foreground">Add your first farm to start placing sensors.</p>
-                <Button as-child>
+            <EmptyState v-else title="No farms yet" text="Add your first farm to start placing sensors."
+                ><Button as-child>
                     <Link :href="route('farms.create')">Add your first farm</Link>
-                </Button>
-            </div>
-        </div>
+                </Button></EmptyState
+            >
+        </PageContainer>
     </AppLayout>
 </template>

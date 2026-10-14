@@ -1,7 +1,7 @@
 <template>
     <Head :title="sensor.name ? sensor.name : 'Sensor'" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader :eyebrow="`${sensorTypeLabel(sensor.type)} sensor`" :title="sensor.name || 'Unnamed sensor'">
                 <template #actions>
                     <Button variant="outline" as-child>
@@ -30,12 +30,9 @@
 
             <SectionCard title="Reading history">
                 <template #actions>
-                    <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
-                        Range
-                        <NativeSelect v-model="selectedRange" @change="applyRange">
-                            <option v-for="opt in rangeOptions ?? []" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </NativeSelect>
-                    </label>
+                    <FilterSelect v-model="selectedRange" label="Range" @change="applyRange">
+                        <option v-for="opt in rangeOptions ?? []" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </FilterSelect>
                 </template>
                 <div v-if="chartData === undefined" class="h-[320px] animate-pulse rounded-md bg-muted" aria-label="Loading chart"></div>
                 <LineChart
@@ -61,55 +58,39 @@
                 </SectionCard>
 
                 <SectionCard title="Sensor information" class="flex-[1_1_280px]">
-                    <dl class="m-0 flex flex-col">
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Sensor UUID</dt>
-                            <dd class="m-0 min-w-0 truncate font-mono text-sm" :title="sensor.uuid">{{ sensor.uuid }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Device</dt>
-                            <dd class="m-0 min-w-0 truncate font-mono text-sm">
-                                <Link v-if="sensor.device" :href="route('devices.show', sensor.device.id)" class="text-info hover:text-foreground">{{
-                                    sensor.device.uuid
-                                }}</Link>
-                                <template v-else>–</template>
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Type</dt>
-                            <dd class="m-0 text-[15px]">{{ sensorTypeLabel(sensor.type) }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Farm</dt>
-                            <dd class="m-0 text-[15px]">
-                                <Link v-if="sensor.farm" :href="route('farms.show', sensor.farm.id)" class="text-info hover:text-foreground">{{
-                                    sensor.farm.name
-                                }}</Link>
-                                <template v-else>–</template>
-                            </dd>
-                        </div>
-                        <div class="flex justify-between gap-4 py-3">
-                            <dt class="text-sm text-muted-foreground">Coordinates</dt>
-                            <dd class="m-0 font-mono text-sm">{{ sensor.lat ?? '–' }}, {{ sensor.lon ?? '–' }}</dd>
-                        </div>
-                    </dl>
+                    <DescriptionList :items="sensorInfo">
+                        <template #value-device>
+                            <Link v-if="sensor.device" :href="route('devices.show', sensor.device.id)" class="text-info hover:text-foreground">{{
+                                sensor.device.uuid
+                            }}</Link>
+                            <template v-else>–</template>
+                        </template>
+                        <template #value-farm>
+                            <Link v-if="sensor.farm" :href="route('farms.show', sensor.farm.id)" class="text-info hover:text-foreground">{{
+                                sensor.farm.name
+                            }}</Link>
+                            <template v-else>–</template>
+                        </template>
+                    </DescriptionList>
                 </SectionCard>
             </div>
 
             <SectionCard v-if="readingRows.length" title="Recent readings">
                 <DataTable :columns="readingColumns" :rows="readingRows" row-key="time" min-width="360px" />
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>
 
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
+import FilterSelect from '@/components/agronos/FilterSelect.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import FarmMapbox from '@/components/FarmMapbox.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import useTimestamp from '@/composables/useTimestamp';
@@ -195,6 +176,14 @@ const series = computed(() => [
         color: sensorColors[props.sensor.type] ?? signalColors.ink,
         data: (props.chartData ?? []).map(([x, y]) => ({ x, y })),
     },
+]);
+
+const sensorInfo = computed<DescriptionItem[]>(() => [
+    { label: 'Sensor UUID', value: props.sensor.uuid, mono: true },
+    { key: 'device', label: 'Device', value: props.sensor.device?.uuid, mono: true },
+    { label: 'Type', value: sensorTypeLabel(props.sensor.type) },
+    { key: 'farm', label: 'Farm', value: props.sensor.farm?.name },
+    { label: 'Coordinates', value: `${props.sensor.lat ?? '–'}, ${props.sensor.lon ?? '–'}`, mono: true },
 ]);
 
 const readingColumns: DataTableColumn[] = [

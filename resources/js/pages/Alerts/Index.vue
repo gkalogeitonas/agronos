@@ -2,6 +2,7 @@
 import AlertList, { type AlertItem } from '@/components/agronos/AlertList.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sampleAlerts } from '@/lib/sampleData';
@@ -29,7 +30,7 @@ const alerts = computed(() => sampleAlerts.filter((alert) => tone.value === 'all
     <Head title="Alerts" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Monitor" title="Alerts" sample-data />
 
             <p class="m-0 max-w-3xl text-[15px] text-muted-foreground">
@@ -42,6 +43,6 @@ const alerts = computed(() => sampleAlerts.filter((alert) => tone.value === 'all
             <SectionCard title="Open alerts">
                 <AlertList :alerts="alerts" />
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

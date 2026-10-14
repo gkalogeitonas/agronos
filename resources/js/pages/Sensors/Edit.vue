@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
-import InputError from '@/components/InputError.vue';
+import FormField from '@/components/FormField.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sensorTypeLabel } from '@/lib/theme';
 import { type BreadcrumbItem } from '@/types';
@@ -42,6 +43,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sensors', href: '/sensors' },
     { title: sensor.name || 'Sensor', href: route('sensors.show', sensor.id) },
     { title: 'Edit', href: route('sensors.edit', sensor.id) },
+];
+
+const details: DescriptionItem[] = [
+    { label: 'Sensor UUID', value: sensor.uuid, mono: true },
+    { label: 'Device UUID', value: sensor.device?.uuid, mono: true },
+    { label: 'Type', value: sensorTypeLabel(sensor.type) },
 ];
 
 const form = useForm({
@@ -194,55 +201,32 @@ watch(
 <template>
     <Head :title="`Edit ${sensor.name}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Edit sensor" :title="sensor.name || 'Sensor'" />
 
             <form class="flex flex-col gap-6" @submit.prevent="submit">
                 <div class="flex flex-wrap items-start gap-4">
                     <SectionCard title="Details" class="flex-[1_1_320px]">
-                        <dl class="m-0 flex flex-col">
-                            <div class="flex justify-between gap-4 border-b border-row py-3">
-                                <dt class="text-sm text-muted-foreground">Sensor UUID</dt>
-                                <dd class="m-0 min-w-0 truncate font-mono text-sm" :title="sensor.uuid">{{ sensor.uuid }}</dd>
-                            </div>
-                            <div class="flex justify-between gap-4 border-b border-row py-3">
-                                <dt class="text-sm text-muted-foreground">Device UUID</dt>
-                                <dd class="m-0 min-w-0 truncate font-mono text-sm">{{ sensor.device?.uuid || '–' }}</dd>
-                            </div>
-                            <div class="flex justify-between gap-4 py-3">
-                                <dt class="text-sm text-muted-foreground">Type</dt>
-                                <dd class="m-0 text-[15px]">{{ sensorTypeLabel(sensor.type) }}</dd>
-                            </div>
-                        </dl>
-                        <div class="flex flex-col gap-2">
-                            <Label for="name">Name</Label>
-                            <Input id="name" v-model="form.name" />
-                            <InputError :message="form.errors.name" />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <Label for="farm_id">Farm</Label>
-                            <NativeSelect id="farm_id" v-model="form.farm_id">
+                        <DescriptionList :items="details" />
+                        <FormField id="name" label="Name" :error="form.errors.name"><Input id="name" v-model="form.name" /></FormField>
+                        <FormField id="farm_id" label="Farm" :error="form.errors.farm_id"
+                            ><NativeSelect id="farm_id" v-model="form.farm_id">
                                 <option value="" disabled>Select a farm</option>
                                 <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
-                            </NativeSelect>
-                            <InputError :message="form.errors.farm_id" />
-                        </div>
+                            </NativeSelect></FormField
+                        >
                     </SectionCard>
 
                     <SectionCard title="Location" class="flex-[2_1_480px]">
                         <p class="m-0 text-sm text-muted-foreground">Click the map or drag the marker to move the sensor.</p>
                         <div ref="mapContainer" class="h-[320px] w-full overflow-hidden rounded-md border"></div>
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="flex flex-col gap-2">
-                                <Label for="lat">Latitude</Label>
-                                <Input id="lat" v-model="form.lat" type="number" step="any" required class="font-mono" />
-                                <InputError :message="form.errors.lat" />
-                            </div>
-                            <div class="flex flex-col gap-2">
-                                <Label for="lon">Longitude</Label>
-                                <Input id="lon" v-model="form.lon" type="number" step="any" required class="font-mono" />
-                                <InputError :message="form.errors.lon" />
-                            </div>
+                            <FormField id="lat" label="Latitude" :error="form.errors.lat"
+                                ><Input id="lat" v-model="form.lat" type="number" step="any" required class="font-mono"
+                            /></FormField>
+                            <FormField id="lon" label="Longitude" :error="form.errors.lon"
+                                ><Input id="lon" v-model="form.lon" type="number" step="any" required class="font-mono"
+                            /></FormField>
                         </div>
                     </SectionCard>
                 </div>
@@ -252,6 +236,6 @@ watch(
                     <Button type="submit" :disabled="form.processing">Save changes</Button>
                 </div>
             </form>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

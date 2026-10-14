@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FarmForm, { type FarmFormData } from '@/components/farms/FarmForm.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -49,7 +50,7 @@ const submit = () => {
 <template>
     <Head :title="`Edit ${farm.name}`" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Edit farm" :title="farm.name" />
             <FarmForm
                 :form="form"
@@ -64,6 +65,6 @@ const submit = () => {
                     <Button variant="outline" as-child><Link :href="route('farms.show', farm.id)">Cancel</Link></Button>
                 </template>
             </FarmForm>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

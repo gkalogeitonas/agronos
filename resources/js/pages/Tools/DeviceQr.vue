@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import FormField from '@/components/FormField.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -58,7 +59,7 @@ const pretty = (json: string): string => JSON.stringify(JSON.parse(json), null, 
 <template>
     <Head title="Device QR generator" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Tools" title="Device QR generator">
                 <template #actions>
                     <Button @click="generate"><RefreshCw /> Generate new</Button>
@@ -72,12 +73,11 @@ const pretty = (json: string): string => JSON.stringify(JSON.parse(json), null, 
 
             <div class="flex flex-wrap items-start gap-4">
                 <SectionCard title="Device" class="flex-[1_1_320px]">
-                    <div class="flex flex-col gap-2">
-                        <Label for="type">Device type</Label>
+                    <FormField id="type" label="Device type">
                         <NativeSelect id="type" v-model="type">
                             <option v-for="option in deviceTypes" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </NativeSelect>
-                    </div>
+                    </FormField>
                     <div class="flex justify-center rounded-md border bg-white p-4">
                         <QRCodeVue :value="deviceQrData" :size="220" />
                     </div>
@@ -97,6 +97,6 @@ const pretty = (json: string): string => JSON.stringify(JSON.parse(json), null, 
                     </div>
                 </SectionCard>
             </div>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import ActivityFeed from '@/components/agronos/ActivityFeed.vue';
 import AlertList from '@/components/agronos/AlertList.vue';
+import EmptyState from '@/components/agronos/EmptyState.vue';
 import FarmsOverviewMap from '@/components/agronos/FarmsOverviewMap.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -36,7 +38,7 @@ const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.s
     <Head title="Overview" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Organisation overview" title="All farms" sample-data>
                 <template #actions>
                     <Button variant="outline" as-child>
@@ -115,17 +117,16 @@ const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.s
                         </div>
                     </article>
                 </div>
-                <div v-else class="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
-                    <p class="m-0 text-[15px] text-muted-foreground">You have no farms yet.</p>
-                    <Button as-child>
+                <EmptyState v-else text="You have no farms yet."
+                    ><Button as-child>
                         <Link :href="route('farms.create')">Add your first farm</Link>
-                    </Button>
-                </div>
+                    </Button></EmptyState
+                >
             </section>
 
             <SectionCard title="Recent activity">
                 <ActivityFeed :items="sampleActivity" />
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

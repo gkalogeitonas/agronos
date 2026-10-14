@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import ActivityFeed from '@/components/agronos/ActivityFeed.vue';
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import DescriptionList from '@/components/agronos/DescriptionList.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
@@ -70,17 +72,17 @@ const batteryChart = computed(() =>
 );
 
 const info = computed(() => [
-    { label: 'Protocol', value: deviceTypeLabel(props.device.type) },
-    { label: 'Device ID', value: props.device.uuid },
+    { mono: true, label: 'Protocol', value: deviceTypeLabel(props.device.type) },
+    { mono: true, label: 'Device ID', value: props.device.uuid },
     ...(isLoRa.value
         ? [
-              { label: 'Encryption', value: 'AES-128-CTR' },
-              { label: 'Frame counter', value: String(props.device.lora_frame_counter ?? 0) },
+              { mono: true, label: 'Encryption', value: 'AES-128-CTR' },
+              { mono: true, label: 'Frame counter', value: String(props.device.lora_frame_counter ?? 0) },
           ]
         : []),
-    { label: 'Firmware', value: sampleFirmwareVersion },
-    { label: 'Last seen', value: props.device.last_seen_at ? `${formatAge(props.device.last_seen_at)} ago` : 'Never' },
-    { label: 'Registered', value: formatTimestamp(props.device.created_at).slice(0, 10) },
+    { mono: true, label: 'Firmware', value: sampleFirmwareVersion },
+    { mono: true, label: 'Last seen', value: props.device.last_seen_at ? `${formatAge(props.device.last_seen_at)} ago` : 'Never' },
+    { mono: true, label: 'Registered', value: formatTimestamp(props.device.created_at).slice(0, 10) },
 ]);
 
 const sensorColumns: DataTableColumn[] = [
@@ -113,7 +115,7 @@ const comingSoon = 'Coming soon: device commands are not available yet';
     <Head :title="device.name" />
 
     <AppLayout>
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader :title="device.name" sample-data>
                 <template #breadcrumb>
                     <Breadcrumb>
@@ -181,12 +183,7 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                 </SectionCard>
 
                 <SectionCard title="Device information" class="flex-[1_1_280px]">
-                    <dl class="m-0 flex flex-col">
-                        <div v-for="item in info" :key="item.label" class="flex justify-between gap-4 border-b border-row py-3 last:border-b-0">
-                            <dt class="text-sm text-muted-foreground">{{ item.label }}</dt>
-                            <dd class="m-0 min-w-0 truncate text-right font-mono text-sm" :title="item.value">{{ item.value }}</dd>
-                        </div>
-                    </dl>
+                    <DescriptionList :items="info" />
                 </SectionCard>
             </div>
 
@@ -243,6 +240,6 @@ const comingSoon = 'Coming soon: device commands are not available yet';
             <SectionCard title="Device activity">
                 <ActivityFeed :items="sampleDeviceActivity" />
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

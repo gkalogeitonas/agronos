@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import AlertList from '@/components/agronos/AlertList.vue';
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import FarmMapbox from '@/components/FarmMapbox.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
@@ -123,6 +125,14 @@ const sensorRows = computed(() =>
     })),
 );
 
+const farmInfo = computed<DescriptionItem[]>(() => [
+    { label: 'Location', value: props.farm.location },
+    { label: 'Size', value: props.farm.size !== null ? `${props.farm.size} m²` : null, mono: true },
+    { label: 'Sensors', value: props.sensorDbStats?.totalSensors ?? props.sensors.length, mono: true },
+    { label: 'Updated', value: new Date(props.farm.updated_at).toLocaleDateString(), mono: true },
+    { label: 'Description', value: props.farm.description || 'No description yet.', stacked: true },
+]);
+
 const deleteFarm = () => {
     if (confirm(`Are you sure you want to delete ${props.farm.name}?`)) {
         router.delete(route('farms.destroy', props.farm.id));
@@ -134,7 +144,7 @@ const deleteFarm = () => {
     <Head :title="farm.name" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Farm detail" :title="farm.name" sample-data>
                 <template #actions>
                     <Button variant="outline" as-child>
@@ -212,28 +222,7 @@ const deleteFarm = () => {
                 </SectionCard>
 
                 <SectionCard title="Farm information" class="flex-[1_1_280px]">
-                    <dl class="m-0 flex flex-col">
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Location</dt>
-                            <dd class="m-0 text-right text-[15px]">{{ farm.location ?? '–' }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Size</dt>
-                            <dd class="m-0 font-mono text-sm">{{ farm.size !== null ? `${farm.size} m²` : '–' }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Sensors</dt>
-                            <dd class="m-0 font-mono text-sm">{{ sensorDbStats?.totalSensors ?? sensors.length }}</dd>
-                        </div>
-                        <div class="flex justify-between gap-4 border-b border-row py-3">
-                            <dt class="text-sm text-muted-foreground">Updated</dt>
-                            <dd class="m-0 font-mono text-sm">{{ new Date(farm.updated_at).toLocaleDateString() }}</dd>
-                        </div>
-                        <div class="flex flex-col gap-1 pt-3">
-                            <dt class="text-sm text-muted-foreground">Description</dt>
-                            <dd class="m-0 text-[15px]">{{ farm.description || 'No description yet.' }}</dd>
-                        </div>
-                    </dl>
+                    <DescriptionList :items="farmInfo" />
                 </SectionCard>
             </div>
 
@@ -247,6 +236,6 @@ const deleteFarm = () => {
                     </template>
                 </DataTable>
             </SectionCard>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
+import EmptyState from '@/components/agronos/EmptyState.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import FilterSelect from '@/components/agronos/FilterSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,7 +77,7 @@ const rows = computed(() => {
     <Head title="Devices" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6 md:p-8">
+        <PageContainer>
             <PageHeader eyebrow="Manage" title="Devices">
                 <template #actions>
                     <Button as-child>
@@ -95,20 +97,14 @@ const rows = computed(() => {
                             placeholder="Search devices"
                             class="min-w-0 flex-[1_1_240px]"
                         />
-                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
-                            Farm
-                            <NativeSelect v-model="farm">
-                                <option value="all">All farms</option>
-                                <option v-for="name in farmOptions" :key="name" :value="name">{{ name }}</option>
-                            </NativeSelect>
-                        </label>
-                        <label class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
-                            Link
-                            <NativeSelect v-model="link">
-                                <option value="all">All links</option>
-                                <option v-for="type in linkOptions" :key="type" :value="type">{{ deviceTypeLabel(type) }}</option>
-                            </NativeSelect>
-                        </label>
+                        <FilterSelect v-model="farm" label="Farm">
+                            <option value="all">All farms</option>
+                            <option v-for="name in farmOptions" :key="name" :value="name">{{ name }}</option>
+                        </FilterSelect>
+                        <FilterSelect v-model="link" label="Link">
+                            <option value="all">All links</option>
+                            <option v-for="type in linkOptions" :key="type" :value="type">{{ deviceTypeLabel(type) }}</option>
+                        </FilterSelect>
                     </div>
                 </section>
 
@@ -130,13 +126,11 @@ const rows = computed(() => {
                 </SectionCard>
             </template>
 
-            <div v-else class="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
-                <h2 class="m-0 text-lg font-semibold">No devices yet</h2>
-                <p class="m-0 text-[15px] text-muted-foreground">Register a device to start receiving readings.</p>
-                <Button as-child>
+            <EmptyState v-else title="No devices yet" text="Register a device to start receiving readings."
+                ><Button as-child>
                     <Link :href="route('devices.create')">Add your first device</Link>
-                </Button>
-            </div>
-        </div>
+                </Button></EmptyState
+            >
+        </PageContainer>
     </AppLayout>
 </template>
