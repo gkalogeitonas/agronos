@@ -70,3 +70,10 @@ export const sampleDeviceActivity: ActivityItem[] = [
     { id: 3, when: '3 h', text: 'Uplink received, signal -101 dBm' },
     { id: 4, when: '1 day', text: 'Firmware check completed' },
 ];
+
+/** Follow-up: actuators and irrigation valve control. */
+export const sampleActuators = [
+    { id: 1, name: 'Zone A valve', farm: 'North Orchard', kind: 'Irrigation valve', state: 'Closed', lastRun: '6 h' },
+    { id: 2, name: 'Zone B valve', farm: 'North Orchard', kind: 'Irrigation valve', state: 'Closed', lastRun: '1 day' },
+    { id: 3, name: 'Bay 1 vent', farm: 'Hilltop Greenhouse', kind: 'Vent motor', state: 'Open', lastRun: '25 min' },
+];

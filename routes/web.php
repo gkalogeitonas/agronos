@@ -51,6 +51,12 @@ Route::middleware(['auth', 'verified'])->get('/test-sensor-event/{sensor}', func
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])->name('dashboard');
 
+// Placeholder pages for features from the redesign that have no backend yet (sample data only)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::inertia('/alerts', 'Alerts/Index')->name('alerts.index');
+    Route::inertia('/actuators', 'Actuators/Index')->name('actuators.index');
+});
+
 // Farm resource routes
 Route::resource('farms', FarmController::class)
     ->middleware(['auth', 'verified']);
