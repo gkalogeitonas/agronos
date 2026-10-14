@@ -52,6 +52,8 @@
     --color-danger-soft: var(--danger-soft);
     --color-danger-ink: var(--danger-ink);
     --color-row: var(--row);
+    --color-sun: var(--sun);
+    --color-threshold: var(--threshold);
 
     --color-border: var(--border);
     --color-input: var(--input);
@@ -103,6 +105,8 @@
     --danger-soft: #f3d6d0;
     --danger-ink: #7a1f12;
     --row: #ecf0e9;
+    --sun: #e0a526;
+    --threshold: #b7791f;
     --border: #dde4d9;
     --input: #c7d2c3;
     --ring: #1f7a4d;

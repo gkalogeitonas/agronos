@@ -15,6 +15,8 @@ export interface NavItem {
     href: string;
     icon?: LucideIcon;
     isActive?: boolean;
+    /** Short label shown next to the title, e.g. PROPOSED for features not built yet. */
+    badge?: string;
 }
 
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
