@@ -12,7 +12,7 @@ import { computed, ref } from 'vue';
 
 type ToneFilter = 'all' | AlertItem['tone'];
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Alerts', href: '/alerts' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Alerts', href: route('alerts.index') }];
 
 const tone = ref<ToneFilter>('all');
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { capitalize } from '@/lib/format';
 import { statusTone, type StatusTone } from '@/lib/theme';
 import { computed } from 'vue';
 
@@ -19,10 +20,7 @@ const toneClasses: Record<StatusTone, string> = {
 };
 
 const classes = computed(() => toneClasses[props.tone ?? statusTone(props.status)]);
-const label = computed(() => {
-    const value = props.status ?? 'Unknown';
-    return value.charAt(0).toUpperCase() + value.slice(1);
-});
+const label = computed(() => capitalize(props.status ?? 'Unknown'));
 </script>
 
 <template>

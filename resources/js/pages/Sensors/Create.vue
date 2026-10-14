@@ -34,7 +34,7 @@ const SensorTypes = computed(() => props.SensorTypes ?? []);
 const farms = computed(() => props.farms ?? []);
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Sensors', href: '/sensors' },
+    { title: 'Sensors', href: route('sensors.index') },
     { title: 'Add sensor', href: route('sensors.create') },
 ];
 

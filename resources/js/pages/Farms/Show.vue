@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AlertList from '@/components/agronos/AlertList.vue';
+import ConfirmDeleteButton from '@/components/agronos/ConfirmDeleteButton.vue';
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import DeviceTable from '@/components/agronos/DeviceTable.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
@@ -17,9 +18,9 @@ import { sampleAlerts, sampleIrrigationThreshold, sampleMoistureSeries, sampleTr
 import { sensorColors, sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
 import type { Sensor } from '@/types/sensor';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { Pencil, Plus } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface ReadingStats {
@@ -53,7 +54,7 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Farms', href: '/farms' },
+    { title: 'Farms', href: route('farms.index') },
     { title: props.farm.name, href: route('farms.show', props.farm.id) },
 ];
 
@@ -95,12 +96,6 @@ const farmInfo = computed<DescriptionItem[]>(() => [
     { label: 'Updated', value: new Date(props.farm.updated_at).toLocaleDateString(), mono: true },
     { label: 'Description', value: props.farm.description || 'No description yet.', stacked: true },
 ]);
-
-const deleteFarm = () => {
-    if (confirm(`Are you sure you want to delete ${props.farm.name}?`)) {
-        router.delete(route('farms.destroy', props.farm.id));
-    }
-};
 </script>
 
 <template>
@@ -113,7 +108,7 @@ const deleteFarm = () => {
                     <Button variant="outline" as-child>
                         <Link :href="route('farms.edit', farm.id)"><Pencil /> Edit</Link>
                     </Button>
-                    <Button variant="outline" class="text-destructive hover:text-destructive" @click="deleteFarm"><Trash2 /> Delete</Button>
+                    <ConfirmDeleteButton :url="route('farms.destroy', farm.id)" :item-name="farm.name" />
                     <Button as-child>
                         <Link :href="route('farms.sensors.create', { farm: farm.id })"><Plus /> Add sensor</Link>
                     </Button>
@@ -155,7 +150,7 @@ const deleteFarm = () => {
 
                 <SectionCard title="Needs attention" class="flex-[1_1_280px]">
                     <template #actions>
-                        <Link href="/alerts" class="text-sm font-medium text-info hover:text-foreground">View all</Link>
+                        <Link :href="route('alerts.index')" class="text-sm font-medium text-info hover:text-foreground">View all</Link>
                     </template>
                     <AlertList :alerts="sampleAlerts.slice(1, 4)" />
                 </SectionCard>

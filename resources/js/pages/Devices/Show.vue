@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ActivityFeed from '@/components/agronos/ActivityFeed.vue';
+import ComingSoonButton from '@/components/agronos/ComingSoonButton.vue';
 import DescriptionList from '@/components/agronos/DescriptionList.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
@@ -8,7 +9,6 @@ import StatTile from '@/components/agronos/StatTile.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
 import { useTimestamp } from '@/composables/useTimestamp';
@@ -16,7 +16,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { deviceTypeLabel, formatReading, isLowBattery } from '@/lib/format';
 import { sampleDeviceActivity, sampleFirmwareVersion } from '@/lib/sampleData';
 import { sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
-import { type DeviceSummary } from '@/types';
+import { type BreadcrumbItem as BreadcrumbItemType, type DeviceSummary } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -36,6 +36,11 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+
+const breadcrumbs: BreadcrumbItemType[] = [
+    { title: 'Devices', href: route('devices.index') },
+    { title: props.device.name, href: route('devices.show', props.device.id) },
+];
 const { formatAge, formatTimestamp } = useTimestamp();
 const liveReadings = useLiveSensorReadings(props.sensors);
 
@@ -97,22 +102,9 @@ const comingSoon = 'Coming soon: device commands are not available yet';
 <template>
     <Head :title="device.name" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <PageContainer>
             <PageHeader :title="device.name" sample-data>
-                <template #breadcrumb>
-                    <Breadcrumb>
-                        <BreadcrumbList class="text-sm">
-                            <BreadcrumbItem>
-                                <BreadcrumbLink as-child><Link :href="route('devices.index')" class="text-info">Devices</Link></BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator />
-                            <BreadcrumbItem
-                                ><BreadcrumbPage>{{ device.name }}</BreadcrumbPage></BreadcrumbItem
-                            >
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </template>
                 <template #meta>
                     <StatusBadge :status="device.status" />
                     <span v-if="farms.length > 0" class="text-body text-muted-foreground">
@@ -123,8 +115,8 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                     </span>
                 </template>
                 <template #actions>
-                    <Button variant="outline" disabled :title="comingSoon">Restart device</Button>
-                    <Button disabled :title="comingSoon">Update firmware</Button>
+                    <ComingSoonButton variant="outline" :reason="comingSoon">Restart device</ComingSoonButton>
+                    <ComingSoonButton :reason="comingSoon">Update firmware</ComingSoonButton>
                 </template>
             </PageHeader>
 
@@ -186,8 +178,8 @@ const comingSoon = 'Coming soon: device commands are not available yet';
                         Closed. A manual or agent-controlled irrigation run could be started here once actuators are supported.
                     </p>
                     <div class="flex flex-wrap gap-3">
-                        <Button disabled :title="comingSoon">Open valve</Button>
-                        <Button variant="outline" disabled :title="comingSoon">Set schedule</Button>
+                        <ComingSoonButton :reason="comingSoon">Open valve</ComingSoonButton>
+                        <ComingSoonButton variant="outline" :reason="comingSoon">Set schedule</ComingSoonButton>
                     </div>
                 </SectionCard>
             </div>

@@ -9,7 +9,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { deviceTypeLabel } from '@/lib/format';
+import { capitalize, deviceTypeLabel } from '@/lib/format';
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -21,7 +21,7 @@ const props = defineProps<{
     devices: DeviceRow[];
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: '/devices' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: route('devices.index') }];
 
 const status = ref<StatusFilter>('all');
 const search = ref('');
@@ -32,7 +32,7 @@ const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
     { value: 'all', label: 'All', count: props.devices.length },
     ...(['online', 'registered', 'offline', 'error'] as const).map((value) => ({
         value,
-        label: value.charAt(0).toUpperCase() + value.slice(1),
+        label: capitalize(value),
         count: props.devices.filter((device) => device.status === value).length,
     })),
 ]);

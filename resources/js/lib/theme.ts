@@ -1,3 +1,5 @@
+import { capitalize } from '@/lib/format';
+
 /**
  * Signal colours from the Field instrument palette, for places that need raw values
  * (SVG strokes, ApexCharts). Keep in sync with the tokens in resources/css/app.css.
@@ -73,4 +75,4 @@ export const sensorColors: Record<string, string> = {
     light: signalColors.ink,
 };
 
-export const sensorTypeLabel = (type: string | null | undefined): string => (type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown');
+export const sensorTypeLabel = (type: string | null | undefined): string => (type ? capitalize(type) : 'Unknown');

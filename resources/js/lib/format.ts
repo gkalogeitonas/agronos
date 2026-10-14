@@ -23,3 +23,6 @@ export const formatBattery = (level: number | null | undefined): string => {
 };
 
 export const deviceTypeLabel = (type: string): string => ({ lora: 'LoRa', wifi: 'Wi-Fi', other: 'Other' })[type.toLowerCase()] ?? type;
+
+/** Upper-cases the first letter: `online` → `Online`. */
+export const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);

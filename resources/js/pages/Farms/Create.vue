@@ -1,37 +1,16 @@
 <script setup lang="ts">
-import FarmForm, { type FarmFormData } from '@/components/farms/FarmForm.vue';
+import FarmForm from '@/components/farms/FarmForm.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import type { Polygon } from 'geojson';
-import { ref } from 'vue';
+import { Head, Link } from '@inertiajs/vue3';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Farms', href: '/farms' },
+    { title: 'Farms', href: route('farms.index') },
     { title: 'Add farm', href: route('farms.create') },
 ];
-
-const form = useForm<FarmFormData>({
-    name: '',
-    location: '',
-    size: '',
-    coordinates: null,
-    description: '',
-});
-
-const polygon = ref<Polygon | null>(null);
-
-const handleMapPolygon = (value: Polygon | null) => {
-    polygon.value = value;
-    form.coordinates = value;
-};
-
-const submit = () => {
-    form.post(route('farms.store'));
-};
 </script>
 
 <template>
@@ -39,7 +18,7 @@ const submit = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <PageContainer>
             <PageHeader eyebrow="Farms" title="Add farm" />
-            <FarmForm :form="form" :polygon="polygon" :on-update-polygon="handleMapPolygon" :on-submit="submit">
+            <FarmForm :action="route('farms.store')" method="post">
                 <template #cancel>
                     <Button variant="outline" as-child><Link :href="route('farms.index')">Cancel</Link></Button>
                 </template>

@@ -12,7 +12,7 @@ import { RefreshCw } from 'lucide-vue-next';
 import QRCodeVue from 'qrcode.vue';
 import { computed, ref } from 'vue';
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Device QR generator', href: '/tools/device-qr' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Device QR generator', href: route('tools.device-qr') }];
 
 const deviceTypes = [
     { label: 'Wi-Fi', value: 'wifi' },

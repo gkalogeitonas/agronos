@@ -1,16 +1,16 @@
 <script setup lang="ts">
+import ComingSoonButton from '@/components/agronos/ComingSoonButton.vue';
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sampleActuators } from '@/lib/sampleData';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Actuators', href: '/actuators' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Actuators', href: route('actuators.index') }];
 
 const columns: DataTableColumn[] = [
     { key: 'name', label: 'Actuator', width: '1.6fr' },
@@ -31,7 +31,7 @@ const comingSoon = 'Coming soon: actuator control is not available yet';
         <PageContainer>
             <PageHeader eyebrow="Proposed" title="Actuators" sample-data>
                 <template #actions>
-                    <Button disabled :title="comingSoon">Add actuator</Button>
+                    <ComingSoonButton :reason="comingSoon">Add actuator</ComingSoonButton>
                 </template>
             </PageHeader>
 
@@ -49,7 +49,7 @@ const comingSoon = 'Coming soon: actuator control is not available yet';
                         <StatusBadge :status="row.state" :tone="row.state === 'Open' ? 'info' : 'neutral'" />
                     </template>
                     <template #cell-actions>
-                        <Button variant="outline" size="sm" disabled :title="comingSoon">Run</Button>
+                        <ComingSoonButton variant="outline" size="sm" :reason="comingSoon">Run</ComingSoonButton>
                     </template>
                 </DataTable>
             </SectionCard>

@@ -18,8 +18,8 @@ defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Devices', href: '/devices' },
-    { title: 'Add device', href: '/devices/create' },
+    { title: 'Devices', href: route('devices.index') },
+    { title: 'Add device', href: route('devices.create') },
 ];
 
 const form = useForm({

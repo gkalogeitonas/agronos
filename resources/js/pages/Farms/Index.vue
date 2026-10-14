@@ -19,7 +19,7 @@ const props = defineProps<{
     farms: FarmSummary[];
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Farms', href: '/farms' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Farms', href: route('farms.index') }];
 
 const search = ref('');
 const status = ref<FarmSummary['status'] | 'all'>('all');

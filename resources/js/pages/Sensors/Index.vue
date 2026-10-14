@@ -23,7 +23,7 @@ const props = defineProps<{
     farms: { id: number; name: string }[];
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Sensors', href: '/sensors' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Sensors', href: route('sensors.index') }];
 
 const { formatAge } = useTimestamp();
 const liveReadings = useLiveSensorReadings(props.sensors);
