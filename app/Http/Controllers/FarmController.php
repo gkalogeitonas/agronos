@@ -24,7 +24,7 @@ class FarmController extends Controller
     public function index(FarmOverviewService $farmOverview): Response
     {
         $this->authorize('viewAny', Farm::class);
-        $farms = Farm::where('user_id', Auth::id())->orderBy('name')->get();
+        $farms = Farm::orderBy('name')->get();
 
         return Inertia::render('Farms/Index', [
             'farms' => $farmOverview->summarize($farms),

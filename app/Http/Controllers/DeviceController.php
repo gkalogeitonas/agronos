@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\DeviceType;
 use App\Enums\SensorType;
 use App\Http\Requests\RegisterDeviceRequest;
+use App\Http\Resources\DeviceResource;
 use App\Models\Device;
 use App\Services\MqttCredentialService;
 use App\Services\TimeSeries\SensorTimeSeriesService;
@@ -23,17 +24,15 @@ class DeviceController extends Controller
      */
     public function index(): Response
     {
+        $this->authorize('viewAny', Device::class);
+
         $devices = Device::query()
             ->with('sensors.farm:id,name')
             ->orderBy('name')
-            ->get(['id', 'name', 'uuid', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at'])
-            ->map(fn (Device $device) => [
-                ...$device->only(['id', 'name', 'uuid', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at']),
-                'farms' => $device->sensors->pluck('farm')->filter()->unique('id')->pluck('name')->values(),
-            ]);
+            ->get(['id', 'name', 'uuid', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at']);
 
         return Inertia::render('Devices/Index', [
-            'devices' => $devices,
+            'devices' => DeviceResource::collection($devices)->resolve(),
         ]);
     }
 
@@ -77,7 +76,9 @@ class DeviceController extends Controller
     {
         $this->authorize('view', $device);
 
-        $sensors = $device->sensors()->with('farm:id,name')->get();
+        $sensors = $device->load('sensors.farm:id,name')->sensors;
+        $farms = $device->linkedFarms()->map->only(['id', 'name'])->values();
+        $device->unsetRelation('sensors');
 
         // Prefer device-level battery_level if present, otherwise use battery sensor last_reading
         $batteryReading = $this->getBatteryLevel($device, $sensors);
@@ -90,7 +91,7 @@ class DeviceController extends Controller
         return Inertia::render('Devices/Show', [
             'device' => $device,
             'sensors' => $sensors,
-            'farms' => $sensors->pluck('farm')->filter()->unique('id')->map->only(['id', 'name'])->values(),
+            'farms' => $farms,
             'batteryReading' => $batteryReading,
             'batteryTimeSeries' => Inertia::defer(fn () => $batterySensorId ? $ts->recentReadings((int) $batterySensorId, '-24h', 100) : []),
         ]);
