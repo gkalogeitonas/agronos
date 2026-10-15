@@ -44,6 +44,14 @@ test('dashboard summarises the fleet and each farm', function () {
         );
 });
 
+test('dashboard shares the configured low battery threshold with the frontend', function () {
+    config(['agronos.low_battery_percent' => 30]);
+
+    $this->actingAs(User::factory()->create())
+        ->get('/dashboard')
+        ->assertInertia(fn ($page) => $page->where('lowBatteryPercent', 30));
+});
+
 test('dashboard does not include other users farms or devices', function () {
     $user = User::factory()->create();
     Farm::factory()->create();

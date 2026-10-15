@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DeviceStatus;
 use App\Enums\DeviceType;
 use App\Traits\BelongsToTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -59,6 +60,27 @@ class Device extends Authenticatable
     public function linkedFarms(): Collection
     {
         return $this->sensors->pluck('farm')->filter()->unique('id')->values();
+    }
+
+    /**
+     * Battery percentage below which a device is reported as low battery.
+     */
+    public static function lowBatteryPercent(): int
+    {
+        return config('agronos.low_battery_percent');
+    }
+
+    public function isLowBattery(): bool
+    {
+        return $this->battery_level !== null && $this->battery_level < self::lowBatteryPercent();
+    }
+
+    /**
+     * Scope to devices whose reported battery level is below the low-battery threshold.
+     */
+    public function scopeLowBattery(Builder $query): Builder
+    {
+        return $query->where('battery_level', '<', self::lowBatteryPercent());
     }
 
     public function isLoRa(): bool

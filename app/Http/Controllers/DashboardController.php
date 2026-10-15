@@ -27,7 +27,7 @@ class DashboardController extends Controller
                 'farms' => Farm::query()->count(),
                 'devicesTotal' => Device::query()->count(),
                 'devicesOnline' => Device::query()->where('status', DeviceStatus::ONLINE)->count(),
-                'lowBattery' => Device::query()->where('battery_level', '<', 20)->count(),
+                'lowBattery' => Device::query()->lowBattery()->count(),
             ],
             'farms' => $farmOverview->summarize(Farm::query()->orderBy('name')->get()),
         ]);
