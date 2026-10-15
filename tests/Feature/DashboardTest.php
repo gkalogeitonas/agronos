@@ -37,6 +37,7 @@ test('dashboard summarises the fleet and each farm', function () {
             ->where('fleet.lowBattery', 1)
             ->where('farms.0.name', 'North Orchard')
             ->where('farms.0.status', 'warning')
+            ->where('farms.0.statusLabel', 'Warning')
             ->where('farms.0.devicesOnline', 1)
             ->where('farms.0.devicesTotal', 2)
             ->where('farms.0.moisture', 35)

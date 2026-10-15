@@ -10,13 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sampleOpenAlertsForFarm, sampleZoneCount } from '@/lib/sampleData';
-import { farmStatusLabels } from '@/lib/theme';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
     farms: FarmSummary[];
+    farmStatuses: { value: FarmSummary['status']; label: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Farms', href: route('farms.index') }];
@@ -67,7 +67,7 @@ const rows = computed(() => {
                     <Input v-model="search" type="search" aria-label="Search farms" placeholder="Search farms" class="min-w-0 flex-[1_1_240px]" />
                     <FilterSelect v-model="status" label="Status">
                         <option value="all">All statuses</option>
-                        <option v-for="(label, value) in farmStatusLabels" :key="value" :value="value">{{ label }}</option>
+                        <option v-for="option in farmStatuses" :key="option.value" :value="option.value">{{ option.label }}</option>
                     </FilterSelect>
                     <span class="font-mono text-meta text-muted-foreground">{{ rows.length }} of {{ farms.length }} farms</span>
                 </div>
@@ -80,7 +80,7 @@ const rows = computed(() => {
                         </span>
                     </template>
                     <template #cell-status="{ row }">
-                        <StatusBadge :status="farmStatusLabels[row.status]" />
+                        <StatusBadge :status="row.statusLabel" />
                     </template>
                     <template #cell-actions="{ row }">
                         <span class="flex items-center gap-4">

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import { formatReading } from '@/lib/format';
-import { farmStatusLabels } from '@/lib/theme';
 import type { FarmSummary } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -25,7 +24,7 @@ const metrics = computed(() => [
                 <h3 class="m-0 truncate text-xl font-bold">{{ farm.name }}</h3>
                 <div class="font-mono text-xs text-muted-foreground">{{ farm.location ?? 'No location' }} · {{ zoneCount }} zones</div>
             </div>
-            <StatusBadge :status="farmStatusLabels[farm.status]" />
+            <StatusBadge :status="farm.statusLabel" />
         </div>
         <dl class="m-0 grid grid-cols-3 gap-3">
             <div v-for="metric in metrics" :key="metric.label" class="flex flex-col gap-0.5">

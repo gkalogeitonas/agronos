@@ -45,7 +45,9 @@ export interface FarmSummary {
     location: string | null;
     size: number | null;
     center: { lng: number; lat: number } | null;
+    /** Mirrors App\\Enums\\FarmStatus. */
     status: 'ok' | 'warning' | 'offline' | 'unknown';
+    statusLabel: string;
     sensors: number;
     devicesOnline: number;
     devicesTotal: number;

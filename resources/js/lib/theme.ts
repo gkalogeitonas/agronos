@@ -49,14 +49,6 @@ export const toneColors: Record<StatusTone, string> = {
     neutral: signalColors.muted,
 };
 
-/** Display labels for the derived farm status from FarmOverviewService. */
-export const farmStatusLabels = {
-    ok: 'OK',
-    warning: 'Warning',
-    offline: 'Offline',
-    unknown: 'No devices',
-} as const;
-
 /** Units per sensor type. Mirrors App\\Enums\\SensorType::unit(). */
 export const sensorUnits: Record<string, string> = {
     moisture: '%',
