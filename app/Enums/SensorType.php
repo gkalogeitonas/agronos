@@ -41,6 +41,22 @@ enum SensorType: string
     }
 
     /**
+     * Types with their label and unit, for frontend display.
+     *
+     * @return list<array{value: string, label: string, unit: string}>
+     */
+    public static function options(): array
+    {
+        $labels = self::labels();
+
+        return array_map(fn (self $type) => [
+            'value' => $type->value,
+            'label' => $labels[$type->value],
+            'unit' => $type->unit(),
+        ], self::cases());
+    }
+
+    /**
      * Values that are relevant for farm-facing UIs (exclude internal-only types).
      */
     public static function farmRelevantValues(): array

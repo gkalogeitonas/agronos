@@ -23,4 +23,19 @@ enum DeviceStatus: string
             self::ERROR->value => 'Error',
         ];
     }
+
+    /**
+     * Statuses in display order, for frontend filters.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    public static function options(): array
+    {
+        $labels = self::labels();
+
+        return array_map(fn (self $status) => [
+            'value' => $status->value,
+            'label' => $labels[$status->value],
+        ], self::cases());
+    }
 }

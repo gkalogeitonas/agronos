@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\DeviceStatus;
+use App\Enums\SensorType;
 use App\Models\Device;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -62,6 +64,10 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'lowBatteryPercent' => Device::lowBatteryPercent(),
+            'enums' => [
+                'deviceStatuses' => DeviceStatus::options(),
+                'sensorTypes' => SensorType::options(),
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

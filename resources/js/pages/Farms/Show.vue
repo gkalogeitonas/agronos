@@ -15,7 +15,8 @@ import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatReading } from '@/lib/format';
 import { sampleAlerts, sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
-import { sensorColors, sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
+import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
+import { sensorColors, signalColors } from '@/lib/theme';
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link } from '@inertiajs/vue3';
@@ -76,10 +77,10 @@ const readingTiles = computed(() => {
                 type,
                 label: type === 'temperature' ? 'Air temperature' : sensorTypeLabel(type),
                 value: formatReading(averages[type]),
-                unit: sensorUnits[type] ?? '',
+                unit: sensorUnit(type),
                 note:
                     range && range.minReading !== null
-                        ? `24 h range ${formatReading(range.minReading)}–${formatReading(range.maxReading, sensorUnits[type])}`
+                        ? `24 h range ${formatReading(range.minReading)}–${formatReading(range.maxReading, sensorUnit(type))}`
                         : 'Average of online sensors',
             };
         });

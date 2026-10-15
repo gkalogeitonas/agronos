@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
 import { useTimestamp } from '@/composables/useTimestamp';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { deviceTypeLabel, formatReading, isLowBattery } from '@/lib/format';
 import { sampleDeviceActivity, sampleFirmwareVersion } from '@/lib/sampleData';
-import { sensorTypeLabel, sensorUnits, signalColors } from '@/lib/theme';
+import { signalColors } from '@/lib/theme';
 import { type BreadcrumbItem as BreadcrumbItemType, type DeviceSummary } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
@@ -59,7 +60,7 @@ const readingTiles = computed(() =>
             id: sensor.id,
             label: sensor.type === 'temperature' ? 'Air temperature' : sensorTypeLabel(sensor.type),
             value: formatReading(liveReadings[sensor.id]?.value),
-            unit: sensorUnits[sensor.type] ?? '',
+            unit: sensorUnit(sensor.type),
             note: sensor.name,
         })),
 );

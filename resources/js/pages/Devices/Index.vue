@@ -9,7 +9,8 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { capitalize, deviceTypeLabel } from '@/lib/format';
+import { deviceStatusOptions } from '@/lib/enums';
+import { deviceTypeLabel } from '@/lib/format';
 import { type BreadcrumbItem, type DeviceSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -30,9 +31,9 @@ const link = ref('all');
 
 const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
     { value: 'all', label: 'All', count: props.devices.length },
-    ...(['online', 'registered', 'offline', 'error'] as const).map((value) => ({
-        value,
-        label: capitalize(value),
+    ...deviceStatusOptions().map(({ value, label }) => ({
+        value: value as DeviceSummary['status'],
+        label,
         count: props.devices.filter((device) => device.status === value).length,
     })),
 ]);

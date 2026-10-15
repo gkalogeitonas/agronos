@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
 import { useTimestamp } from '@/composables/useTimestamp';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { deviceStatusOptions, sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { formatReading } from '@/lib/format';
-import { sensorTypeLabel, sensorUnits } from '@/lib/theme';
 import { type BreadcrumbItem } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link } from '@inertiajs/vue3';
@@ -67,7 +67,7 @@ const groups = computed(() => {
                 id: sensor.id,
                 name: sensor.name,
                 context: groupBy.value === 'farm' ? sensorTypeLabel(sensor.type) : farmName(sensor.farm_id),
-                latest: formatReading(liveReadings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
+                latest: formatReading(liveReadings[sensor.id]?.value, sensorUnit(sensor.type)),
                 seen: formatAge(liveReadings[sensor.id]?.time),
                 status: sensorStatus(sensor),
             }));
@@ -107,10 +107,7 @@ const columns = computed<DataTableColumn[]>(() => [
                         </FilterSelect>
                         <FilterSelect v-model="status" label="Status">
                             <option value="all">All statuses</option>
-                            <option value="online">Online</option>
-                            <option value="registered">Registered</option>
-                            <option value="offline">Offline</option>
-                            <option value="error">Error</option>
+                            <option v-for="option in deviceStatusOptions()" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </FilterSelect>
                         <div class="inline-flex items-center gap-2.5 text-sm text-muted-foreground">
                             Group by
