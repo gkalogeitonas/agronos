@@ -10,6 +10,7 @@ use App\Services\TimeSeries\FarmTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class FarmController extends Controller
 {
@@ -20,7 +21,7 @@ class FarmController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(FarmOverviewService $farmOverview)
+    public function index(FarmOverviewService $farmOverview): Response
     {
         $this->authorize('viewAny', Farm::class);
         $farms = Farm::where('user_id', Auth::id())->orderBy('name')->get();

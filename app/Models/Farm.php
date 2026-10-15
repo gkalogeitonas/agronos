@@ -6,6 +6,7 @@ use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Farm extends Model
 {
@@ -39,7 +40,7 @@ class Farm extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function getAreaAttribute()
+    public function getAreaAttribute(): float|int
     {
         if (! $this->coordinates || ! isset($this->coordinates['coordinates'][0])) {
             return 0;
@@ -49,7 +50,10 @@ class Farm extends Model
         return $this->calculatePolygonArea($this->coordinates['coordinates'][0]);
     }
 
-    public function getCenterAttribute()
+    /**
+     * @return array{lng: float, lat: float}|null
+     */
+    public function getCenterAttribute(): ?array
     {
         if (! $this->coordinates || ! isset($this->coordinates['coordinates'][0])) {
             return null;
@@ -69,7 +73,7 @@ class Farm extends Model
         ];
     }
 
-    public function sensors()
+    public function sensors(): HasMany
     {
         return $this->hasMany(Sensor::class);
     }
