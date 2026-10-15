@@ -1,3 +1,6 @@
+import type { AppPageProps } from '@/types';
+import { usePage } from '@inertiajs/vue3';
+
 /**
  * Display formatters for readings and device health. Missing values render as an en dash.
  */
@@ -11,9 +14,9 @@ export const formatReading = (value: string | number | null | undefined, unit = 
 
 export const formatSignal = (dbm: number | null | undefined): string => (dbm === null || dbm === undefined ? '–' : `${dbm} dBm`);
 
-export const LOW_BATTERY_PERCENT = 20;
-
-export const isLowBattery = (level: number | null | undefined): boolean => level !== null && level !== undefined && level < LOW_BATTERY_PERCENT;
+/** Threshold comes from the backend (`config/agronos.php`) via the shared `lowBatteryPercent` prop. */
+export const isLowBattery = (level: number | null | undefined): boolean =>
+    level !== null && level !== undefined && level < usePage<AppPageProps>().props.lowBatteryPercent;
 
 export const formatBattery = (level: number | null | undefined): string => {
     if (level === null || level === undefined) {
