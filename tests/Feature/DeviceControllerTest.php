@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Device;
+use App\Models\Farm;
+use App\Models\Sensor;
 use App\Models\User;
 use App\Services\EmqxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,5 +102,28 @@ describe('DeviceController@createMqttCredentials', function () {
         $response = $this->post(route('devices.mqtt.create', $device));
 
         $response->assertRedirect(route('login'));
+    });
+});
+
+describe('DeviceController@index', function () {
+
+    it('lists only the tenant devices with their farm names', function () {
+        $user = User::factory()->create();
+        $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
+        $device = Device::factory()->create(['user_id' => $user->id]);
+        Sensor::factory()->count(2)->create(['user_id' => $user->id, 'device_id' => $device->id, 'farm_id' => $farm->id]);
+        Device::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('devices.index'))
+            ->assertInertia(fn ($page) => $page
+                ->component('Devices/Index')
+                ->has('devices', 1)
+                ->where('devices.0.farms', ['North Field'])
+                ->missing('devices.0.secret'));
+    });
+
+    it('requires authentication', function () {
+        $this->get(route('devices.index'))->assertRedirect(route('login'));
     });
 });

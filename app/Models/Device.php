@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
 class Device extends Authenticatable
@@ -48,6 +49,16 @@ class Device extends Authenticatable
     public function sensors(): HasMany
     {
         return $this->hasMany(Sensor::class);
+    }
+
+    /**
+     * Distinct farms of this device's sensors. Requires `sensors.farm` to be loaded.
+     *
+     * @return Collection<int, Farm>
+     */
+    public function linkedFarms(): Collection
+    {
+        return $this->sensors->pluck('farm')->filter()->unique('id')->values();
     }
 
     public function isLoRa(): bool
