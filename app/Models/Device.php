@@ -6,6 +6,8 @@ use App\Enums\DeviceStatus;
 use App\Enums\DeviceType;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -38,14 +40,13 @@ class Device extends Authenticatable
         'status' => DeviceStatus::class,
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function sensors()
+    public function sensors(): HasMany
     {
-        // Return a simplified array of sensors for frontend consumption
         return $this->hasMany(Sensor::class);
     }
 

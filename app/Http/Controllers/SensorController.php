@@ -14,6 +14,7 @@ use App\Models\Sensor;
 use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class SensorController extends Controller
 {
@@ -22,7 +23,7 @@ class SensorController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): Response
     {
         $this->authorize('viewAny', Sensor::class);
         $sensors = request()->user()->sensors()->with('device:id,name,status')->orderBy('name')->get();
