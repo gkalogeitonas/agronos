@@ -19,6 +19,13 @@ export interface NavItem {
     badge?: string;
 }
 
+/** One-time messages flashed by controllers, delivered as Inertia flash data (`HandleInertiaRequests`). */
+export interface FlashMessages {
+    success?: string;
+    error?: string;
+    info?: string;
+}
+
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     name: string;
     quote: { message: string; author: string };

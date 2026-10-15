@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Device;
+use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
 
@@ -48,6 +49,7 @@ it('can create a sensor', function () {
     ];
     $response = post('/sensors', $payload);
     $response->assertRedirect();
+    $response->assertSessionHas('success', 'Sensor added.');
     $this->assertDatabaseHas('sensors', ['uuid' => 'test-create-uuid']);
 });
 
@@ -59,6 +61,7 @@ it('can update a sensor', function () {
     ];
     $response = put('/sensors/'.$sensor->id, $payload);
     $response->assertRedirect();
+    $response->assertSessionHas('success', 'Sensor updated.');
     $this->assertDatabaseHas('sensors', ['id' => $sensor->id, 'lat' => 89.99, 'lon' => 88.88]);
 });
 
@@ -66,6 +69,7 @@ it('can delete a sensor', function () {
     $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id]);
     $response = delete('/sensors/'.$sensor->id);
     $response->assertRedirect();
+    $response->assertSessionHas('success', 'Sensor deleted.');
     $this->assertDatabaseMissing('sensors', ['id' => $sensor->id]);
 });
 
@@ -153,7 +157,7 @@ it('cannot create a sensor with a device_uuid that does not belong to the user',
 });
 
 it('can create a sensor with a farm', function () {
-    $farm = \App\Models\Farm::factory(['user_id' => $this->user->id])->create();
+    $farm = Farm::factory(['user_id' => $this->user->id])->create();
     $payload = [
         'uuid' => 'sensor-with-farm',
         'device_uuid' => $this->device->uuid,
@@ -164,6 +168,7 @@ it('can create a sensor with a farm', function () {
     ];
     $response = post('/sensors', $payload);
     $response->assertRedirect();
+    $response->assertSessionHas('success', 'Sensor added.');
     $this->assertDatabaseHas('sensors', [
         'uuid' => 'sensor-with-farm',
         'farm_id' => $farm->id,

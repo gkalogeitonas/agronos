@@ -1,4 +1,4 @@
-import { AppPageProps } from '@/types/index';
+import { AppPageProps, FlashMessages } from '@/types/index';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -15,6 +15,10 @@ declare module 'vite/client' {
 
 declare module '@inertiajs/core' {
     interface PageProps extends InertiaPageProps, AppPageProps {}
+
+    interface InertiaConfig {
+        flashDataType: FlashMessages;
+    }
 }
 
 declare module '@vue/runtime-core' {

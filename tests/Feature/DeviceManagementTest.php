@@ -44,6 +44,7 @@ test('authenticated user can delete a device', function () {
         ->delete(route('devices.destroy', $device));
 
     $response->assertRedirect(route('devices.index'));
+    $response->assertSessionHas('success', 'Device deleted.');
     $this->assertDatabaseMissing('devices', ['id' => $device->id]);
 });
 
