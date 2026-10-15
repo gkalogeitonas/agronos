@@ -3,29 +3,38 @@
 namespace App\Services;
 
 use App\Enums\DeviceStatus;
+use App\Enums\FarmHealth;
 use App\Enums\SensorType;
 use App\Models\Farm;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class FarmOverviewService
 {
     /**
      * Health summary per farm, derived from the farm's sensors and the devices they belong to.
      *
-     * Status is OK when every device is online, Offline when none are, Warning otherwise,
-     * and Unknown for a farm without devices.
+     * Counts and averages are aggregated in SQL, so the cost does not grow with the number of sensors.
      *
      * @param  EloquentCollection<int, Farm>  $farms
-     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, status: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
+     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, health: string, healthLabel: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
      */
     public function summarize(EloquentCollection $farms): Collection
     {
-        $farms->loadMissing('sensors.device');
+        $farms->loadCount('sensors');
+        $farms->loadAggregate([
+            'sensors as moisture_avg' => fn (Builder $query) => $query->where('type', SensorType::MOISTURE->value),
+            'sensors as temperature_avg' => fn (Builder $query) => $query->where('type', SensorType::TEMPERATURE->value),
+        ], 'last_reading', 'avg');
 
-        return $farms->map(function (Farm $farm): array {
-            $devices = $farm->sensors->pluck('device')->filter()->unique('id');
-            $devicesOnline = $devices->filter(fn ($device) => $device->status === DeviceStatus::ONLINE)->count();
+        $deviceCounts = $this->deviceCounts($farms->modelKeys());
+
+        return $farms->map(function (Farm $farm) use ($deviceCounts): array {
+            $devicesTotal = (int) ($deviceCounts[$farm->id]->total ?? 0);
+            $devicesOnline = (int) ($deviceCounts[$farm->id]->online ?? 0);
+            $health = FarmHealth::fromDeviceCounts($devicesOnline, $devicesTotal);
 
             return [
                 'id' => $farm->id,
@@ -33,32 +42,44 @@ class FarmOverviewService
                 'location' => $farm->location,
                 'size' => $farm->size !== null ? (float) $farm->size : null,
                 'center' => $farm->center,
-                'status' => $this->status($devicesOnline, $devices->count()),
-                'sensors' => $farm->sensors->count(),
+                'health' => $health->value,
+                'healthLabel' => FarmHealth::labels()[$health->value],
+                'sensors' => $farm->sensors_count,
                 'devicesOnline' => $devicesOnline,
-                'devicesTotal' => $devices->count(),
-                'moisture' => $this->averageReading($farm, SensorType::MOISTURE),
-                'temperature' => $this->averageReading($farm, SensorType::TEMPERATURE),
+                'devicesTotal' => $devicesTotal,
+                'moisture' => $this->roundReading($farm->moisture_avg),
+                'temperature' => $this->roundReading($farm->temperature_avg),
             ];
         })->values();
     }
 
-    private function status(int $online, int $total): string
+    /**
+     * Distinct devices per farm (through the farm's sensors) and how many of them are online.
+     *
+     * The farm ids come from an already tenant-scoped query, so the join needs no further scoping.
+     *
+     * @param  array<int, int>  $farmIds
+     * @return Collection<int, object{farm_id: int, total: int, online: int}>
+     */
+    private function deviceCounts(array $farmIds): Collection
     {
-        return match (true) {
-            $total === 0 => 'unknown',
-            $online === $total => 'ok',
-            $online === 0 => 'offline',
-            default => 'warning',
-        };
+        if ($farmIds === []) {
+            return collect();
+        }
+
+        return DB::table('sensors')
+            ->join('devices', 'devices.id', '=', 'sensors.device_id')
+            ->whereIn('sensors.farm_id', $farmIds)
+            ->groupBy('sensors.farm_id')
+            ->select('sensors.farm_id')
+            ->selectRaw('COUNT(DISTINCT devices.id) AS total')
+            ->selectRaw('COUNT(DISTINCT CASE WHEN devices.status = ? THEN devices.id END) AS online', [DeviceStatus::ONLINE->value])
+            ->get()
+            ->keyBy('farm_id');
     }
 
-    private function averageReading(Farm $farm, SensorType $type): ?float
+    private function roundReading(float|string|null $average): ?float
     {
-        $readings = $farm->sensors
-            ->filter(fn ($sensor) => $sensor->type === $type->value && is_numeric($sensor->last_reading))
-            ->pluck('last_reading');
-
-        return $readings->isEmpty() ? null : round((float) $readings->avg(), 1);
+        return $average === null ? null : round((float) $average, 1);
     }
 }

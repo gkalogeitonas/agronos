@@ -29,7 +29,7 @@ const props = defineProps<{
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Overview', href: route('dashboard') }];
 
-const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.status === 'warning' || farm.status === 'offline').length);
+const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.health === 'warning' || farm.health === 'offline').length);
 </script>
 
 <template>

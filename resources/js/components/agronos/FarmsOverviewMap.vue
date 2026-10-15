@@ -21,10 +21,10 @@ const pinMarks: Record<StatusTone, string> = {
 };
 
 /**
- * Builds a pill-shaped link marker with a status mark, matching the design's farm pins.
+ * Builds a pill-shaped link marker with a health mark, matching the design's farm pins.
  */
 function createPin(farm: FarmSummary): HTMLAnchorElement {
-    const tone = statusTone(farm.status);
+    const tone = statusTone(farm.health);
     const pin = document.createElement('a');
     pin.href = route('farms.show', farm.id);
     pin.className =
@@ -35,7 +35,7 @@ function createPin(farm: FarmSummary): HTMLAnchorElement {
     mark.setAttribute('aria-hidden', 'true');
     mark.textContent = pinMarks[tone];
     pin.append(mark, document.createTextNode(farm.name));
-    pin.setAttribute('aria-label', `${farm.name}, status ${farm.status}`);
+    pin.setAttribute('aria-label', `${farm.name}, health ${farm.healthLabel}`);
     return pin;
 }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FarmHealth;
 use App\Http\Requests\FarmRequest;
 use App\Models\Device;
 use App\Models\Farm;
@@ -28,6 +29,7 @@ class FarmController extends Controller
 
         return Inertia::render('Farms/Index', [
             'farms' => $farmOverview->summarize($farms),
+            'farmHealthOptions' => FarmHealth::options(),
         ]);
     }
 
