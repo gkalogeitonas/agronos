@@ -1,5 +1,3 @@
-import { capitalize } from '@/lib/format';
-
 /**
  * Signal colours from the Field instrument palette, for places that need raw values
  * (SVG strokes, ApexCharts). Keep in sync with the tokens in resources/css/app.css.
@@ -49,16 +47,6 @@ export const toneColors: Record<StatusTone, string> = {
     neutral: signalColors.muted,
 };
 
-/** Units per sensor type. Mirrors App\\Enums\\SensorType::unit(). */
-export const sensorUnits: Record<string, string> = {
-    moisture: '%',
-    temperature: '°C',
-    humidity: '%',
-    light: 'lux',
-    battery: '%',
-    other: '',
-};
-
 /** Trend line colour per sensor type, one colour per signal. */
 export const sensorColors: Record<string, string> = {
     moisture: signalColors.water,
@@ -66,5 +54,3 @@ export const sensorColors: Record<string, string> = {
     humidity: signalColors.leaf,
     light: signalColors.ink,
 };
-
-export const sensorTypeLabel = (type: string | null | undefined): string => (type ? capitalize(type) : 'Unknown');

@@ -9,7 +9,7 @@ import SensorLocationPicker from '@/components/SensorLocationPicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sensorTypeLabel } from '@/lib/theme';
+import { sensorTypeLabel } from '@/lib/enums';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';

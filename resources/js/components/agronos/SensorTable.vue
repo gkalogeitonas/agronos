@@ -2,8 +2,8 @@
 import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.vue';
 import type { LiveReading } from '@/composables/useLiveSensorReadings';
 import { useTimestamp } from '@/composables/useTimestamp';
+import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { formatReading } from '@/lib/format';
-import { sensorTypeLabel, sensorUnits } from '@/lib/theme';
 import type { Sensor } from '@/types/sensor';
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -35,7 +35,7 @@ const rows = computed(() =>
         id: sensor.id,
         name: sensor.name,
         type: sensorTypeLabel(sensor.type),
-        latest: formatReading(props.readings[sensor.id]?.value, sensorUnits[sensor.type] ?? ''),
+        latest: formatReading(props.readings[sensor.id]?.value, sensorUnit(sensor.type)),
         seen: formatAge(props.readings[sensor.id]?.time),
     })),
 );

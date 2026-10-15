@@ -34,7 +34,17 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     sidebarOpen: boolean;
     /** Battery percentage below which a device counts as low battery (`config/agronos.php`). */
     lowBatteryPercent: number;
+    /** Backend enum cases with labels (`HandleInertiaRequests`). */
+    enums: {
+        deviceStatuses: EnumOption[];
+        sensorTypes: (EnumOption & { unit: string })[];
+    };
 };
+
+export interface EnumOption {
+    value: string;
+    label: string;
+}
 
 export interface User {
     id: number;

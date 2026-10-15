@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Switch from '@/components/ui/switch/Switch.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sensorTypeLabel } from '@/lib/theme';
+import { sensorTypeLabel } from '@/lib/enums';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
