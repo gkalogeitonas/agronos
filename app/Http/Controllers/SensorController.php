@@ -13,6 +13,7 @@ use App\Models\Farm;
 use App\Models\Sensor;
 use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -72,7 +73,7 @@ class SensorController extends Controller
             ]
         );
 
-        return redirect()->route('sensors.index');
+        return redirect()->route('sensors.index')->with('success', 'Sensor added.');
     }
 
     /**
@@ -126,7 +127,7 @@ class SensorController extends Controller
 
         $sensor->update($validated);
 
-        return redirect()->route('sensors.show', $sensor->id);
+        return redirect()->route('sensors.show', $sensor->id)->with('success', 'Sensor updated.');
     }
 
     /**
@@ -137,40 +138,53 @@ class SensorController extends Controller
         $this->authorize('delete', $sensor);
         $sensor->delete();
 
-        return redirect()->route('sensors.index');
+        return redirect()->route('sensors.index')->with('success', 'Sensor deleted.');
     }
 
     /**
      * Scan or add a sensor by QR code (uuid). If the sensor exists, update it; otherwise, create it.
+     *
+     * A repeated QR scan updates the existing sensor directly. A UUID typed by hand
+     * (`manual_entry`) that matches an existing sensor is rejected until the user
+     * confirms the update (`confirm_update`), so a typo cannot overwrite a sensor.
+     *
+     * @throws ValidationException
      */
     public function scan(ScanSensorRequest $request)
     {
         $validated = $request->validated();
+        $sensorAttributes = collect($validated)->except(['manual_entry', 'confirm_update']);
 
         $device = Device::where('uuid', $validated['device_uuid'])->firstOrFail();
         $sensor = Sensor::where('uuid', $validated['uuid'])->first();
         $this->authorize('view', $device); // This uses DevicePolicy
 
         if ($sensor) {
+            if ($request->boolean('manual_entry') && ! $request->boolean('confirm_update')) {
+                $existingSensor = $sensor->name ? "sensor \"{$sensor->name}\"" : 'sensor';
+
+                throw ValidationException::withMessages([
+                    'confirm_update' => "This UUID belongs to an existing {$existingSensor}. Confirm to update it, or check the UUID.",
+                ]);
+            }
+
             // Update sensor, but never update device_id or user_id from scan
-            $sensor->update(collect($validated)->except(['device_uuid', 'uuid'])->toArray());
+            $sensor->update($sensorAttributes->except(['device_uuid', 'uuid'])->toArray());
 
-            return redirect()->route('sensors.index');
-        } else {
-            // Create sensor, ensure user can create
-            $this->authorize('create', Sensor::class);
-
-            $sensor = Sensor::create(
-                collect($validated)
-                    ->except('device_uuid')
-                    ->toArray()
-                + [
-                    'user_id' => $request->user()->id,
-                    'device_id' => $device->id,
-                ]
-            );
-
-            return redirect()->route('sensors.index');
+            return redirect()->route('sensors.index')->with('success', 'Sensor updated.');
         }
+
+        // Create sensor, ensure user can create
+        $this->authorize('create', Sensor::class);
+
+        Sensor::create(
+            $sensorAttributes->except('device_uuid')->toArray()
+            + [
+                'user_id' => $request->user()->id,
+                'device_id' => $device->id,
+            ]
+        );
+
+        return redirect()->route('sensors.index')->with('success', 'Sensor added.');
     }
 }

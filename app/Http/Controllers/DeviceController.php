@@ -134,7 +134,7 @@ class DeviceController extends Controller
         $this->authorize('delete', $device);
         $device->delete();
 
-        return redirect()->route('devices.index');
+        return redirect()->route('devices.index')->with('success', 'Device deleted.');
     }
 
     private function getBatteryLevel(Device $device, $sensors): ?float

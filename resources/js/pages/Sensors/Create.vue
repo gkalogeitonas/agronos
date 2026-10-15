@@ -46,7 +46,12 @@ const form = useForm({
     device_uuid: '',
     lat: '',
     lon: '',
+    manual_entry: false,
+    confirm_update: false,
 });
+
+/** UUID from the last QR scan; any other UUID counts as typed by hand. */
+const scannedUuid = ref<string | null>(null);
 
 const showScanner = ref(false);
 const locationError = ref<string | null>(null);
@@ -60,11 +65,27 @@ const farmPolygon = computed(() => {
 });
 
 function submit(): void {
-    form.post(route('sensors.scan'));
+    form.transform((data) => ({ ...data, manual_entry: data.uuid !== scannedUuid.value })).post(route('sensors.scan'));
 }
 
+function confirmUpdate(): void {
+    form.confirm_update = true;
+    submit();
+}
+
+watch(
+    () => form.uuid,
+    () => {
+        form.confirm_update = false;
+        form.clearErrors('confirm_update');
+    },
+);
+
 function onScan(data: QrPayload): void {
-    if (data.uuid) form.uuid = data.uuid;
+    if (data.uuid) {
+        form.uuid = data.uuid;
+        scannedUuid.value = data.uuid;
+    }
     if (data.device_uuid) form.device_uuid = data.device_uuid;
     if (data.type) form.type = data.type;
     showScanner.value = false;
@@ -167,6 +188,15 @@ watch(
                             /></FormField>
                         </div>
                     </SectionCard>
+                </div>
+
+                <div
+                    v-if="form.errors.confirm_update"
+                    role="alert"
+                    class="flex flex-wrap items-center justify-between gap-3 rounded-md bg-warning-soft p-3 text-sm text-warning-foreground"
+                >
+                    <p class="m-0">{{ form.errors.confirm_update }}</p>
+                    <Button type="button" variant="outline" :disabled="form.processing" @click="confirmUpdate">Update existing sensor</Button>
                 </div>
 
                 <div class="flex justify-end gap-3">

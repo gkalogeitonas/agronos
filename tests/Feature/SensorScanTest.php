@@ -23,6 +23,7 @@ it('creates a new sensor on first scan', function () {
     ];
     $response = postJson(route('sensors.scan'), $payload);
     $response->assertRedirect();
+    $response->assertSessionHas('success', 'Sensor added.');
     $this->assertDatabaseHas('sensors', ['uuid' => 'test-uuid-123', 'device_id' => $this->device->id]);
 });
 
@@ -47,6 +48,7 @@ it('updates an existing sensor on repeated scan', function () {
     ];
     $response = postJson(route('sensors.scan'), $payload);
     $response->assertRedirect();
+    $response->assertSessionHas('success', 'Sensor updated.');
     $this->assertDatabaseHas('sensors', [
         'uuid' => 'test-uuid-123',
         'device_id' => $this->device->id,
@@ -55,6 +57,68 @@ it('updates an existing sensor on repeated scan', function () {
         'type' => 'humidity',
         'name' => 'Updated Name',
     ]);
+});
+
+it('rejects a manually entered uuid of an existing sensor until the update is confirmed', function () {
+    actingAs($this->user);
+    $sensor = Sensor::factory()->create([
+        'user_id' => $this->user->id,
+        'device_id' => $this->device->id,
+        'uuid' => 'test-uuid-123',
+        'name' => 'Old Name',
+    ]);
+    $payload = [
+        'device_uuid' => $this->device->uuid,
+        'uuid' => 'test-uuid-123',
+        'name' => 'Typo Name',
+        'manual_entry' => true,
+    ];
+
+    $response = postJson(route('sensors.scan'), $payload);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors([
+        'confirm_update' => 'This UUID belongs to an existing sensor "Old Name". Confirm to update it, or check the UUID.',
+    ]);
+    $this->assertDatabaseHas('sensors', ['id' => $sensor->id, 'name' => 'Old Name']);
+});
+
+it('updates an existing sensor from manual entry once the update is confirmed', function () {
+    actingAs($this->user);
+    $sensor = Sensor::factory()->create([
+        'user_id' => $this->user->id,
+        'device_id' => $this->device->id,
+        'uuid' => 'test-uuid-123',
+        'name' => 'Old Name',
+    ]);
+    $payload = [
+        'device_uuid' => $this->device->uuid,
+        'uuid' => 'test-uuid-123',
+        'name' => 'Updated Name',
+        'manual_entry' => true,
+        'confirm_update' => true,
+    ];
+
+    $response = postJson(route('sensors.scan'), $payload);
+
+    $response->assertRedirect(route('sensors.index'));
+    $response->assertSessionHas('success', 'Sensor updated.');
+    $this->assertDatabaseHas('sensors', ['id' => $sensor->id, 'name' => 'Updated Name']);
+});
+
+it('creates a sensor from manual entry of a new uuid', function () {
+    actingAs($this->user);
+    $payload = [
+        'device_uuid' => $this->device->uuid,
+        'uuid' => 'manual-uuid-456',
+        'manual_entry' => true,
+    ];
+
+    $response = postJson(route('sensors.scan'), $payload);
+
+    $response->assertRedirect(route('sensors.index'));
+    $response->assertSessionHas('success', 'Sensor added.');
+    $this->assertDatabaseHas('sensors', ['uuid' => 'manual-uuid-456', 'device_id' => $this->device->id]);
 });
 
 it('cannot update another user\'s sensor by scanning', function () {

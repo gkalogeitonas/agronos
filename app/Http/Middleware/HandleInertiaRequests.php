@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Device;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -18,6 +19,13 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Session keys that controllers flash with `->with()` and the layout shows as toasts.
+     *
+     * @var list<string>
+     */
+    private const FLASH_MESSAGE_KEYS = ['success', 'error', 'info'];
 
     /**
      * Determines the current asset version.
@@ -38,6 +46,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $this->flashSessionMessages($request);
+
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
         return [
@@ -54,5 +64,23 @@ class HandleInertiaRequests extends Middleware
             'lowBatteryPercent' => Device::lowBatteryPercent(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Hand the messages flashed to the session over to Inertia flash data. The
+     * client receives Inertia flash data once and keeps it out of browser
+     * history, so partial reloads and the back button do not repeat a toast.
+     */
+    private function flashSessionMessages(Request $request): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        $messages = array_filter($request->session()->only(self::FLASH_MESSAGE_KEYS));
+
+        if ($messages !== []) {
+            Inertia::flash($messages);
+        }
     }
 }

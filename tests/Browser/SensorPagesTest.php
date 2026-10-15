@@ -83,3 +83,60 @@ it('moves the sensor to the clicked point on the map', function () {
     $page->assertValueIsNot('#lat', '37.0582268')
         ->assertValueIsNot('#lon', '25.4074122');
 })->group('maps');
+
+it('asks before a typed uuid updates an existing sensor and confirms the update with a toast', function () {
+    $page = visit(route('sensors.create', absolute: false))
+        ->click('#allow-edit-switch')
+        ->fill('#name', 'Typed name')
+        ->select('#farm_id', (string) $this->farm->id)
+        ->select('#type', 'moisture')
+        ->fill('#uuid', $this->sensor->uuid)
+        ->fill('#device_uuid', $this->device->uuid)
+        ->fill('#lat', '37.1')
+        ->fill('#lon', '25.5')
+        ->press('button[type="submit"]')
+        ->assertSee('This UUID belongs to an existing sensor "Zone A probe". Confirm to update it, or check the UUID.')
+        ->assertPathIs(route('sensors.create', absolute: false));
+
+    expect($this->sensor->refresh()->name)->toBe('Zone A probe');
+
+    $page->press('Update existing sensor')
+        ->assertPathIs(route('sensors.index', absolute: false))
+        ->assertSee('Sensor updated.')
+        ->assertNoJavaScriptErrors();
+
+    expect($this->sensor->refresh()->name)->toBe('Typed name');
+});
+
+it('shows a toast after adding a sensor with a new uuid', function () {
+    visit(route('sensors.create', absolute: false))
+        ->click('#allow-edit-switch')
+        ->fill('#name', 'Zone B probe')
+        ->select('#farm_id', (string) $this->farm->id)
+        ->select('#type', 'moisture')
+        ->fill('#uuid', 'typed-new-uuid')
+        ->fill('#device_uuid', $this->device->uuid)
+        ->fill('#lat', '37.1')
+        ->fill('#lon', '25.5')
+        ->press('button[type="submit"]')
+        ->assertPathIs(route('sensors.index', absolute: false))
+        ->assertSee('Sensor added.')
+        ->assertNoJavaScriptErrors();
+
+    $this->assertDatabaseHas('sensors', ['uuid' => 'typed-new-uuid', 'name' => 'Zone B probe']);
+});
+
+it('does not repeat a toast when going back to the page that showed it', function () {
+    $page = visit(route('sensors.edit', $this->sensor, absolute: false))
+        ->press('Save changes')
+        ->assertPathIs(route('sensors.show', $this->sensor, absolute: false))
+        ->assertSee('Sensor updated.')
+        ->press('[aria-label="Dismiss"]')
+        ->assertDontSee('Sensor updated.')
+        ->click('Edit')
+        ->assertPathIs(route('sensors.edit', $this->sensor, absolute: false))
+        ->back()
+        ->assertPathIs(route('sensors.show', $this->sensor, absolute: false))
+        ->wait(1)
+        ->assertDontSee('Sensor updated.');
+});
