@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Enums\DeviceStatus;
-use App\Enums\FarmStatus;
+use App\Enums\FarmHealth;
 use App\Enums\SensorType;
 use App\Models\Farm;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +19,7 @@ class FarmOverviewService
      * Counts and averages are aggregated in SQL, so the cost does not grow with the number of sensors.
      *
      * @param  EloquentCollection<int, Farm>  $farms
-     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, status: string, statusLabel: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
+     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, health: string, healthLabel: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
      */
     public function summarize(EloquentCollection $farms): Collection
     {
@@ -34,7 +34,7 @@ class FarmOverviewService
         return $farms->map(function (Farm $farm) use ($deviceCounts): array {
             $devicesTotal = (int) ($deviceCounts[$farm->id]->total ?? 0);
             $devicesOnline = (int) ($deviceCounts[$farm->id]->online ?? 0);
-            $status = FarmStatus::fromDeviceCounts($devicesOnline, $devicesTotal);
+            $health = FarmHealth::fromDeviceCounts($devicesOnline, $devicesTotal);
 
             return [
                 'id' => $farm->id,
@@ -42,8 +42,8 @@ class FarmOverviewService
                 'location' => $farm->location,
                 'size' => $farm->size !== null ? (float) $farm->size : null,
                 'center' => $farm->center,
-                'status' => $status->value,
-                'statusLabel' => FarmStatus::labels()[$status->value],
+                'health' => $health->value,
+                'healthLabel' => FarmHealth::labels()[$health->value],
                 'sensors' => $farm->sensors_count,
                 'devicesOnline' => $devicesOnline,
                 'devicesTotal' => $devicesTotal,

@@ -24,7 +24,7 @@ const metrics = computed(() => [
                 <h3 class="m-0 truncate text-xl font-bold">{{ farm.name }}</h3>
                 <div class="font-mono text-xs text-muted-foreground">{{ farm.location ?? 'No location' }} · {{ zoneCount }} zones</div>
             </div>
-            <StatusBadge :status="farm.statusLabel" />
+            <StatusBadge :status="farm.healthLabel" />
         </div>
         <dl class="m-0 grid grid-cols-3 gap-3">
             <div v-for="metric in metrics" :key="metric.label" class="flex flex-col gap-0.5">

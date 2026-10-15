@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum FarmStatus: string
+enum FarmHealth: string
 {
     case OK = 'ok';
     case WARNING = 'warning';
@@ -35,14 +35,16 @@ enum FarmStatus: string
      */
     public static function options(): array
     {
-        return array_map(fn (self $status): array => [
-            'value' => $status->value,
-            'label' => self::labels()[$status->value],
+        return array_map(fn (self $health): array => [
+            'value' => $health->value,
+            'label' => self::labels()[$health->value],
         ], self::cases());
     }
 
     /**
-     * Status is OK when every device is online, Offline when none are, Warning otherwise,
+     * Health is derived from the farm's devices, never stored.
+     *
+     * OK when every device is online, Offline when none are, Warning otherwise,
      * and Unknown for a farm without devices.
      */
     public static function fromDeviceCounts(int $online, int $total): self

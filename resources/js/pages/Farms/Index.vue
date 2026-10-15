@@ -16,17 +16,17 @@ import { computed, ref } from 'vue';
 
 const props = defineProps<{
     farms: FarmSummary[];
-    farmStatuses: { value: FarmSummary['status']; label: string }[];
+    farmHealthOptions: { value: FarmSummary['health']; label: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Farms', href: route('farms.index') }];
 
 const search = ref('');
-const status = ref<FarmSummary['status'] | 'all'>('all');
+const health = ref<FarmSummary['health'] | 'all'>('all');
 
 const columns: DataTableColumn[] = [
     { key: 'name', label: 'Farm', width: '2.2fr' },
-    { key: 'status', label: 'Status', width: '1fr' },
+    { key: 'health', label: 'Health', width: '1fr' },
     { key: 'zones', label: 'Zones', width: '0.8fr', mono: true },
     { key: 'devices', label: 'Devices', width: '1fr', mono: true },
     { key: 'alerts', label: 'Open alerts', width: '1.1fr', mono: true },
@@ -37,7 +37,7 @@ const rows = computed(() => {
     const query = search.value.trim().toLowerCase();
 
     return props.farms
-        .filter((farm) => status.value === 'all' || farm.status === status.value)
+        .filter((farm) => health.value === 'all' || farm.health === health.value)
         .filter((farm) => query === '' || `${farm.name} ${farm.location ?? ''}`.toLowerCase().includes(query))
         .map((farm) => ({
             ...farm,
@@ -65,9 +65,9 @@ const rows = computed(() => {
             <SectionCard v-if="farms.length > 0" class="gap-5">
                 <div class="flex flex-wrap items-center gap-3">
                     <Input v-model="search" type="search" aria-label="Search farms" placeholder="Search farms" class="min-w-0 flex-[1_1_240px]" />
-                    <FilterSelect v-model="status" label="Status">
-                        <option value="all">All statuses</option>
-                        <option v-for="option in farmStatuses" :key="option.value" :value="option.value">{{ option.label }}</option>
+                    <FilterSelect v-model="health" label="Health">
+                        <option value="all">All</option>
+                        <option v-for="option in farmHealthOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                     </FilterSelect>
                     <span class="font-mono text-meta text-muted-foreground">{{ rows.length }} of {{ farms.length }} farms</span>
                 </div>
@@ -79,8 +79,8 @@ const rows = computed(() => {
                             <span class="font-mono text-xs text-muted-foreground">{{ row.location ?? 'No location' }}</span>
                         </span>
                     </template>
-                    <template #cell-status="{ row }">
-                        <StatusBadge :status="row.statusLabel" />
+                    <template #cell-health="{ row }">
+                        <StatusBadge :status="row.healthLabel" />
                     </template>
                     <template #cell-actions="{ row }">
                         <span class="flex items-center gap-4">

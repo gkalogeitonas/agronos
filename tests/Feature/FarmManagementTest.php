@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\FarmStatus;
+use App\Enums\FarmHealth;
 use App\Enums\SensorType;
 use App\Models\Farm;
 use App\Models\Sensor;
@@ -40,7 +40,7 @@ describe('Index (Viewing Farms List)', function () {
         $response->assertInertia(fn ($page) => $page
             ->component('Farms/Index')
             ->has('farms', 3)
-            ->where('farmStatuses', FarmStatus::options())
+            ->where('farmHealthOptions', FarmHealth::options())
         );
     });
 

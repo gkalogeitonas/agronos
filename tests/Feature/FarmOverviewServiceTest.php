@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\DeviceStatus;
-use App\Enums\FarmStatus;
+use App\Enums\FarmHealth;
 use App\Enums\SensorType;
 use App\Models\Device;
 use App\Models\Farm;
@@ -26,15 +26,15 @@ function farmWithDevices(array $statuses): Farm
     return $farm;
 }
 
-it('derives farm status from its devices', function (array $statuses, FarmStatus $expected) {
+it('derives farm health from its devices', function (array $statuses, FarmHealth $expected) {
     $summary = app(FarmOverviewService::class)->summarize(new EloquentCollection([farmWithDevices($statuses)]))->first();
 
-    expect($summary['status'])->toBe($expected->value);
+    expect($summary['health'])->toBe($expected->value);
 })->with([
-    'all online' => [[DeviceStatus::ONLINE, DeviceStatus::ONLINE], FarmStatus::OK],
-    'some offline' => [[DeviceStatus::ONLINE, DeviceStatus::OFFLINE], FarmStatus::WARNING],
-    'none online' => [[DeviceStatus::OFFLINE, DeviceStatus::ERROR], FarmStatus::OFFLINE],
-    'no devices' => [[], FarmStatus::UNKNOWN],
+    'all online' => [[DeviceStatus::ONLINE, DeviceStatus::ONLINE], FarmHealth::OK],
+    'some offline' => [[DeviceStatus::ONLINE, DeviceStatus::OFFLINE], FarmHealth::WARNING],
+    'none online' => [[DeviceStatus::OFFLINE, DeviceStatus::ERROR], FarmHealth::OFFLINE],
+    'no devices' => [[], FarmHealth::UNKNOWN],
 ]);
 
 it('counts a device once when it has several sensors on the farm', function () {
