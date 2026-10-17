@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\SensorRequest;
 
+use App\Enums\SensorType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Enums\SensorType;
 
 abstract class SensorRequest extends FormRequest
 {
+    public const UNREGISTERED_DEVICE_MESSAGE = 'No device with this UUID was found in your account. Check the UUID, or register the device first.';
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -36,7 +38,6 @@ abstract class SensorRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'device_uuid.exists' => 'The selected device UUID is invalid.',
             'uuid.unique' => 'A sensor with this UUID already exists.',
         ];
     }

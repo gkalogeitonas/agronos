@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Requests\SensorRequest\SensorRequest;
 use App\Models\Device;
 use App\Models\Sensor;
 use App\Models\User;
@@ -143,7 +144,8 @@ it('cannot update another user\'s sensor by scanning', function () {
         'name' => 'Hacked Name',
     ];
     $response = postJson(route('sensors.scan'), $payload);
-    $response->assertStatus(404);
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE]);
     $this->assertDatabaseMissing('sensors', [
         'id' => $sensor->id,
         'lat' => 89.9999999,
@@ -188,9 +190,32 @@ it('cannot create a sensor by scanning with a device that does not belong to the
         'name' => 'Should Not Be Created',
     ];
     $response = postJson(route('sensors.scan'), $payload);
-    $this->assertTrue(
-        in_array($response->status(), [403, 404]),
-        'Expected 403 Forbidden or 404 Not Found, got '.$response->status()
-    );
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE]);
     $this->assertDatabaseMissing('sensors', ['uuid' => 'scan-wrong-owner-device']);
+});
+
+it('tells the user to register the device first when the device uuid does not exist', function () {
+    actingAs($this->user);
+
+    $response = postJson(route('sensors.scan'), ['device_uuid' => 'missing-device', 'uuid' => 'new-sensor']);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE]);
+    $this->assertDatabaseMissing('sensors', ['uuid' => 'new-sensor']);
+});
+
+it('rejects a sensor uuid that belongs to another tenant without changing that sensor', function () {
+    $otherSensor = Sensor::factory()->create(['uuid' => 'taken-uuid', 'name' => 'Other Sensor']);
+    actingAs($this->user);
+
+    $response = postJson(route('sensors.scan'), [
+        'device_uuid' => $this->device->uuid,
+        'uuid' => 'taken-uuid',
+        'name' => 'My Sensor',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['uuid' => 'This sensor UUID cannot be used. Check the UUID.']);
+    $this->assertDatabaseHas('sensors', ['id' => $otherSensor->id, 'name' => 'Other Sensor', 'user_id' => $otherSensor->user_id]);
 });

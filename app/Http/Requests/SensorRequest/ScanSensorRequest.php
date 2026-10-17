@@ -23,7 +23,7 @@ class ScanSensorRequest extends SensorRequest
     {
         return array_merge($this->commonRules(), [
             'uuid' => ['required', 'string'],
-            'device_uuid' => ['required', 'exists:devices,uuid'],
+            'device_uuid' => ['required', 'string'],
             'manual_entry' => ['sometimes', 'boolean'],
             'confirm_update' => ['sometimes', 'boolean'],
         ]);

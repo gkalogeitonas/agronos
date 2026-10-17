@@ -13,8 +13,9 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ScanLine } from 'lucide-vue-next';
 import { ref } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     deviceTypes: { value: string; label: string }[];
+    prefillUuid?: string | null;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -24,7 +25,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const form = useForm({
     name: '',
-    uuid: '',
+    uuid: props.prefillUuid ?? '',
     secret: '',
     type: '',
     lora_aes_key: '',

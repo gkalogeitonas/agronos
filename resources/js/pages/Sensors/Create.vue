@@ -28,6 +28,7 @@ const props = defineProps<{
     farms: Farm[];
     selectedFarm: Farm | null;
     SensorTypes: string[];
+    unregisteredDeviceMessage: string;
 }>();
 
 const SensorTypes = computed(() => props.SensorTypes ?? []);
@@ -169,6 +170,9 @@ watch(
                         <FormField id="device_uuid" label="Device UUID" :error="form.errors.device_uuid"
                             ><Input id="device_uuid" v-model="form.device_uuid" :disabled="!allowEdit" required class="font-mono"
                         /></FormField>
+                        <Button v-if="form.errors.device_uuid === props.unregisteredDeviceMessage" variant="outline" as-child class="self-start">
+                            <a :href="route('devices.create', { uuid: form.device_uuid })" target="_blank" rel="noopener">Add device in a new tab</a>
+                        </Button>
                     </SectionCard>
 
                     <SectionCard title="Location" class="flex-[2_1_480px]">
