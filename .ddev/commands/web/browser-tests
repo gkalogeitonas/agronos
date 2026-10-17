@@ -1,0 +1,10 @@
+#!/bin/bash
+
+## Description: Build the frontend assets and run the Pest browser tests
+## Usage: browser-tests [pest arguments]
+## Example: "ddev browser-tests" or "ddev browser-tests --filter=toast"
+
+set -e
+
+npm run build
+php artisan test tests/Browser "$@"
