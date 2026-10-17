@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Requests\SensorRequest\SensorRequest;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
@@ -148,11 +149,7 @@ it('cannot create a sensor with a device_uuid that does not belong to the user',
         'lon' => 4.56,
     ];
     $response = post('/sensors', $payload);
-    // You may want to add a custom validation rule for this in your controller
-    $this->assertTrue(
-        in_array($response->status(), [403, 404]),
-        'Expected 403 Forbidden or 404 Not Found, got '.$response->status()
-    );
+    $response->assertSessionHasErrors(['device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE]);
     $this->assertDatabaseMissing('sensors', ['uuid' => 'wrong-owner-device']);
 });
 

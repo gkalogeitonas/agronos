@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\SensorType;
 use App\Enums\TimeRange;
 use App\Http\Requests\SensorRequest\ScanSensorRequest;
+use App\Http\Requests\SensorRequest\SensorRequest;
 use App\Http\Requests\SensorRequest\StoreSensorRequest;
 use App\Http\Requests\SensorRequest\UpdateSensorRequest;
 use App\Http\Resources\SensorResource;
@@ -48,6 +49,7 @@ class SensorController extends Controller
             'farms' => $farms,
             'selectedFarm' => $farm,
             'SensorTypes' => SensorType::values(),
+            'unregisteredDeviceMessage' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE,
         ]);
     }
 
@@ -59,8 +61,7 @@ class SensorController extends Controller
         $this->authorize('create', Sensor::class);
         $validated = $request->validated();
 
-        $device = Device::where('uuid', $validated['device_uuid'])
-            ->firstOrFail();
+        $device = $this->findRegisteredDevice($validated['device_uuid']);
         $this->authorize('view', $device); // This uses DevicePolicy
 
         $sensor = Sensor::create(
@@ -155,7 +156,7 @@ class SensorController extends Controller
         $validated = $request->validated();
         $sensorAttributes = collect($validated)->except(['manual_entry', 'confirm_update']);
 
-        $device = Device::where('uuid', $validated['device_uuid'])->firstOrFail();
+        $device = $this->findRegisteredDevice($validated['device_uuid']);
         $sensor = Sensor::where('uuid', $validated['uuid'])->first();
         $this->authorize('view', $device); // This uses DevicePolicy
 
@@ -186,5 +187,19 @@ class SensorController extends Controller
         );
 
         return redirect()->route('sensors.index')->with('success', 'Sensor added.');
+    }
+
+    /**
+     * Find the device under the tenant scope. A device owned by another tenant gets the same
+     * error as a missing one, so its existence is not revealed.
+     *
+     * @throws ValidationException
+     */
+    private function findRegisteredDevice(string $uuid): Device
+    {
+        return Device::where('uuid', $uuid)->first()
+            ?? throw ValidationException::withMessages([
+                'device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE,
+            ]);
     }
 }

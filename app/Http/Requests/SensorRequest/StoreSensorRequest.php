@@ -2,8 +2,7 @@
 
 namespace App\Http\Requests\SensorRequest;
 
-use Illuminate\Validation\Rule;
-use App\Enums\SensorType;
+use Illuminate\Contracts\Validation\ValidationRule;
 
 class StoreSensorRequest extends SensorRequest
 {
@@ -18,12 +17,12 @@ class StoreSensorRequest extends SensorRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return array_merge($this->commonRules(), [
-            'device_uuid' => ['required', 'exists:devices,uuid'],
+            'device_uuid' => ['required', 'string'],
             'uuid' => ['required', 'string', 'unique:sensors,uuid'],
         ]);
     }
