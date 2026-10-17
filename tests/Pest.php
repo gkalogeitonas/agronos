@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
 /*
@@ -16,7 +17,17 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->in('Feature', 'Unit', 'Browser');
+    ->in('Feature', 'Unit');
+
+/*
+| Browser tests always load the compiled assets from public/build. A running Vite dev
+| server writes public/hot, and its CORS rules reject the test server's 127.0.0.1 origin,
+| which leaves every page blank. Run `ddev npm run build` before the browser suite.
+*/
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
+    ->beforeEach(fn () => Vite::useHotFile(storage_path('framework/vite.hot.ignored')))
+    ->in('Browser');
 
 /*
 |--------------------------------------------------------------------------
