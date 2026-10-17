@@ -31,3 +31,17 @@ it('loads the redesigned pages without JavaScript errors', function () {
         route('actuators.index', absolute: false),
     ])->assertNoJavaScriptErrors();
 });
+
+it('loads the home page for guests and signed-in users without JavaScript errors', function () {
+    visit(route('home', absolute: false))
+        ->assertSee('Know your fields before you walk them.')
+        ->assertSee('Create account')
+        ->assertNoJavaScriptErrors();
+
+    actingAs(User::factory()->create());
+
+    visit(route('home', absolute: false))
+        ->assertSee('Open dashboard')
+        ->assertDontSee('Create account')
+        ->assertNoJavaScriptErrors();
+});
