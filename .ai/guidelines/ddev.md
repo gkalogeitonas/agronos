@@ -11,6 +11,12 @@ Examples
 - Run migrations: `ddev artisan migrate`
 - Install Boost: `ddev composer require --dev laravel/boost` then `ddev artisan boost:install`
 
+Browser tests
+
+- Run the Pest browser tests (`tests/Browser`) with `ddev browser-tests`. It runs `npm run build` and then `php artisan test tests/Browser` inside the container. It passes Pest arguments through, for example `ddev browser-tests --filter=toast`.
+- Browser tests always load the compiled assets in `public/build` and ignore `public/hot`, so they pass even while `ddev composer run dev` is running. If you use `ddev artisan test tests/Browser` directly, run `ddev npm run build` first. Otherwise the tests check a stale build.
+- Run the dev server through DDEV (`ddev composer run dev`), not with the host's `php`/`composer`.
+
 Notes for the LLM agent
 
 - When executing or suggesting commands that interact with Laravel, prefer the `ddev` wrapper. If the user indicates they are not using DDEV, fall back to `php artisan`/`composer` and confirm.
