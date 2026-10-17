@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\DeviceType;
 use App\Enums\SensorType;
 use App\Http\Requests\RegisterDeviceRequest;
+use App\Http\Resources\DeviceDetailResource;
 use App\Http\Resources\DeviceResource;
 use App\Models\Device;
 use App\Services\MqttCredentialService;
@@ -29,7 +30,7 @@ class DeviceController extends Controller
         $devices = Device::query()
             ->with('sensors.farm:id,name')
             ->orderBy('name')
-            ->get(['id', 'name', 'uuid', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at']);
+            ->get();
 
         return Inertia::render('Devices/Index', [
             'devices' => DeviceResource::collection($devices)->resolve(),
@@ -79,7 +80,6 @@ class DeviceController extends Controller
 
         $sensors = $device->load('sensors.farm:id,name')->sensors;
         $farms = $device->linkedFarms()->map->only(['id', 'name'])->values();
-        $device->unsetRelation('sensors');
 
         // Prefer device-level battery_level if present, otherwise use battery sensor last_reading
         $batteryReading = $this->getBatteryLevel($device, $sensors);
@@ -90,7 +90,7 @@ class DeviceController extends Controller
         $batterySensorId = optional($sensors->firstWhere('type', SensorType::BATTERY->value))->id;
 
         return Inertia::render('Devices/Show', [
-            'device' => $device,
+            'device' => (new DeviceDetailResource($device->withoutRelations()))->resolve(),
             'sensors' => $sensors,
             'farms' => $farms,
             'batteryReading' => $batteryReading,

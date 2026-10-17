@@ -11,12 +11,12 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { deviceStatusOptions } from '@/lib/enums';
 import { deviceTypeLabel } from '@/lib/format';
-import { type BreadcrumbItem, type DeviceSummary } from '@/types';
+import { type BreadcrumbItem, type Device } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-type DeviceRow = DeviceSummary & { uuid: string; farms: string[] };
-type StatusFilter = 'all' | DeviceSummary['status'];
+type DeviceRow = Device & { farms: string[] };
+type StatusFilter = 'all' | Device['status'];
 
 const props = defineProps<{
     devices: DeviceRow[];
@@ -32,7 +32,7 @@ const link = ref('all');
 const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
     { value: 'all', label: 'All', count: props.devices.length },
     ...deviceStatusOptions().map(({ value, label }) => ({
-        value: value as DeviceSummary['status'],
+        value: value as Device['status'],
         label,
         count: props.devices.filter((device) => device.status === value).length,
     })),

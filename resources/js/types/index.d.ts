@@ -74,12 +74,24 @@ export interface FarmSummary {
     temperature: number | null;
 }
 
-export interface DeviceSummary {
+/** Shaped by App\Http\Resources\DeviceResource. */
+export interface Device {
     id: number;
     name: string;
+    uuid: string;
     type: string;
     status: 'registered' | 'online' | 'offline' | 'error';
     signal_strength: number | null;
     battery_level: number | null;
     last_seen_at: string | null;
+    /** Names of the farms the device's sensors are on; present when the sensors were loaded. */
+    farms?: string[];
+}
+
+/** Shaped by App\Http\Resources\DeviceDetailResource. */
+export interface DeviceDetail extends Device {
+    created_at: string;
+    lora_frame_counter: number | null;
+    mqtt_username: string | null;
+    mqtt_password: string | null;
 }

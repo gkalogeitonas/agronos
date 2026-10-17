@@ -3,13 +3,13 @@ import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import { useTimestamp } from '@/composables/useTimestamp';
 import { deviceTypeLabel, formatBattery, formatSignal, isLowBattery } from '@/lib/format';
-import type { DeviceSummary } from '@/types';
+import type { Device } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 interface Props {
     /** `farms` holds the names of the farms the device reports to; only shown with `showFarm`. */
-    devices: (DeviceSummary & { farms?: string[] })[];
+    devices: Device[];
     showFarm?: boolean;
     minWidth?: string;
     emptyText?: string;

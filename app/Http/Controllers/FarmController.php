@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\FarmHealth;
 use App\Http\Requests\FarmRequest;
+use App\Http\Resources\DeviceResource;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Services\FarmOverviewService;
@@ -101,12 +102,12 @@ class FarmController extends Controller
         $devices = Device::query()
             ->whereIn('id', $farm->sensors()->select('device_id'))
             ->orderBy('name')
-            ->get(['id', 'name', 'type', 'status', 'signal_strength', 'battery_level', 'last_seen_at']);
+            ->get();
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
-            'devices' => $devices,
+            'devices' => DeviceResource::collection($devices)->resolve(),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),
