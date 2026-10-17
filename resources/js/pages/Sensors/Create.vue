@@ -171,7 +171,7 @@ watch(
                             ><Input id="device_uuid" v-model="form.device_uuid" :disabled="!allowEdit" required class="font-mono"
                         /></FormField>
                         <Button v-if="form.errors.device_uuid === props.unregisteredDeviceMessage" variant="outline" as-child class="self-start">
-                            <Link :href="route('devices.create')">Add device</Link>
+                            <a :href="route('devices.create', { uuid: form.device_uuid })" target="_blank" rel="noopener">Add device in a new tab</a>
                         </Button>
                     </SectionCard>
 

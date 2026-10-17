@@ -12,6 +12,7 @@ use App\Http\Resources\SensorResource;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
+use App\Scopes\TenantScope;
 use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Validation\ValidationException;
@@ -177,6 +178,12 @@ class SensorController extends Controller
 
         // Create sensor, ensure user can create
         $this->authorize('create', Sensor::class);
+
+        if (Sensor::withoutGlobalScope(TenantScope::class)->where('uuid', $validated['uuid'])->exists()) {
+            throw ValidationException::withMessages([
+                'uuid' => 'This sensor UUID cannot be used. Check the UUID.',
+            ]);
+        }
 
         Sensor::create(
             $sensorAttributes->except('device_uuid')->toArray()

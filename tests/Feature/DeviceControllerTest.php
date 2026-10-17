@@ -127,3 +127,14 @@ describe('DeviceController@index', function () {
         $this->get(route('devices.index'))->assertRedirect(route('login'));
     });
 });
+
+describe('DeviceController@create', function () {
+
+    it('prefills the device uuid from the query string', function () {
+        $this->actingAs(User::factory()->create())
+            ->get(route('devices.create', ['uuid' => 'scanned-device-uuid']))
+            ->assertInertia(fn ($page) => $page
+                ->component('Devices/Create')
+                ->where('prefillUuid', 'scanned-device-uuid'));
+    });
+});

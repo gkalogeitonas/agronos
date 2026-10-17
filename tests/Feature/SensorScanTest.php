@@ -204,3 +204,18 @@ it('tells the user to register the device first when the device uuid does not ex
     $response->assertJsonValidationErrors(['device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE]);
     $this->assertDatabaseMissing('sensors', ['uuid' => 'new-sensor']);
 });
+
+it('rejects a sensor uuid that belongs to another tenant without changing that sensor', function () {
+    $otherSensor = Sensor::factory()->create(['uuid' => 'taken-uuid', 'name' => 'Other Sensor']);
+    actingAs($this->user);
+
+    $response = postJson(route('sensors.scan'), [
+        'device_uuid' => $this->device->uuid,
+        'uuid' => 'taken-uuid',
+        'name' => 'My Sensor',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['uuid' => 'This sensor UUID cannot be used. Check the UUID.']);
+    $this->assertDatabaseHas('sensors', ['id' => $otherSensor->id, 'name' => 'Other Sensor', 'user_id' => $otherSensor->user_id]);
+});

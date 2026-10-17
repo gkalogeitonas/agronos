@@ -42,6 +42,7 @@ class DeviceController extends Controller
     public function create()
     {
         return Inertia::render('Devices/Create', [
+            'prefillUuid' => request()->query('uuid'),
             'deviceTypes' => collect(DeviceType::cases())->map(fn ($type) => [
                 'label' => DeviceType::labels()[$type->value],
                 'value' => $type->value,
