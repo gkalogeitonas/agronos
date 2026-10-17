@@ -17,19 +17,13 @@ import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { deviceTypeLabel, formatReading, isLowBattery } from '@/lib/format';
 import { sampleDeviceActivity, sampleFirmwareVersion } from '@/lib/sampleData';
 import { signalColors } from '@/lib/theme';
-import { type BreadcrumbItem as BreadcrumbItemType, type DeviceSummary } from '@/types';
+import { type BreadcrumbItem as BreadcrumbItemType, type DeviceDetail } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
-    device: DeviceSummary & {
-        uuid: string;
-        created_at: string;
-        lora_frame_counter: number | null;
-        mqtt_username: string | null;
-        mqtt_password: string | null;
-    };
+    device: DeviceDetail;
     sensors: (Sensor & { farm?: { id: number; name: string } | null })[];
     farms: { id: number; name: string }[];
     batteryReading: number | string | null;

@@ -36,6 +36,22 @@ test('authenticated user can view a specific device', function () {
     $response->assertSee($device->uuid);
 });
 
+test('device page gives the owner the MQTT credentials but not the device secret', function () {
+    $device = $this->devices->first();
+    $device->update(['mqtt_username' => 'device-user', 'mqtt_password' => 'device-pass']);
+
+    $this->actingAs($this->user)
+        ->get(route('devices.show', $device))
+        ->assertInertia(fn ($page) => $page->component('Devices/Show')
+            ->where('device.uuid', $device->uuid)
+            ->where('device.mqtt_username', 'device-user')
+            ->where('device.mqtt_password', 'device-pass')
+            ->missing('device.secret')
+            ->missing('device.lora_aes_key')
+            ->missing('device.sensors')
+        );
+});
+
 test('authenticated user can delete a device', function () {
     $device = $this->devices->first();
 

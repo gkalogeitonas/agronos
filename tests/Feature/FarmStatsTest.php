@@ -142,6 +142,8 @@ it('lists the devices whose sensors are on the farm', function () {
         ->assertInertia(fn ($page) => $page->component('Farms/Show')
             ->has('devices', 1)
             ->where('devices.0.id', $device->id)
+            ->where('devices.0.uuid', $device->uuid)
             ->missing('devices.0.secret')
+            ->missing('devices.0.mqtt_password')
         );
 });

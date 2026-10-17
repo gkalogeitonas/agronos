@@ -17,7 +17,7 @@ import { formatReading } from '@/lib/format';
 import { sampleAlerts, sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
 import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { sensorColors, signalColors } from '@/lib/theme';
-import { type BreadcrumbItem, type DeviceSummary } from '@/types';
+import { type BreadcrumbItem, type Device } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
@@ -43,7 +43,7 @@ const props = defineProps<{
         center: { lng: number; lat: number } | null;
     };
     sensors: Sensor[];
-    devices: DeviceSummary[];
+    devices: Device[];
     sensorDbStats?: {
         totalSensors: number;
         sensorTypeStats: Record<string, number>;
