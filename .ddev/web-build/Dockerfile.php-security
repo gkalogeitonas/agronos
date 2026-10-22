@@ -1,0 +1,7 @@
+# Upgrade the bundled PHP 8.5 packages to 8.5.12+, which fixes
+# CVE-2026-109618 and CVE-2026-109619. Keeps DDEV's existing config files.
+# Remove once the DDEV webserver image ships PHP 8.5.12 or newer.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade \
+       -o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef 'php8.5-*' \
+    && rm -rf /var/lib/apt/lists/*

@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # base: PHP runtime with the extensions the app needs
 # ---------------------------------------------------------------------------
-FROM php:8.5-fpm AS base
+FROM php:8.5.12-fpm AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     zip unzip curl libpng-dev libonig-dev libxml2-dev \
