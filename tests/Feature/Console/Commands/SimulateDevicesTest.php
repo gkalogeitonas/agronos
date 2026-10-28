@@ -5,6 +5,7 @@ use App\Jobs\ProcessSensorInfluxData;
 use App\Models\Device;
 use App\Models\Sensor;
 use App\Services\DeviceMqttPublisher;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -212,4 +213,16 @@ it('rejects an unsupported transport', function () {
     $this->artisan('devices:simulate', ['--via' => 'carrier-pigeon', '--once' => true])
         ->expectsOutputToContain('Unsupported --via value "carrier-pigeon"')
         ->assertFailed();
+});
+
+it('keeps a device when the device API cannot be reached', function () {
+    config(['app.url' => 'https://agronos.test']);
+    $device = Device::factory()->create(['uuid' => 'sim-device', 'type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id]);
+    Http::preventStrayRequests();
+    Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+    $this->artisan('devices:simulate', ['--via' => 'http', '--once' => true])
+        ->expectsOutputToContain('[sim-device] Could not reach the device API: Connection refused. Retrying next round.')
+        ->assertSuccessful();
 });

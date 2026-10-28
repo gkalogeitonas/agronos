@@ -13,6 +13,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -104,10 +105,18 @@ class SimulateDevices extends Command
 
         try {
             while (! $this->stopping) {
-                $devices = $devices->filter(fn (Device $device) => match ($via) {
-                    'http' => $this->sendOverHttp($device),
-                    'mqtt' => $this->sendOverMqtt($device),
-                    default => $this->sendDirect($device, $sensorDataService),
+                $devices = $devices->filter(function (Device $device) use ($via, $sensorDataService) {
+                    try {
+                        return match ($via) {
+                            'http' => $this->sendOverHttp($device),
+                            'mqtt' => $this->sendOverMqtt($device),
+                            default => $this->sendDirect($device, $sensorDataService),
+                        };
+                    } catch (ConnectionException $exception) {
+                        $this->warn("[{$device->uuid}] Could not reach the device API: {$exception->getMessage()}. Retrying next round.");
+
+                        return true;
+                    }
                 });
 
                 if ($devices->isEmpty()) {

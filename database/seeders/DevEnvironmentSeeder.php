@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Hash;
 class DevEnvironmentSeeder extends Seeder
 {
     /**
-     * Plaintext secret of the seeded devices, used by `devices:simulate --via=http` to log in.
+     * Plaintext secret of the seeded devices, used by `devices:simulate --via=http|mqtt` to log in.
+     * It is public, so this seeder only runs in local and testing environments.
      */
     public const DEVICE_SECRET = 'secret';
 
@@ -21,6 +22,12 @@ class DevEnvironmentSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->warn('Skipping DevEnvironmentSeeder: its devices use a public secret, so it only runs in local and testing.');
+
+            return;
+        }
+
         $deviceSecret = Hash::make(self::DEVICE_SECRET);
 
         $data = [
@@ -116,7 +123,7 @@ class DevEnvironmentSeeder extends Seeder
                 $device = null;
                 if ($deviceData) {
                     $deviceData['user_id'] = $user->id;
-                    $device = Device::firstOrCreate(
+                    $device = Device::updateOrCreate(
                         ['uuid' => $deviceData['uuid']],
                         $deviceData
                     );

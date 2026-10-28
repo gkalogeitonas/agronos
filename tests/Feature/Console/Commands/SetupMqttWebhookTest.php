@@ -3,9 +3,8 @@
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
-const EMQX_API = 'http://emqx.test/api/v5';
-
 beforeEach(function () {
+    $this->emqx = 'http://emqx.test/api/v5';
     config([
         'services.emqx.url' => 'http://emqx.test',
         'services.emqx.base_path' => '/api/v5',
@@ -18,12 +17,12 @@ beforeEach(function () {
 
 it('creates the device and LoRa connectors, actions and rules when they do not exist', function () {
     Http::fake([
-        EMQX_API.'/connectors/*' => Http::response(['code' => 'NOT_FOUND'], 404),
-        EMQX_API.'/actions/*' => Http::response(['code' => 'NOT_FOUND'], 404),
-        EMQX_API.'/rules/*' => Http::response(['code' => 'NOT_FOUND'], 404),
-        EMQX_API.'/connectors' => Http::response([], 201),
-        EMQX_API.'/actions' => Http::response([], 201),
-        EMQX_API.'/rules' => Http::response([], 201),
+        $this->emqx.'/connectors/*' => Http::response(['code' => 'NOT_FOUND'], 404),
+        $this->emqx.'/actions/*' => Http::response(['code' => 'NOT_FOUND'], 404),
+        $this->emqx.'/rules/*' => Http::response(['code' => 'NOT_FOUND'], 404),
+        $this->emqx.'/connectors' => Http::response([], 201),
+        $this->emqx.'/actions' => Http::response([], 201),
+        $this->emqx.'/rules' => Http::response([], 201),
     ]);
 
     $this->artisan('mqtt:setup-webhook', ['--base-url' => 'http://app.test/'])
@@ -36,31 +35,31 @@ it('creates the device and LoRa connectors, actions and rules when they do not e
         ->assertSuccessful();
 
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === EMQX_API.'/connectors'
+        && $request->url() === $this->emqx.'/connectors'
         && $request['type'] === 'http'
         && $request['name'] === 'agronos_device_webhook'
         && $request['url'] === 'http://app.test/api/v1/device/mqtt-webhook');
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === EMQX_API.'/actions'
+        && $request->url() === $this->emqx.'/actions'
         && $request['name'] === 'agronos_device_webhook'
         && $request['connector'] === 'agronos_device_webhook'
         && $request['parameters']['body'] === '${.}');
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === EMQX_API.'/rules'
+        && $request->url() === $this->emqx.'/rules'
         && $request['id'] === 'agronos_device_sensors'
         && $request['sql'] === 'SELECT username, payload, topic FROM "devices/+/sensors"'
         && $request['actions'] === ['http:agronos_device_webhook']);
 
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === EMQX_API.'/connectors'
+        && $request->url() === $this->emqx.'/connectors'
         && $request['name'] === 'agronos_lora_webhook'
         && $request['url'] === 'http://app.test/api/v1/lora/webhook');
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === EMQX_API.'/actions'
+        && $request->url() === $this->emqx.'/actions'
         && $request['name'] === 'agronos_lora_webhook'
         && $request['connector'] === 'agronos_lora_webhook');
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === EMQX_API.'/rules'
+        && $request->url() === $this->emqx.'/rules'
         && $request['id'] === 'agronos_lora_gateway'
         && $request['sql'] === 'SELECT username, payload, topic FROM "lora/+/data"'
         && $request['actions'] === ['http:agronos_lora_webhook']);
@@ -68,7 +67,7 @@ it('creates the device and LoRa connectors, actions and rules when they do not e
 
 it('updates the existing resources instead of creating them', function () {
     Http::fake([
-        EMQX_API.'/*' => Http::response(['enable' => true]),
+        $this->emqx.'/*' => Http::response(['enable' => true]),
     ]);
 
     $this->artisan('mqtt:setup-webhook')
@@ -79,20 +78,25 @@ it('updates the existing resources instead of creating them', function () {
         ->assertSuccessful();
 
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
-        && $request->url() === EMQX_API.'/connectors/http:agronos_device_webhook'
+        && $request->url() === $this->emqx.'/connectors/http:agronos_device_webhook'
         && $request['url'] === 'http://web/api/v1/device/mqtt-webhook');
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
-        && $request->url() === EMQX_API.'/connectors/http:agronos_lora_webhook'
+        && $request->url() === $this->emqx.'/connectors/http:agronos_lora_webhook'
         && $request['url'] === 'http://web/api/v1/lora/webhook');
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
-        && $request->url() === EMQX_API.'/rules/agronos_lora_gateway');
+        && $request->url() === $this->emqx.'/actions/http:agronos_lora_webhook'
+        && $request['connector'] === 'agronos_lora_webhook');
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
+        && $request->url() === $this->emqx.'/rules/agronos_lora_gateway');
+    Http::assertNotSent(fn (Request $request) => $request->method() === 'PUT'
+        && collect(['type', 'name', 'id'])->contains(fn (string $field) => $request->offsetExists($field)));
     Http::assertNotSent(fn (Request $request) => $request->method() === 'POST');
 });
 
 it('fails with the EMQX error and stops before the remaining resources', function () {
     Http::fake([
-        EMQX_API.'/connectors/http:agronos_device_webhook' => Http::response(['code' => 'NOT_FOUND'], 404),
-        EMQX_API.'/connectors' => Http::response(['code' => 'BAD_REQUEST', 'message' => 'invalid url'], 400),
+        $this->emqx.'/connectors/http:agronos_device_webhook' => Http::response(['code' => 'NOT_FOUND'], 404),
+        $this->emqx.'/connectors' => Http::response(['code' => 'BAD_REQUEST', 'message' => 'invalid url'], 400),
     ]);
 
     $this->artisan('mqtt:setup-webhook')

@@ -33,9 +33,8 @@ class EmqxService
         $secretKey = config('services.emqx.secret_key');
 
         Log::info('EMQX Service initialized', [
-            'api_key' => $apiKey,
-            'secret_key_length' => $secretKey ? strlen($secretKey) : 0,
-            'secret_key_preview' => $secretKey ? substr($secretKey, 0, 10).'...' : 'null',
+            'api_key_set' => filled($apiKey),
+            'secret_key_set' => filled($secretKey),
         ]);
 
         $this->http = Http::withBasicAuth($apiKey, $secretKey)
