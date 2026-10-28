@@ -4,9 +4,12 @@ use App\Enums\DeviceStatus;
 use App\Jobs\ProcessSensorInfluxData;
 use App\Models\Device;
 use App\Models\Sensor;
+use App\Services\DeviceMqttPublisher;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Mockery\MockInterface;
+use PhpMqtt\Client\Exceptions\ConnectingToBrokerFailedException;
 
 it('sends one round of readings and marks the device online', function () {
     $device = Device::factory()->create(['status' => DeviceStatus::OFFLINE, 'last_seen_at' => null]);
@@ -128,17 +131,79 @@ it('skips a device that cannot log in and keeps simulating the others', function
     Http::assertSentCount(3);
 });
 
-it('does not send LoRa devices through the device API', function () {
+it('does not simulate LoRa devices through the device API or the broker', function (string $via) {
     $device = Device::factory()->lora()->create();
     Sensor::factory()->create(['device_id' => $device->id]);
     Http::preventStrayRequests();
     Http::fake();
 
-    $this->artisan('devices:simulate', ['--via' => 'http', '--once' => true])
+    $this->artisan('devices:simulate', ['--via' => $via, '--once' => true])
         ->expectsOutputToContain('No devices with sensors found to simulate.')
         ->assertFailed();
 
     Http::assertNothingSent();
+})->with(['http', 'mqtt']);
+
+it('connects to the broker with the provisioned credentials and publishes readings', function () {
+    config(['app.url' => 'https://agronos.test']);
+    $device = Device::factory()->create(['uuid' => 'sim-device', 'type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id, 'uuid' => 'sim-sensor', 'type' => 'humidity', 'last_reading' => 50]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
+        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['username' => 'sim-device', 'password' => 'mqtt-pass', 'created' => false]),
+    ]);
+    $this->mock(DeviceMqttPublisher::class, function (MockInterface $mock) {
+        $mock->shouldReceive('connect')->once()->with('sim-device-simulator', 'sim-device', 'mqtt-pass', 60);
+        $mock->shouldReceive('publish')->once()->withArgs(function (string $topic, string $payload) {
+            $value = json_decode($payload, true)['sensors'][0]['value'] ?? null;
+
+            return $topic === 'devices/sim-device/sensors'
+                && json_decode($payload, true)['sensors'][0]['uuid'] === 'sim-sensor'
+                && $value >= 48 && $value <= 52;
+        });
+        $mock->shouldReceive('disconnect')->once();
+    });
+
+    $this->artisan('devices:simulate', ['--via' => 'mqtt', '--once' => true])->assertSuccessful();
+
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://agronos.test/api/v1/device/mqtt-credentials'
+        && $request->hasHeader('Authorization', 'Bearer device-token'));
+});
+
+it('skips a device that cannot get MQTT credentials', function () {
+    config(['app.url' => 'https://agronos.test']);
+    $device = Device::factory()->create(['uuid' => 'sim-device', 'type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
+        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['created' => false, 'error' => 'emqx_unavailable'], 503),
+    ]);
+    $this->mock(DeviceMqttPublisher::class, fn (MockInterface $mock) => $mock->shouldNotReceive('connect'));
+
+    $this->artisan('devices:simulate', ['--via' => 'mqtt', '--once' => true])
+        ->expectsOutputToContain('[sim-device] Skipped: could not get MQTT credentials (HTTP 503: emqx_unavailable)')
+        ->assertFailed();
+});
+
+it('skips a device the broker refuses to connect', function () {
+    config(['app.url' => 'https://agronos.test']);
+    $device = Device::factory()->create(['uuid' => 'sim-device', 'type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
+        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['username' => 'sim-device', 'password' => 'stale-pass']),
+    ]);
+    $this->mock(DeviceMqttPublisher::class, function (MockInterface $mock) {
+        $mock->shouldReceive('connect')->once()->andThrow(new ConnectingToBrokerFailedException(5, 'not authorized'));
+        $mock->shouldNotReceive('publish');
+    });
+
+    $this->artisan('devices:simulate', ['--via' => 'mqtt', '--once' => true])
+        ->expectsOutputToContain('[sim-device] Skipped: MQTT connection failed')
+        ->assertFailed();
 });
 
 it('rejects an unsupported transport', function () {

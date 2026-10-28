@@ -42,6 +42,11 @@ return [
         // Enable fake client during tests or when explicitly requested
         'fake' => env('INFLUXDB_FAKE', env('APP_ENV') === 'testing'),
     ],
+    'mqtt' => [
+        // MQTT broker host and port as reachable from the app (used by devices:simulate --via=mqtt)
+        'host' => env('MQTT_HOST', 'mqtt'),
+        'port' => (int) env('MQTT_PORT', 1883),
+    ],
     'emqx' => [
         // Management API base url (include scheme and host, without path)
         'url' => env('EMQX_API_URL'),

@@ -6,6 +6,7 @@ use App\Enums\DeviceStatus;
 use App\Enums\SensorType;
 use App\Models\Device;
 use App\Models\Sensor;
+use App\Services\DeviceMqttPublisher;
 use App\Services\SensorDataService;
 use Database\Seeders\DevEnvironmentSeeder;
 use Illuminate\Console\Attributes\Description;
@@ -16,18 +17,19 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
+use PhpMqtt\Client\Exceptions\MqttClientException;
 
 #[Signature('devices:simulate
     {devices?* : UUIDs of the devices to simulate (defaults to every device with sensors)}
-    {--via=direct : How readings are sent: "direct" (SensorDataService) or "http" (device API)}
-    {--secret='.DevEnvironmentSeeder::DEVICE_SECRET.' : Plaintext device secret used to log in with --via=http}
+    {--via=direct : How readings are sent: "direct" (SensorDataService), "http" (device API) or "mqtt" (EMQX broker)}
+    {--secret='.DevEnvironmentSeeder::DEVICE_SECRET.' : Plaintext device secret used to log in with --via=http or --via=mqtt}
     {--url= : Base URL of the device API (defaults to APP_URL)}
     {--interval=10 : Seconds between readings}
     {--once : Send a single round of readings and exit}')]
 #[Description('Send fake sensor readings for virtual devices in local development')]
 class SimulateDevices extends Command
 {
-    private const TRANSPORTS = ['direct', 'http'];
+    private const TRANSPORTS = ['direct', 'http', 'mqtt'];
 
     /**
      * Value range and maximum change per reading for each sensor type.
@@ -58,6 +60,17 @@ class SimulateDevices extends Command
     private array $tokens = [];
 
     /**
+     * Open broker connection per device id for the mqtt transport.
+     *
+     * @var array<int, DeviceMqttPublisher>
+     */
+    private array $publishers = [];
+
+    private int $interval = 10;
+
+    private bool $stopping = false;
+
+    /**
      * Execute the console command.
      */
     public function handle(SensorDataService $sensorDataService): int
@@ -84,27 +97,38 @@ class SimulateDevices extends Command
             return self::FAILURE;
         }
 
-        $interval = max(1, (int) $this->option('interval'));
+        $this->interval = max(1, (int) $this->option('interval'));
+        $this->trap([SIGINT, SIGTERM], fn () => $this->stopping = true);
 
         $this->info("Simulating {$devices->count()} device(s) via {$via}. Press Ctrl+C to stop.");
 
-        while (true) {
-            $devices = $devices->filter(fn (Device $device) => $via === 'http'
-                ? $this->sendOverHttp($device)
-                : $this->sendDirect($device, $sensorDataService));
+        try {
+            while (! $this->stopping) {
+                $devices = $devices->filter(fn (Device $device) => match ($via) {
+                    'http' => $this->sendOverHttp($device),
+                    'mqtt' => $this->sendOverMqtt($device),
+                    default => $this->sendDirect($device, $sensorDataService),
+                });
 
-            if ($devices->isEmpty()) {
-                $this->error('No devices left to simulate.');
+                if ($devices->isEmpty()) {
+                    $this->error('No devices left to simulate.');
 
-                return self::FAILURE;
+                    return self::FAILURE;
+                }
+
+                if ($this->option('once')) {
+                    break;
+                }
+
+                Sleep::for($this->interval)->seconds();
             }
-
-            if ($this->option('once')) {
-                return self::SUCCESS;
+        } finally {
+            foreach ($this->publishers as $publisher) {
+                $publisher->disconnect();
             }
-
-            Sleep::for($interval)->seconds();
         }
+
+        return self::SUCCESS;
     }
 
     /**
@@ -126,7 +150,7 @@ class SimulateDevices extends Command
 
         return $devices->reject(function (Device $device) {
             if ($device->isLoRa()) {
-                $this->warn("[{$device->uuid}] Skipped: LoRa devices send through the LoRa gateway, not the device API.");
+                $this->warn("[{$device->uuid}] Skipped: LoRa devices send through the LoRa gateway; simulate them with --via=direct.");
             }
 
             return $device->isLoRa();
@@ -194,6 +218,77 @@ class SimulateDevices extends Command
         }
 
         return $this->api()->withToken($token)->post('api/v1/device/data', ['sensors' => $payloads]);
+    }
+
+    /**
+     * Publish a round of readings to the device's MQTT topic, connecting to the broker first if needed.
+     * Returns false when the device cannot get credentials or connect, so it is dropped from the simulation.
+     */
+    private function sendOverMqtt(Device $device): bool
+    {
+        $publisher = $this->publishers[$device->id] ??= $this->connectToBroker($device);
+
+        if ($publisher === null) {
+            unset($this->publishers[$device->id]);
+
+            return false;
+        }
+
+        $payloads = $this->readingsFor($device);
+
+        try {
+            $publisher->publish("devices/{$device->uuid}/sensors", json_encode(['sensors' => $payloads]));
+        } catch (MqttClientException $exception) {
+            $this->warn("[{$device->uuid}] Publish failed: {$exception->getMessage()}. Reconnecting next round.");
+            $publisher->disconnect();
+            unset($this->publishers[$device->id]);
+
+            return true;
+        }
+
+        $this->reportReadings($device, $payloads);
+
+        return true;
+    }
+
+    /**
+     * Log in, fetch the device's broker credentials from the device API and connect as the device.
+     */
+    private function connectToBroker(Device $device): ?DeviceMqttPublisher
+    {
+        $token = $this->tokens[$device->id] ??= $this->login($device);
+
+        if ($token === null) {
+            unset($this->tokens[$device->id]);
+
+            return null;
+        }
+
+        $credentials = $this->api()->withToken($token)->get('api/v1/device/mqtt-credentials');
+
+        if ($credentials->failed() || ! $credentials->json('username')) {
+            $reason = $credentials->json('error') ?? $credentials->body();
+            $this->warn("[{$device->uuid}] Skipped: could not get MQTT credentials (HTTP {$credentials->status()}: {$reason}).");
+
+            return null;
+        }
+
+        $publisher = app(DeviceMqttPublisher::class);
+
+        try {
+            $publisher->connect(
+                "{$device->uuid}-simulator",
+                $credentials->json('username'),
+                $credentials->json('password'),
+                min(65535, max(60, $this->interval * 2)),
+            );
+        } catch (MqttClientException $exception) {
+            $this->warn("[{$device->uuid}] Skipped: MQTT connection failed: {$exception->getMessage()}. Check that the EMQX user's password matches devices.mqtt_password.");
+
+            return null;
+        }
+
+        return $publisher;
     }
 
     private function login(Device $device): ?string
