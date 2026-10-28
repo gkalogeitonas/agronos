@@ -52,5 +52,7 @@ return [
         'base_path' => env('EMQX_API_BASE_PATH', '/api/v5'),
         // The authenticator id to use for built_in_database (default name used in EMQX dashboard)
         'authenticator_id' => env('EMQX_AUTHENTICATOR_ID', 'password_based:built_in_database'),
+        // Base URL of the app as reachable from the EMQX container; EMQX posts MQTT messages to its webhooks (see mqtt:setup-webhook)
+        'webhook_base_url' => env('EMQX_WEBHOOK_BASE_URL', 'http://web'),
     ],
 ];

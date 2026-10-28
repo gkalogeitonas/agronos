@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -14,7 +16,7 @@ class EmqxService
     protected string $authId;
 
     /**
-     * @var \Illuminate\Http\Client\PendingRequest
+     * @var PendingRequest
      */
     protected $http;
 
@@ -142,5 +144,85 @@ class EmqxService
         Log::error('EMQX authorizePublishOnly failed', ['url' => $url, 'status' => $response->status(), 'body' => $body, 'payload' => $payload]);
 
         return ['status' => $response->status(), 'body' => $body];
+    }
+
+    /**
+     * Create or update an HTTP connector that posts JSON to the given URL.
+     *
+     * @return 'created'|'updated'
+     *
+     * @throws RequestException
+     */
+    public function upsertWebhookConnector(string $name, string $url): string
+    {
+        $config = [
+            'url' => $url,
+            'headers' => ['content-type' => 'application/json'],
+            'enable' => true,
+        ];
+
+        return $this->upsert("connectors/http:{$name}", 'connectors', ['type' => 'http', 'name' => $name, ...$config], $config);
+    }
+
+    /**
+     * Create or update an HTTP action that posts the rule output (`${.}`) through the given connector.
+     *
+     * @return 'created'|'updated'
+     *
+     * @throws RequestException
+     */
+    public function upsertWebhookAction(string $name, string $connector): string
+    {
+        $config = [
+            'connector' => $connector,
+            'enable' => true,
+            'parameters' => [
+                'method' => 'post',
+                'body' => '${.}',
+                'headers' => ['content-type' => 'application/json'],
+            ],
+        ];
+
+        return $this->upsert("actions/http:{$name}", 'actions', ['type' => 'http', 'name' => $name, ...$config], $config);
+    }
+
+    /**
+     * Create or update a rule engine rule.
+     *
+     * @param  list<string>  $actions  Action references, e.g. `http:my_action`
+     * @return 'created'|'updated'
+     *
+     * @throws RequestException
+     */
+    public function upsertRule(string $id, string $sql, array $actions): string
+    {
+        $config = ['sql' => $sql, 'actions' => $actions, 'enable' => true];
+
+        return $this->upsert("rules/{$id}", 'rules', ['id' => $id, ...$config], $config);
+    }
+
+    /**
+     * Update the resource when it exists, otherwise create it in its collection.
+     *
+     * @param  array<string, mixed>  $createBody
+     * @param  array<string, mixed>  $updateBody
+     * @return 'created'|'updated'
+     *
+     * @throws RequestException
+     */
+    private function upsert(string $resourcePath, string $collectionPath, array $createBody, array $updateBody): string
+    {
+        $existing = $this->http->get($this->apiUrl($resourcePath));
+
+        if ($existing->notFound()) {
+            $this->http->post($this->apiUrl($collectionPath), $createBody)->throw();
+
+            return 'created';
+        }
+
+        $existing->throw();
+        $this->http->put($this->apiUrl($resourcePath), $updateBody)->throw();
+
+        return 'updated';
     }
 }
