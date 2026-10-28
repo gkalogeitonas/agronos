@@ -101,7 +101,14 @@ For more comprehensive applications like Agronos, consider these additional patt
 - Filter HTTP requests before they hit controllers
 - Use for cross-cutting concerns like authentication, logging
 
-#### 16. Tests
+#### 16. Console Commands
+- `app/Console/Commands/SimulateDevices.php`, etc. (create with `ddev artisan make:command`)
+- Classes in `app/Console/Commands` are auto-discovered: `Application::configure()` calls `withCommands()`, which defaults to that directory. No registration in `routes/console.php` is needed
+- Use `routes/console.php` only for small closure commands (`Artisan::command(...)`) and for scheduling (`Schedule::command(...)`)
+- A command class outside `app/Console/Commands` must be registered explicitly with `->withCommands([...])` in `bootstrap/app.php`
+- Test commands in `tests/Feature/Console/Commands/`
+
+#### 17. Tests
 - Feature tests: `tests/Feature/FarmManagementTest.php`, etc.
 - Unit tests: `tests/Unit/Services/MqttServiceTest.php`, etc.
 - Write tests using Pest's expressive syntax

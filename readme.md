@@ -191,6 +191,7 @@ Then point `DB_HOST` at the shared MariaDB's internal hostname, and add these do
   - The EMQX broker URL and API settings are configured under `services.emqx.*` in your config/env.
   - The server-side implementation is idempotent: calling the provision endpoint multiple times will return the same credentials unless they are missing and need creation.
   - Ensure the EMQX admin API (used by `EmqxService`) is reachable from the Laravel app and that any required API credentials are set in `.env`/`config/services.php`.
+  - Run `ddev artisan mqtt:setup-webhook` once (and again after resetting the EMQX data volume). It creates or updates the EMQX connectors, actions and rules that forward `devices/+/sensors` messages to `POST /api/v1/device/mqtt-webhook` and LoRa gateway `lora/+/data` messages to `POST /api/v1/lora/webhook`. The app's base URL comes from `EMQX_WEBHOOK_BASE_URL` (default `http://web`, the DDEV web container as seen from EMQX) or `--base-url`. Re-running it is safe.
 
 
 ### Device firmware repository
