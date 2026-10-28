@@ -7,14 +7,22 @@ use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DevEnvironmentSeeder extends Seeder
 {
+    /**
+     * Plaintext secret of the seeded devices, used by `devices:simulate --via=http` to log in.
+     */
+    public const DEVICE_SECRET = 'secret';
+
     /**
      * Seed the application's database with current dev environment data.
      */
     public function run(): void
     {
+        $deviceSecret = Hash::make(self::DEVICE_SECRET);
+
         $data = [
             [
                 'farm' => [
@@ -53,7 +61,7 @@ class DevEnvironmentSeeder extends Seeder
                         'device' => [
                             'name' => 'Test-Device-1',
                             'uuid' => 'Test-Device-1',
-                            'secret' => '$2y$12$E/8Q1PwgKwSuJw2G/VU5zOV6epZ6Vxgx7MHh9T35CIF9UvkJm8CU2',
+                            'secret' => $deviceSecret,
                             'type' => 'wifi',
                             'status' => 'online',
                             'battery_level' => null,
@@ -75,7 +83,7 @@ class DevEnvironmentSeeder extends Seeder
                         'device' => [
                             'name' => 'Test-Device-1',
                             'uuid' => 'Test-Device-1',
-                            'secret' => '$2y$12$E/8Q1PwgKwSuJw2G/VU5zOV6epZ6Vxgx7MHh9T35CIF9UvkJm8CU2',
+                            'secret' => $deviceSecret,
                             'type' => 'wifi',
                             'status' => 'online',
                             'battery_level' => null,
