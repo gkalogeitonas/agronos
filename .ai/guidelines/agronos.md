@@ -63,4 +63,11 @@ This ensures a consistent look and feel across the application and aligns with t
 
 Refer to the ShadCN documentation and the frontend implementation notes in `docs/technical_reference.md` for usage examples and best practices.
 
+## Device Simulator (local development)
+
+To exercise devices without hardware, use `ddev artisan devices:simulate` (`app/Console/Commands/SimulateDevices.php`). It sends fake readings for the seeded devices `--via=direct|http|mqtt`.
+- `mqtt` needs the EMQX rules from `ddev artisan mqtt:setup-webhook`.
+- `http` and `mqtt` log in with the seeded device secret, so re-run `ddev artisan db:seed` if login returns 401.
+- See "Simulating devices (dev)" in `readme.md` for options and prerequisites. Don't run it against production.
+
 ===

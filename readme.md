@@ -99,6 +99,36 @@ Notes:
 - If you see private channel authentication failures, ensure the app is reachable at the host/port used by Reverb and that `REVERB_HOST`/`REVERB_SERVER_HOST` in `.env` is correct. Private channel auth requests are made to your Laravel app via `/broadcasting/auth` and require session/cookie or token auth.
 - For production, run Reverb and queue workers under a process supervisor (supervisord/systemd) and ensure you secure the Reverb endpoint and scale workers appropriately.
 
+### Simulating devices (dev)
+
+`devices:simulate` sends fake, slowly drifting sensor readings for the seeded devices, so you can work on charts, live updates and the ingestion pipeline without real hardware. It refuses to run in production.
+
+```bash
+ddev artisan devices:simulate                          # every device with sensors, one round every 10 s, until Ctrl+C
+ddev artisan devices:simulate --via=mqtt               # through the EMQX broker, like the firmware
+ddev artisan devices:simulate --via=http --once        # one round through the device HTTP API, then exit
+ddev artisan devices:simulate Test-Device-1 --interval=5
+ddev artisan devices:simulate --help                   # all options
+```
+
+How readings are sent (`--via`):
+
+| Mode | Path | Use it to check |
+|---|---|---|
+| `direct` (default) | Calls `SensorDataService` in-process | Charts, live updates, InfluxDB writes |
+| `http` | `POST /api/v1/device/login` → token → `POST /api/v1/device/data` | The device HTTP API |
+| `mqtt` | Login → `GET /api/v1/device/mqtt-credentials` → publish to `devices/{uuid}/sensors` → EMQX rule → `/api/v1/device/mqtt-webhook` | The broker, ACL, EMQX rules and webhook |
+
+Before you run it:
+- **Seeded devices:** run `ddev artisan db:seed` (or `migrate:fresh --seed`). The seeder gives the dev devices the secret `secret` (`DevEnvironmentSeeder::DEVICE_SECRET`), which `http` and `mqtt` use to log in. A "login failed with HTTP 401" warning usually means the database was seeded before that, and re-seeding fixes it. The seeder only runs in `local` and `testing`.
+- **EMQX rules (`mqtt` only):** run `ddev artisan mqtt:setup-webhook` once (see "MQTT provisioning" below). Without the rules, publishing succeeds but nothing reaches Laravel.
+- **Queue worker:** readings reach InfluxDB through the `sensor-data` queue. DDEV starts a worker automatically (`.ddev/config.laravel-workers.yaml`). If charts stay empty, check that it is running.
+
+Notes:
+- LoRa devices are skipped with `http` and `mqtt`, because they send through the LoRa gateway. Use `direct` for them.
+- `http` and `mqtt` log in as the device, so use the seeded dev devices, not a device a physical board is using.
+- The chart for the last 24 h groups readings into 15-minute windows, so a new line appears only after readings in at least two windows.
+
 ## Production deployment (Docker Compose)
 
 `docker-compose.yml` runs the whole stack in one go: app (PHP-FPM), web (nginx), queue workers, Reverb, EMQX and MariaDB. Code, dependencies and frontend assets are built into the images, so no host PHP or Node is needed.
