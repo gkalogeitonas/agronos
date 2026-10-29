@@ -17,70 +17,20 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 
 === .ai/agronos rules ===
 
-# Documentation Location
+# Agronos
 
-All project documentation is located in the `docs/` directory at the root of the repository.
+- Thesis-era reports, PRD and technical reference were removed after the thesis; they live in release `thesis-v1.0`. They are history, not current design: current decisions are in `docs/adr/`.
+- Device firmware (ESP32, PlatformIO): https://github.com/gkalogeitonas/Agronos-iot-device
+- After `boost:install` or `boost:update`, make sure `.mcp.json` and `.vscode/mcp.json` run the server as `ddev exec php artisan boost:mcp`.
 
-### Files and Contents
+## Tenancy
 
-- **docs/Laravel_guidelines.md**  
-  Contains best practices and conventions for Laravel development in this project.  
-  Includes:  
-  - Resource class structure (Models, Controllers, API Resources, Form Requests, Policies, Factories, Seeders, Migrations)
-  - Testing strategy (using Pest PHP)
-  - Multi-tenancy implementation using global scopes and traits
+Farm, Device and Sensor are tenant-scoped (ADR-0003). Code that runs without a signed-in user (device API, webhooks, jobs, commands) must use `allTenants()`.
+Feature tests for a tenant-scoped resource cover, per action, both the owner succeeding and another user getting 403 or not seeing the record.
 
-- **docs/prd.md**  
-  Product Requirements Document (PRD) for the Smart Agriculture IoT Platform.  
-  Includes:  
-  - Project overview and goals
-  - Target users and user stories
-  - Technology stack
-  - Key features and deliverables
-  - Security considerations
-  - Database entities and data strategy
+## UI
 
-- **docs/technical_reference.md**  
-  Technical reference for the Agronos project.  
-  Includes:  
-  - Project evolution and architecture
-  - Data models and relationships (with tables)
-  - Database schema (MySQL/PostgreSQL and InfluxDB)
-  - Device HTTP endpoints and payloads
-  - MQTT integration details
-  - Frontend implementation notes
-  - Future enhancements
-
-## Usage for Copilot
-
-When generating code or answering questions, please consider the guidelines and information provided in these documentation files.  
-- For Laravel code, follow the conventions in `docs/Laravel_guidelines.md`.
-- For project requirements and features, refer to `docs/prd.md`.
-- For technical architecture, data models, and API endpoints, use `docs/technical_reference.md`.
-
-Refer to these files for authoritative information about project requirements, conventions, and technical details.
-
----
-
-## Laravel Artisan Command Guidance
-
-**When you need to create a new class (such as a Model, Controller, Migration, Seeder, Factory, Policy, or Form Request), always use the appropriate Laravel Artisan command to generate the file.**  
-Prefer using Artisan commands over manual file creation to ensure consistency with Laravel standards and project conventions.
-
-**Example:**  
-To create a new model, use:  
-```bash
-php artisan make:model ModelName
-```
-
-Refer to the [Laravel documentation](https://laravel.com/docs/artisan) or `docs/Laravel_guidelines.md` for more details on available Artisan commands and their usage.
-
-## UI Component Library Guidance
-
-For all frontend UI development, prefer using [ShadCN](https://ui.shadcn.com/) Vue components whenever possible.  
-This ensures a consistent look and feel across the application and aligns with the project’s frontend technology stack.
-
-Refer to the ShadCN documentation and the frontend implementation notes in `docs/technical_reference.md` for usage examples and best practices.
+Prefer [ShadCN](https://ui.shadcn.com/) Vue components for frontend UI.
 
 ## Device Simulator (local development)
 
@@ -88,8 +38,6 @@ To exercise devices without hardware, use `ddev artisan devices:simulate` (`app/
 - `mqtt` needs the EMQX rules from `ddev artisan mqtt:setup-webhook`.
 - `http` and `mqtt` log in with the seeded device secret, so re-run `ddev artisan db:seed` if login returns 401.
 - See "Simulating devices (dev)" in `readme.md` for options and prerequisites. Don't run it against production.
-
-===
 
 === .ai/ddev rules ===
 
@@ -128,10 +76,6 @@ This application is a Laravel application running on PHP 8.5. Always use the API
 Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
 - JS packages: check `package.json` for the installed versions.
-
-## Skills Activation
-
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 ## Conventions
 

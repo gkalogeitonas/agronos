@@ -159,7 +159,7 @@ Then point `DB_HOST` at the shared MariaDB's internal hostname, and add these do
 - app/ — Laravel application code (Models, Http controllers, Policies, Services)
 - config/ — Environment and service configuration
 - database/ — Migrations, factories, seeders
-- docs/ — Project docs (PRD, technical reference, guidelines)
+- docs/ — Architecture decisions (`docs/adr/`) and agent setup; domain terms are in `GLOSSARY.md`
 - resources/ — Frontend assets and views
 - routes/ — API and web routes
 - tests/ — Pest test suites
@@ -282,7 +282,7 @@ Payloads written to InfluxDB use the following structure (see `SensorMeasurement
 
 ## Database schema (summary)
 
-A short overview of the main tables and key columns. See `database/migrations` and `docs/technical_reference.md` for the full schema and migrations.
+A short overview of the main tables and key columns. See `database/migrations` for the full schema.
 
 - users
   - id (PK), name, email, password, email_verified_at, created_at, updated_at
@@ -303,7 +303,7 @@ A short overview of the main tables and key columns. See `database/migrations` a
 
 Notes
 - Multi-tenancy: models use a `BelongsToTenant` trait and `TenantScope` to ensure tenant separation; see `app/Traits/BelongsToTenant.php` and `app/Scopes/TenantScope.php`.
-- For exact column types, indexes and constraints, consult the migration files in `database/migrations` and the technical reference in `docs/technical_reference.md`.
+- For exact column types, indexes and constraints, consult the migration files in `database/migrations`.
 
 ## Performance & Architecture Notes
 
