@@ -1,105 +1,73 @@
 # Agronos — Smart Agriculture IoT Platform
 
-> ## 🎓 Thesis release
-> This repository contains the source code of the thesis **"Σχεδιασμός και Υλοποίηση Πλατφόρμας Έξυπνης Γεωργίας με Ενσωμάτωση IoT Κόμβων"** (*Design and Implementation of a Smart Agriculture Platform with IoT Node Integration*) by Γεώργιος Καλογείτονας, Hellenic Open University (Ελληνικό Ανοικτό Πανεπιστήμιο), School of Science and Technology, Patras, May 2026. Supervisor: Νικόλαος Σκλάβος.
->
-> The code exactly as referenced in the thesis text is frozen at the tag [`thesis-v1.0`](https://github.com/gkalogeitonas/agronos/tree/thesis-v1.0) ([release](https://github.com/gkalogeitonas/agronos/releases/tag/thesis-v1.0)). Browse that tag to see the code matching the submitted document; `main` may continue to evolve.
+A platform for collecting, storing and visualizing sensor data from agricultural devices. Agronos provides device registration, time-series ingestion (InfluxDB), per-user tenancy, and HTTP, MQTT and LoRa ingestion paths for farms, devices and sensors.
 
-A platform for collecting, storing and visualizing sensor data from agricultural devices. Agronos provides device registration, time-series ingestion (InfluxDB), multi-tenant data separation, and a REST API for accessing farms, devices and sensors.
+> **Thesis release:** this project started as the thesis *"Σχεδιασμός και Υλοποίηση Πλατφόρμας Έξυπνης Γεωργίας με Ενσωμάτωση IoT Κόμβων"* (Γεώργιος Καλογείτονας, Hellenic Open University, May 2026, supervisor Νικόλαος Σκλάβος). The code as submitted, with the thesis reports, is frozen at the tag [`thesis-v1.0`](https://github.com/gkalogeitonas/agronos/tree/thesis-v1.0) ([release](https://github.com/gkalogeitonas/agronos/releases/tag/thesis-v1.0)). `main` keeps evolving. Current design decisions are in [`docs/adr/`](docs/adr/).
 
 ## Key features
 - Device registration and lifecycle management
-- Time-series storage and query (InfluxDB integration)
-- Multi-tenant data isolation via global scopes and traits
-- HTTP and MQTT device integration patterns
-- API resources with policies and form requests
+- Time-series storage and query in InfluxDB
+- Per-user tenancy for farms, devices and sensors
+- Device ingestion over HTTP, MQTT (EMQX) and LoRa (through a gateway)
+- Live updates in the UI over websockets (Reverb)
 
 ## Tech stack
-- Backend: Laravel (PHP)
-- Time-series DB: InfluxDB
-- Relational DB: SQLite/MySQL/Postgres (configurable)
-- Frontend: Vite + Vue (ShadCN components preferred)
-- Realtime: Reverb (websockets)
-- Testing: Pest PHP
-- Containerization: Docker / docker-compose
+- Backend: Laravel 13, PHP 8.5
+- Frontend: Inertia + Vue, Vite, ShadCN components
+- Relational DB: MariaDB
+- Time-series DB: InfluxDB (external service, not bundled)
+- MQTT broker: EMQX
+- Realtime: Laravel Reverb
+- Testing: Pest (feature and browser tests)
+- Local development: [DDEV](https://ddev.com/). Production: Docker Compose / Dokploy
 
-## Quickstart (Linux)
-1. Requirements
-   - PHP 8.x, Composer, Node 18+, npm or pnpm, Docker (optional)
-2. Copy environment
-   - cp .env.example .env
-   - Update `.env` values (DB, INFLUXDB config, APP_KEY)
-3. Install dependencies
-   - composer install
-   - npm install && npm run build
-4. Generate app key and run migrations
-   - php artisan key:generate
-   - php artisan migrate
-5. Run (local)
-   - php artisan serve 
+## Local development (DDEV)
 
-   
-### Additional services for realtime (Reverb) & workers
+Every command runs inside the DDEV containers: use `ddev artisan`, `ddev composer` and `ddev npm`, never the host's `php`, `composer` or `npm`.
 
-This project uses Reverb for websocket/real-time broadcasting and Laravel queues for broadcasting jobs and other background work. For a local development environment you should run the Reverb server and at least one queue worker.
-
-- Run the Reverb server (local):
-  - If you installed the Reverb binary via composer or globally, run its start command:
-```bash
-  php artisan reverb:start
-```
-  - Confirm `REVERB_SERVER_HOST`/`REVERB_SERVER_PORT` in `.env` match the command above.
-
-- Run a queue worker (to process broadcasts/jobs):
-  - For development, run a synchronous worker or the `queue:work` process in a terminal:
+Requirements: [DDEV](https://ddev.readthedocs.io/en/stable/users/install/) and Docker. PHP, Node and the database run in the containers.
 
 ```bash
-# single worker for default queue
-php artisan queue:work --queue=default --sleep=3 --tries=3
-
-# worker for sensor data processing (recommended for production)
-php artisan queue:work --queue=sensor-data,default --sleep=3 --tries=3
-
-# or run the queue in the foreground using sync driver for immediate execution
-php artisan queue:work --once
+cp .env.example .env               # then fill in INFLUXDB_* (or set INFLUXDB_FAKE=true)
+ddev start                         # DDEV sets the DB_* values in .env
+ddev composer install
+ddev npm install
+ddev artisan key:generate
+ddev artisan migrate --seed
+ddev artisan mqtt:setup-webhook    # EMQX rules for MQTT and LoRa ingestion
+ddev composer run dev              # Vite dev server, logs
 ```
 
-### Example terminal layout during development:
+`ddev start` also starts these services, so you don't run them by hand:
 
+| Service | Where |
+|---|---|
+| App | https://agronos.ddev.site |
+| Reverb (websockets) | Port `8080` (`.ddev/config.laravel-reverb.yaml`) |
+| Queue worker for `sensor-data,default` | `.ddev/config.laravel-workers.yaml` |
+| EMQX broker | MQTT `1883`/`8883`, WebSocket `8083`/`8084`, dashboard http://agronos.ddev.site:18083 |
+| phpMyAdmin | https://agronos.ddev.site:8037 |
+| Mailpit | https://agronos.ddev.site:8026 |
 
-
-Terminal 1 — Laravel app server
-```bash
-php artisan serve --host=0.0.0.0 --port=8000
-```
-
-Terminal 2 — Frontend (Vite dev server)
-```bash
-npm run dev
-```
-
-Terminal 3 — Queue worker
-```bash
-php artisan queue:listen --queue=sensor-data,default --sleep=3 --tries=3
-```
-
-Terminal 4 — Reverb (websockets)
-```bash
-php artisan reverb:start
-```
-
-Terminal 5 — Run tests
-```bash
-php artisan test
-```
-
+After seeding, log in as `johndoe@gmail.com` / `password`. The seeded dev devices use the secret `secret`.
 
 Notes:
-- Broadcasting may be queued depending on `BROADCAST_DRIVER` and `QUEUE_CONNECTION` in your `.env`. For immediate delivery in development you can set `QUEUE_CONNECTION=sync` or run a queue worker as shown above.
-- If you see private channel authentication failures, ensure the app is reachable at the host/port used by Reverb and that `REVERB_HOST`/`REVERB_SERVER_HOST` in `.env` is correct. Private channel auth requests are made to your Laravel app via `/broadcasting/auth` and require session/cookie or token auth.
-- For production, run Reverb and queue workers under a process supervisor (supervisord/systemd) and ensure you secure the Reverb endpoint and scale workers appropriately.
+- **InfluxDB** is not part of DDEV. Point `INFLUXDB_URL`, `INFLUXDB_TOKEN`, `INFLUXDB_ORG` and `INFLUXDB_BUCKET` at an InfluxDB 2 instance, or set `INFLUXDB_FAKE=true` to work without one (no readings are stored).
+- **Queue:** readings reach InfluxDB through the `sensor-data` queue. If charts stay empty, check that the DDEV worker is running (`ddev describe`).
+- **EMQX rules:** run `ddev artisan mqtt:setup-webhook` again after resetting the EMQX data volume. Re-running it is safe.
+- **Private channels:** if websocket auth fails, check that `REVERB_HOST`/`REVERB_PORT` in `.env` match the DDEV setup. Private channels authenticate through `/broadcasting/auth` with the session cookie.
 
-### Simulating devices (dev)
+### Running tests
+
+```bash
+ddev artisan test --compact                 # whole suite
+ddev artisan test --filter=SensorData       # a subset
+ddev browser-tests                          # builds assets, then runs tests/Browser
+```
+
+Tests use a fake InfluxDB client (`INFLUXDB_FAKE=true` in `phpunit.xml`), so they don't need a running InfluxDB.
+
+### Simulating devices
 
 `devices:simulate` sends fake, slowly drifting sensor readings for the seeded devices, so you can work on charts, live updates and the ingestion pipeline without real hardware. It refuses to run in production.
 
@@ -121,8 +89,7 @@ How readings are sent (`--via`):
 
 Before you run it:
 - **Seeded devices:** run `ddev artisan db:seed` (or `migrate:fresh --seed`). The seeder gives the dev devices the secret `secret` (`DevEnvironmentSeeder::DEVICE_SECRET`), which `http` and `mqtt` use to log in. A "login failed with HTTP 401" warning usually means the database was seeded before that, and re-seeding fixes it. The seeder only runs in `local` and `testing`.
-- **EMQX rules (`mqtt` only):** run `ddev artisan mqtt:setup-webhook` once (see "MQTT provisioning" below). Without the rules, publishing succeeds but nothing reaches Laravel.
-- **Queue worker:** readings reach InfluxDB through the `sensor-data` queue. DDEV starts a worker automatically (`.ddev/config.laravel-workers.yaml`). If charts stay empty, check that it is running.
+- **EMQX rules (`mqtt` only):** run `ddev artisan mqtt:setup-webhook` once. Without the rules, publishing succeeds but nothing reaches Laravel.
 
 Notes:
 - LoRa devices are skipped with `http` and `mqtt`, because they send through the LoRa gateway. Use `direct` for them.
@@ -131,19 +98,21 @@ Notes:
 
 ## Production deployment (Docker Compose)
 
-`docker-compose.yml` runs the whole stack in one go: app (PHP-FPM), web (nginx), queue workers, Reverb, EMQX and MariaDB. Code, dependencies and frontend assets are built into the images, so no host PHP or Node is needed.
+`docker-compose.yml` runs the whole stack in one go: app (PHP-FPM), web (nginx), two queue workers (`worker` and a dedicated `sensor-worker`), Reverb, EMQX and MariaDB. Code, dependencies and frontend assets are built into the images, so no host PHP or Node is needed. InfluxDB is external: set the `INFLUXDB_*` values.
 
 ```bash
 cp .env.production.example .env        # fill in every empty value
 docker compose run --rm --no-deps app php artisan key:generate --show   # paste into APP_KEY
 docker compose up -d --build
-docker compose exec app php artisan db:seed --force   # optional demo data
+docker compose exec app php artisan mqtt:setup-webhook   # EMQX rules, once per EMQX data volume
+docker compose exec app php artisan db:seed --force      # optional demo data
 ```
 
 - The app is served on `WEB_PORT` (default `8000`), and Reverb on `REVERB_PUBLIC_PORT` (default `8080`). Put a TLS reverse proxy in front for production.
 - `VITE_*` values are compiled into the frontend, so rebuild (`--build`) after changing them.
 - Migrations run automatically every time the `app` container starts.
 - MQTT devices connect to ports `1883`/`8883`. The EMQX dashboard is on `18083`.
+- To handle more readings, scale the sensor worker: `docker compose up -d --scale sensor-worker=3`.
 
 ### Dokploy (shared database)
 
@@ -155,178 +124,79 @@ compose -p agronos -f docker-compose.yml -f docker-compose.dokploy.yml up -d --b
 
 Then point `DB_HOST` at the shared MariaDB's internal hostname, and add these domains in the Dokploy UI: `web:80`, `reverb:8080`, `emqx:18083` (dashboard) and `emqx:8083` (MQTT over WebSocket).
 
-## Project structure (high level)
-- app/ — Laravel application code (Models, Http controllers, Policies, Services)
-- config/ — Environment and service configuration
-- database/ — Migrations, factories, seeders
-- docs/ — Architecture decisions (`docs/adr/`) and agent setup; domain terms are in `GLOSSARY.md`
-- resources/ — Frontend assets and views
-- routes/ — API and web routes
-- tests/ — Pest test suites
+## Project structure
+- `app/` — Models, controllers, policies, services, jobs and Artisan commands
+- `config/` — Environment and service configuration
+- `database/` — Migrations, factories, seeders
+- `docs/adr/` — Architecture decisions; domain terms are in [`GLOSSARY.md`](GLOSSARY.md)
+- `docker/` — Production images and EMQX config
+- `resources/js/` — Inertia + Vue frontend
+- `routes/` — Web, API and channel routes
+- `tests/` — Pest feature, unit and browser tests
 
-## Device onboarding, registration and data flow
+## Architecture overview
 
-- Device provisioning / pre-provisioning: Devices are provisioned server-side (via admin UI or API) and each Device record contains a UUID and secret. The device vendor or operator provides these credentials to the physical device (printed on a label or embedded in a QR code).
-- Linking in the app (user action): the user adds the device to their account by copying the UUID/secret or scanning the device QR code in the frontend UI. This links the existing Device record to the user's tenant and can enable the device for operation.
-- Enabling the device: once the device record is linked and enabled through the UI, the physical device can authenticate to the platform.
+- **Tenancy:** farms, devices and sensors belong to a user and are filtered by the `BelongsToTenant` trait and `TenantScope` ([ADR-0003](docs/adr/0003-per-user-tenancy.md)). Code that runs without a signed-in user (device API, webhooks, jobs, commands) uses `allTenants()`.
+- **Readings:** the API stores the latest value on the sensor and dispatches the `ProcessSensorInfluxData` job on the `sensor-data` queue, which writes to InfluxDB ([ADR-0001](docs/adr/0001-readings-in-influxdb.md)). Failed writes are retried up to 3 times and logged.
+- **MQTT:** devices publish to EMQX, and EMQX rules forward the messages to the app's webhooks ([ADR-0002](docs/adr/0002-emqx-webhooks-for-mqtt-ingestion.md)).
+- **Device auth:** devices log in with UUID and secret and receive a Sanctum token ([ADR-0004](docs/adr/0004-device-authentication.md)).
+- **LoRa:** a LoRa gateway publishes to `lora/+/data`, and EMQX forwards it to `POST /api/v1/lora/webhook`. Payloads are end-to-end encrypted ([ADR-0005](docs/adr/0005-lora-end-to-end-encryption.md)).
 
-### Authentication (device login)
+InfluxDB points (`SensorMeasurementPayloadFactory`):
+- measurement: `sensor_measurement`
+- tags: `user_id`, `farm_id`, `sensor_id`, `sensor_type`
+- fields: `value` (float)
+- time: server timestamp, seconds precision
 
-- Endpoint: POST /api/v1/device/login
+## Devices and sensors
+
+### Onboarding
+
+- **Devices** are created with a UUID and secret. The operator gives these to the physical device (label or QR code). The user links the device to their account by entering the UUID/secret or scanning the QR code in the UI, and then the device can log in.
+- **Sensors** each have their own UUID. On the Add Sensor screen (`resources/js/pages/Sensors/Create.vue`) the user scans the sensor's QR code (UUID, optionally device UUID and type) or types the details in, and can capture GPS coordinates from the phone. The form posts to `sensors.scan` (`SensorController@scan`), which checks with `DevicePolicy` that the user owns the device and then links or creates the sensor.
+
+### Device API
+
+Device firmware: https://github.com/gkalogeitonas/Agronos-iot-device (flashing instructions, hardware notes, telemetry formats).
+
+**Login:** `POST /api/v1/device/login`
 
 ```json
-{
-  "uuid": "device-uuid-string",
-  "secret": "device-secret"
-}
+{ "uuid": "device-uuid-string", "secret": "device-secret" }
 ```
-- Behavior: the server verifies credentials (see `App\Http\Controllers\Api\V1\DeviceAuthController`). On success the device status is set to ONLINE, `last_seen_at` is updated and a Laravel Sanctum personal access token is issued to the device for future requests.
+
+On success the device is marked online, `last_seen_at` is updated and a Sanctum token is returned:
 
 ```json
-{
-  "token": "plain-text-token"
-}
+{ "token": "plain-text-token" }
 ```
 
+Send the token as `Authorization: Bearer <token>` on the requests below.
 
-### MQTT provisioning (how a device gets MQTT credentials)
-
-- Flow summary:
-  1. The device authenticates to the HTTP API using its UUID and secret (POST `/api/v1/device/login`) and receives a Sanctum token.
-   2. Using that token as a Bearer token the device calls the MQTT provisioning HTTP endpoint.
-     - Endpoint: GET /api/v1/device/mqtt-credentials
-  3. The server uses `App\Services\MqttCredentialService` to ensure the device has broker credentials. If none exist, the service creates an EMQX user (via `EmqxService`), stores `mqtt_username` and `mqtt_password` on the `devices` table and returns the credentials to the device.
-
-- Important details:
-  - The returned payload includes `mqtt_broker_url` (from `config('services.emqx.url')`), `username`, `password` and `created` (boolean indicating whether new credentials were created).
-  - When credentials already exist for the device the service returns them again and sets `created: false`.
-  - By default the implementation sets the MQTT username to the device UUID and generates a random password (see `MqttCredentialService::createCredentials`).
-
-- Example (device side):
-
-  - After login, include the token in the Authorization header and call the provisioning endpoint (device must be authenticated):
-
-    Authorization: Bearer <token>
-
-  - Example JSON response from the provisioning call:
-
-    {
-      "mqtt_broker_url": "https://emqx.local",
-      "username": "device-uuid-string",
-      "password": "0123ab...",
-      "created": true
-    }
-
-- Notes for operators / backend:
-  - The EMQX broker URL and API settings are configured under `services.emqx.*` in your config/env.
-  - The server-side implementation is idempotent: calling the provision endpoint multiple times will return the same credentials unless they are missing and need creation.
-  - Ensure the EMQX admin API (used by `EmqxService`) is reachable from the Laravel app and that any required API credentials are set in `.env`/`config/services.php`.
-  - Run `ddev artisan mqtt:setup-webhook` once (and again after resetting the EMQX data volume). It creates or updates the EMQX connectors, actions and rules that forward `devices/+/sensors` messages to `POST /api/v1/device/mqtt-webhook` and LoRa gateway `lora/+/data` messages to `POST /api/v1/lora/webhook`. The app's base URL comes from `EMQX_WEBHOOK_BASE_URL` (default `http://web`, the DDEV web container as seen from EMQX) or `--base-url`. Re-running it is safe.
-
-
-### Device firmware repository
-
-The device firmware and related embedded code are maintained in a separate repository: https://github.com/gkalogeitonas/Agronos-iot-device
-
-This repo contains the microcontroller firmware, QR/UUID printing utilities and examples for connecting devices to the Agronos platform. Link here for flashing instructions, hardware notes and device-side telemetry formats.
-
-### Sending sensor measurements (HTTP)
-
-- Auth: use the Sanctum token as a Bearer token in Authorization header for subsequent requests to the data endpoint.
-- Endpoint: POST /api/v1/device/data
-- Payload shape:
+**Send readings over HTTP:** `POST /api/v1/device/data`
 
 ```json
 {
   "sensors": [
     { "uuid": "Test-Device-1-sensor-1", "value": 22.6 },
-    { "uuid": "Test-Device-1-sensor-2", "value": 99.9 },
-    { "uuid": "Test-Device-1-sensor-3", "value": 99.9 }
+    { "uuid": "Test-Device-1-sensor-2", "value": 99.9 }
   ]
 }
 ```
-- Behavior: the `DeviceDataController` validates the payload, updates the device `status` and `last_seen_at`, then delegates to `SensorDataService::processSensorData` which:
-  - Resolves sensors for the device and tenant
-  - Writes measurements to InfluxDB using `SensorMeasurementPayloadFactory` (fields: value, tags: user/farm/sensor ids and type, time)
-  - Updates `last_reading` and `last_reading_at` on the Sensor models
-- Example success response:
+
+Response: `{ "message": "Data received." }`. If some sensor UUIDs don't belong to the device, the response also includes `missing_uuids`.
+
+**Get MQTT credentials:** `GET /api/v1/device/mqtt-credentials`
 
 ```json
 {
-  "message": "Data received."
+  "mqtt_broker_url": "https://emqx.local",
+  "username": "device-uuid-string",
+  "password": "0123ab...",
+  "created": true
 }
 ```
-- If any sensor UUIDs are unknown for the device, response will include `missing_uuids` with the list of those UUIDs.
 
-## Sensor onboarding (QR scan and manual)
+`MqttCredentialService` creates an EMQX user on the first call (username = device UUID, random password) and stores the credentials on the device. Later calls return the same credentials with `created: false`. The device then publishes readings to `devices/{uuid}/sensors`, and EMQX forwards them to `POST /api/v1/device/mqtt-webhook`.
 
-- Per-sensor UUIDs: each physical sensor attached to a device has its own UUID (in addition to the device UUID). Sensors can expose their UUIDs separately (labels or QR codes) so they can be registered individually.
-- QR workflow (recommended for ease):
-  1. The operator or vendor pre-provisions the Device and Sensor records server-side (each Sensor has a UUID). A QR code containing the sensor UUID (and optionally device_uuid, type) is printed or displayed on the sensor.
-  2. In the frontend the user opens the Add Sensor screen and taps "Scan Sensor QR" (see `resources/js/pages/Sensors/Create.vue`). The app uses the phone camera to read the QR payload.
-  3. The front-end will populate the sensor form (uuid, device_uuid, type) and can optionally capture GPS coordinates from the phone to set `lat`/`lon`.
-  4. The UI submits to `sensors.scan` which calls `App\Http\Controllers\SensorController@scan`. That action will link the sensor to the selected device and user, update fields if the sensor exists, or create a new Sensor when missing.
-- Manual entry: the user may also add a sensor manually using the same Add Sensor form by entering the sensor UUID and other metadata (farm, name, location).
-- Backend validation and authorization: `SensorController@scan` validates input (device exists, uuid string) and uses `DevicePolicy` to confirm the user is allowed to link the sensor to the device. New sensors are created with `user_id` and `device_id` set to the current user and device respectively (see `app/Http/Controllers/SensorController.php`).
-- Result: after registration the sensor is linked to the user's tenant and will be discoverable in the UI and eligible to receive data from the parent device. When the device sends measurements, `SensorDataService` will resolve sensors by UUID and update `last_reading` / `last_reading_at` on the Sensor models.
-
-See `app/Models/Sensor.php`, `app/Http/Controllers/SensorController.php` and `resources/js/pages/Sensors/Create.vue` for the implementation details and validation rules.
-
-## InfluxDB payload details
-
-Payloads written to InfluxDB use the following structure (see `SensorMeasurementPayloadFactory`):
-- name: sensor_measurement
-- tags: user_id, farm_id, sensor_id, sensor_type
-- fields: value (float)
-- time: server timestamp (seconds precision)
-
-## Database schema (summary)
-
-A short overview of the main tables and key columns. See `database/migrations` for the full schema.
-
-- users
-  - id (PK), name, email, password, email_verified_at, created_at, updated_at
-  - relations: hasMany farms, devices, sensors
-
-- farms
-  - id (PK), user_id (FK), name, location, size, coordinates (GeoJSON), description, created_at, updated_at
-  - relations: belongsTo user, hasMany sensors and are tenant-scoped via the `BelongsToTenant` trait.
-
-- devices
-  - id (PK), user_id (FK), name, uuid (unique), secret (hashed), type, status (enum), last_seen_at, battery_level, signal_strength, created_at, updated_at
-  - notes: Devices are Authenticatable (Laravel Sanctum tokens).
-  - relations: belongsTo user, hasMany sensors
-
-- sensors
-  - id (PK), user_id (FK), device_id (FK), farm_id (FK, nullable), crop_id (nullable), name, uuid (unique), type, lat, lon, last_reading (float), last_reading_at (timestamp), created_at, updated_at
-  - notes: Sensors are resolved by UUID when ingesting measurements. See `app/Models/Sensor.php` and `app/Http/Controllers/SensorController.php` for registration logic
-
-Notes
-- Multi-tenancy: models use a `BelongsToTenant` trait and `TenantScope` to ensure tenant separation; see `app/Traits/BelongsToTenant.php` and `app/Scopes/TenantScope.php`.
-- For exact column types, indexes and constraints, consult the migration files in `database/migrations`.
-
-## Performance & Architecture Notes
-
-### Asynchronous InfluxDB Writes
-
-Sensor data ingestion is designed for high performance and reliability:
-
-- **Non-blocking API**: Device data posts return immediately after updating the local database
-- **Queued writes**: InfluxDB writes are processed asynchronously via the `ProcessSensorInfluxData` job
-- **Dedicated queue**: Sensor data uses the `sensor-data` queue for optimal processing separation
-- **Retry mechanism**: Failed InfluxDB writes are retried up to 3 times with exponential backoff
-- **Monitoring**: All InfluxDB failures are logged for monitoring and alerting
-
-To ensure optimal performance in production:
-```bash
-# Run dedicated workers for sensor data processing
-php artisan queue:work --queue=sensor-data --sleep=1 --tries=3
-
-# Scale workers based on ingestion volume
-supervisorctl start worker_sensor_data:*
-```
-
-This architecture allows the platform to handle high-frequency sensor data while maintaining fast API response times.
-
-
-
+The EMQX API settings are under `services.emqx.*` (`EMQX_API_URL`, `MQTT_API_KEY`, `MQTT_API_SECRET`). The app's base URL as seen from EMQX comes from `EMQX_WEBHOOK_BASE_URL` (default `http://web`) or `mqtt:setup-webhook --base-url`.
