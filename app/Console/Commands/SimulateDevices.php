@@ -8,6 +8,8 @@ use App\Models\Device;
 use App\Models\Sensor;
 use App\Services\DeviceMqttPublisher;
 use App\Services\SensorDataService;
+use App\Services\TimeSeries\SensorTimeSeriesService;
+use Carbon\Carbon;
 use Database\Seeders\DevEnvironmentSeeder;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -26,7 +28,9 @@ use PhpMqtt\Client\Exceptions\MqttClientException;
     {--secret='.DevEnvironmentSeeder::DEVICE_SECRET.' : Plaintext device secret used to log in with --via=http or --via=mqtt}
     {--url= : Base URL of the device API (defaults to APP_URL)}
     {--interval=10 : Seconds between readings}
-    {--once : Send a single round of readings and exit}')]
+    {--once : Send a single round of readings and exit}
+    {--verify : Send one round, then check the readings reached the database and InfluxDB (implies --once)}
+    {--verify-timeout=15 : Seconds to wait for the readings to arrive with --verify}')]
 #[Description('Send fake sensor readings for virtual devices in local development')]
 class SimulateDevices extends Command
 {
@@ -67,6 +71,13 @@ class SimulateDevices extends Command
      */
     private array $publishers = [];
 
+    /**
+     * Sensor and value of every reading sent this run, collected for --verify.
+     *
+     * @var array<int, array{sensor: Sensor, value: float}>
+     */
+    private array $sentReadings = [];
+
     private int $interval = 10;
 
     private bool $stopping = false;
@@ -74,7 +85,7 @@ class SimulateDevices extends Command
     /**
      * Execute the console command.
      */
-    public function handle(SensorDataService $sensorDataService): int
+    public function handle(SensorDataService $sensorDataService, SensorTimeSeriesService $timeSeries): int
     {
         if ($this->laravel->isProduction()) {
             $this->error('Device simulation is disabled in production.');
@@ -97,6 +108,9 @@ class SimulateDevices extends Command
 
             return self::FAILURE;
         }
+
+        $verify = (bool) $this->option('verify');
+        $sendStartedAt = now()->startOfSecond();
 
         $this->interval = max(1, (int) $this->option('interval'));
         $this->trap([SIGINT, SIGTERM], fn () => $this->stopping = true);
@@ -125,7 +139,7 @@ class SimulateDevices extends Command
                     return self::FAILURE;
                 }
 
-                if ($this->option('once')) {
+                if ($verify || $this->option('once')) {
                     break;
                 }
 
@@ -137,7 +151,71 @@ class SimulateDevices extends Command
             }
         }
 
+        return $verify ? $this->verifyReadings($sendStartedAt, $timeSeries) : self::SUCCESS;
+    }
+
+    /**
+     * Wait for every reading sent this run to reach the database and InfluxDB, naming the first stage that is missing.
+     */
+    private function verifyReadings(Carbon $sentAfter, SensorTimeSeriesService $timeSeries): int
+    {
+        $timeout = max(1, (int) $this->option('verify-timeout'));
+        $this->info('Verifying '.count($this->sentReadings)." reading(s), waiting up to {$timeout}s...");
+
+        for ($waited = 0; ; $waited++) {
+            $stages = collect($this->sentReadings)->map(fn (array $sent) => $this->stageReached($sent['sensor'], $sent['value'], $sentAfter, $timeSeries));
+
+            if ($stages->every(fn (string $stage) => $stage === 'stored') || $waited >= $timeout) {
+                break;
+            }
+
+            Sleep::for(1)->second();
+        }
+
+        foreach ($this->sentReadings as $index => $sent) {
+            $this->line("[{$sent['sensor']->uuid}] ".match ($stages[$index]) {
+                'stored' => 'OK: stored in the database and InfluxDB',
+                'received' => 'received by Laravel, but not in InfluxDB',
+                default => 'NOT received by Laravel',
+            });
+        }
+
+        if ($stages->contains('sent')) {
+            $this->error('Readings did not reach Laravel. Check the EMQX rule and webhook, and run `ddev artisan mqtt:setup-webhook`.');
+
+            return self::FAILURE;
+        }
+
+        if ($stages->contains('received')) {
+            $this->error('Readings reached Laravel but not InfluxDB. Check that the `sensor-data` queue worker is running.');
+
+            return self::FAILURE;
+        }
+
+        $this->info('All readings arrived.');
+
         return self::SUCCESS;
+    }
+
+    /**
+     * The furthest stage a sent reading reached: "sent", "received" (database updated) or "stored" (also in InfluxDB).
+     */
+    private function stageReached(Sensor $sensor, float $value, Carbon $sentAfter, SensorTimeSeriesService $timeSeries): string
+    {
+        $fresh = Sensor::allTenants()->find($sensor->id);
+
+        if ($fresh === null
+            || $fresh->last_reading_at === null
+            || Carbon::parse($fresh->last_reading_at)->lt($sentAfter)
+            || abs((float) $fresh->last_reading - $value) > 0.01) {
+            return 'sent';
+        }
+
+        $inInflux = collect($timeSeries->recentReadings($sensor->id, '-5m', 20))
+            ->contains(fn (array $point) => abs((float) $point['value'] - $value) <= 0.01
+                && Carbon::parse($point['time'], 'UTC')->gte($sentAfter));
+
+        return $inInflux ? 'stored' : 'received';
     }
 
     /**
@@ -339,6 +417,14 @@ class SimulateDevices extends Command
     {
         $readings = collect($payloads)->map(fn (array $payload) => "{$payload['uuid']}={$payload['value']}")->implode(', ');
         $this->line("[{$device->uuid}] {$readings}");
+
+        foreach ($payloads as $payload) {
+            $sensor = $device->sensors->firstWhere('uuid', $payload['uuid']);
+
+            if ($sensor !== null) {
+                $this->sentReadings[$sensor->id] = ['sensor' => $sensor, 'value' => $payload['value']];
+            }
+        }
     }
 
     /**
