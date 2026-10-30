@@ -20,7 +20,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Minutes without a reading after which an online device is marked offline
-    | by the devices:mark-offline command.
+    | by the devices:mark-offline command. Values below 6 are raised to 6, so
+    | the threshold always exceeds the command's five-minute schedule.
     |
     */
 

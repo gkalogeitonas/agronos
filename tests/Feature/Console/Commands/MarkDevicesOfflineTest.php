@@ -18,6 +18,15 @@ it('marks online devices offline once they are past the threshold', function () 
         ->and($fresh->fresh()->status)->toBe(DeviceStatus::ONLINE);
 });
 
+it('never uses a threshold of five minutes or less', function (int $configured) {
+    config(['agronos.offline_after_minutes' => $configured]);
+    $device = Device::factory()->create(['status' => DeviceStatus::ONLINE, 'last_seen_at' => now()->subMinutes(5)]);
+
+    $this->artisan('devices:mark-offline')->assertSuccessful();
+
+    expect($device->fresh()->status)->toBe(DeviceStatus::ONLINE);
+})->with([0, -10, 5]);
+
 it('marks online devices that never recorded a last seen time offline', function () {
     $device = Device::factory()->create(['status' => DeviceStatus::ONLINE, 'last_seen_at' => null]);
 
