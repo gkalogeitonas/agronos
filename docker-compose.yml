@@ -67,6 +67,14 @@ services:
       app:
         condition: service_healthy
 
+  scheduler:
+    <<: *app
+    user: www-data
+    command: php artisan schedule:work
+    depends_on:
+      app:
+        condition: service_healthy
+
   reverb:
     <<: *app
     user: www-data

@@ -14,4 +14,16 @@ return [
 
     'low_battery_percent' => (int) env('AGRONOS_LOW_BATTERY_PERCENT', 20),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Offline Threshold
+    |--------------------------------------------------------------------------
+    |
+    | Minutes without a reading after which an online device is marked offline
+    | by the devices:mark-offline command.
+    |
+    */
+
+    'offline_after_minutes' => (int) env('AGRONOS_OFFLINE_AFTER_MINUTES', 60),
+
 ];

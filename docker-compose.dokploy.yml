@@ -27,6 +27,9 @@ services:
   sensor-worker:
     networks: [default, dokploy-network]
 
+  scheduler:
+    networks: [default, dokploy-network]
+
   reverb:
     ports: !reset []
     networks: [default, dokploy-network]
