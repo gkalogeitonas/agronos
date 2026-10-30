@@ -7,6 +7,7 @@ use App\Models\Device;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 
 #[Signature('devices:mark-offline')]
 #[Description('Mark online devices offline when they have not reported within the offline threshold')]
@@ -24,7 +25,7 @@ class MarkDevicesOffline extends Command
 
         $marked = Device::allTenants()
             ->where('status', DeviceStatus::ONLINE)
-            ->where(fn ($query) => $query->whereNull('last_seen_at')->orWhere('last_seen_at', '<', $threshold))
+            ->where(fn (Builder $query) => $query->whereNull('last_seen_at')->orWhere('last_seen_at', '<', $threshold))
             ->update(['status' => DeviceStatus::OFFLINE]);
 
         $this->info("Marked {$marked} device(s) offline.");
