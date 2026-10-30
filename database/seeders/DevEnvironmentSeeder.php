@@ -99,6 +99,28 @@ class DevEnvironmentSeeder extends Seeder
                             'mqtt_password' => 'ac843d75e2711626d9d3c18f3ae370dd',
                         ],
                     ],
+                    [
+                        'sensor' => [
+                            'name' => 'Test-Device-1-battery',
+                            'uuid' => 'Test-Device-1-battery',
+                            'type' => 'battery',
+                            'lat' => '37.0582268',
+                            'lon' => '25.4074122',
+                            'last_reading' => '100.00',
+                            'last_reading_at' => '2026-01-06 21:02:57',
+                        ],
+                        'device' => [
+                            'name' => 'Test-Device-1',
+                            'uuid' => 'Test-Device-1',
+                            'secret' => $deviceSecret,
+                            'type' => 'wifi',
+                            'status' => 'online',
+                            'battery_level' => null,
+                            'signal_strength' => null,
+                            'mqtt_username' => 'Test-Device-1',
+                            'mqtt_password' => 'ac843d75e2711626d9d3c18f3ae370dd',
+                        ],
+                    ],
                 ],
             ],
         ];

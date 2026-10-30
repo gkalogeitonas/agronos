@@ -42,7 +42,7 @@ class SimulateDevices extends Command
         'humidity' => ['min' => 20, 'max' => 100, 'step' => 2],
         'moisture' => ['min' => 0, 'max' => 100, 'step' => 2],
         'light' => ['min' => 0, 'max' => 100000, 'step' => 2000],
-        'battery' => ['min' => 0, 'max' => 100, 'step' => 1],
+        'battery' => ['min' => 0, 'max' => 100, 'step' => 0.5],
         'other' => ['min' => 0, 'max' => 100, 'step' => 5],
     ];
 
@@ -349,9 +349,24 @@ class SimulateDevices extends Command
         $type = SensorType::tryFrom((string) $sensor->type)?->value ?? SensorType::OTHER->value;
         ['min' => $min, 'max' => $max, 'step' => $step] = self::RANGES[$type];
 
+        if ($type === SensorType::BATTERY->value) {
+            return $this->nextBatteryValue($sensor, $max, $step);
+        }
+
         $previous = $this->lastValues[$sensor->id] ?? (float) ($sensor->last_reading ?? ($min + $max) / 2);
         $delta = (mt_rand() / mt_getrandmax() * 2 - 1) * $step;
 
         return $this->lastValues[$sensor->id] = round(min($max, max($min, $previous + $delta)), 2);
+    }
+
+    /**
+     * Discharge the battery by a small random amount, returning to full once it runs out (as if swapped).
+     */
+    private function nextBatteryValue(Sensor $sensor, float $full, float $maxDrop): float
+    {
+        $previous = $this->lastValues[$sensor->id] ?? (float) ($sensor->last_reading ?? $full);
+        $next = $previous - mt_rand() / mt_getrandmax() * $maxDrop;
+
+        return $this->lastValues[$sensor->id] = $next <= 0 ? $full : round($next, 2);
     }
 }

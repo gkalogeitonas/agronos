@@ -92,6 +92,7 @@ Before you run it:
 - **EMQX rules (`mqtt` only):** run `ddev artisan mqtt:setup-webhook` once. Without the rules, publishing succeeds but nothing reaches Laravel.
 
 Notes:
+- The seeded Test-Device-1 has a `battery` sensor. The simulator drains it slowly (and resets to 100 % at 0) instead of drifting it.
 - LoRa devices are skipped with `http` and `mqtt`, because they send through the LoRa gateway. Use `direct` for them.
 - `http` and `mqtt` log in as the device, so use the seeded dev devices, not a device a physical board is using.
 - The chart for the last 24 h groups readings into 15-minute windows, so a new line appears only after readings in at least two windows.
