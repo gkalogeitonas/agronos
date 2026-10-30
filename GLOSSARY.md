@@ -26,6 +26,10 @@ _Avoid_: Farm status
 A physical unit deployed on a farm that carries one or more sensors and talks to the platform.
 _Avoid_: Node, board, unit
 
+**Offline**:
+The state of a device that has reported before but has sent nothing for longer than the offline threshold. It goes back online with its next reading.
+_Avoid_: Disconnected, down
+
 **Device Secret**:
 The credential shipped with a device (on its QR label) that proves possession of it at registration and login.
 _Avoid_: Device password, key

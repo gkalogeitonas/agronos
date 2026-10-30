@@ -3,6 +3,7 @@
 use App\Events\SensorReadingEvent;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -25,3 +26,5 @@ Artisan::command('test:broadcast {sensorId=1}', function (int $sensorId) {
         $this->error('Failed to broadcast event: '.$e->getMessage());
     }
 })->purpose('Test broadcasting to Reverb');
+
+Schedule::command('devices:mark-offline')->everyFiveMinutes();
