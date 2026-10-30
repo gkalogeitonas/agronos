@@ -54,7 +54,7 @@ After seeding, log in as `johndoe@gmail.com` / `password`. The seeded dev device
 Notes:
 - **InfluxDB** is not part of DDEV. Point `INFLUXDB_URL`, `INFLUXDB_TOKEN`, `INFLUXDB_ORG` and `INFLUXDB_BUCKET` at an InfluxDB 2 instance, or set `INFLUXDB_FAKE=true` to work without one (no readings are stored).
 - **Queue:** readings reach InfluxDB through the `sensor-data` queue. If charts stay empty, check that the DDEV worker is running (`ddev describe`).
-- **EMQX rules:** run `ddev artisan mqtt:setup-webhook` again after resetting the EMQX data volume. Re-running it is safe.
+- **EMQX rules:** set `EMQX_WEBHOOK_SECRET` in `.env`, then run `ddev artisan mqtt:setup-webhook`. Run it again after resetting the EMQX data volume or changing the secret. Re-running it is safe.
 - **Private channels:** if websocket auth fails, check that `REVERB_HOST`/`REVERB_PORT` in `.env` match the DDEV setup. Private channels authenticate through `/broadcasting/auth` with the session cookie.
 
 ### Running tests
@@ -201,4 +201,4 @@ Response: `{ "message": "Data received." }`. If some sensor UUIDs don't belong t
 
 `MqttCredentialService` creates an EMQX user on the first call (username = device UUID, random password) and stores the credentials on the device. Later calls return the same credentials with `created: false`. The device then publishes readings to `devices/{uuid}/sensors`, and EMQX forwards them to `POST /api/v1/device/mqtt-webhook`.
 
-The EMQX API settings are under `services.emqx.*` (`EMQX_API_URL`, `MQTT_API_KEY`, `MQTT_API_SECRET`). The app's base URL as seen from EMQX comes from `EMQX_WEBHOOK_BASE_URL` (default `http://web`) or `mqtt:setup-webhook --base-url`.
+The EMQX API settings are under `services.emqx.*` (`EMQX_API_URL`, `MQTT_API_KEY`, `MQTT_API_SECRET`). The app's base URL as seen from EMQX comes from `EMQX_WEBHOOK_BASE_URL` (default `http://web`) or `mqtt:setup-webhook --base-url`. The webhooks only accept requests whose `X-EMQX-Secret` header matches `EMQX_WEBHOOK_SECRET`, and reject everything with 401 while it is empty. `mqtt:setup-webhook` configures the EMQX connectors to send it.

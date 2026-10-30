@@ -11,6 +11,7 @@ beforeEach(function () {
         'services.emqx.api_key' => 'api-key',
         'services.emqx.secret_key' => 'secret',
         'services.emqx.webhook_base_url' => 'http://web',
+        'services.emqx.webhook_secret' => 'emqx-webhook-secret',
     ]);
     Http::preventStrayRequests();
 });
@@ -38,7 +39,8 @@ it('creates the device and LoRa connectors, actions and rules when they do not e
         && $request->url() === $this->emqx.'/connectors'
         && $request['type'] === 'http'
         && $request['name'] === 'agronos_device_webhook'
-        && $request['url'] === 'http://app.test/api/v1/device/mqtt-webhook');
+        && $request['url'] === 'http://app.test/api/v1/device/mqtt-webhook'
+        && $request['headers']['x-emqx-secret'] === 'emqx-webhook-secret');
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
         && $request->url() === $this->emqx.'/actions'
         && $request['name'] === 'agronos_device_webhook'
@@ -53,7 +55,8 @@ it('creates the device and LoRa connectors, actions and rules when they do not e
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
         && $request->url() === $this->emqx.'/connectors'
         && $request['name'] === 'agronos_lora_webhook'
-        && $request['url'] === 'http://app.test/api/v1/lora/webhook');
+        && $request['url'] === 'http://app.test/api/v1/lora/webhook'
+        && $request['headers']['x-emqx-secret'] === 'emqx-webhook-secret');
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
         && $request->url() === $this->emqx.'/actions'
         && $request['name'] === 'agronos_lora_webhook'
@@ -79,7 +82,8 @@ it('updates the existing resources instead of creating them', function () {
 
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request->url() === $this->emqx.'/connectors/http:agronos_device_webhook'
-        && $request['url'] === 'http://web/api/v1/device/mqtt-webhook');
+        && $request['url'] === 'http://web/api/v1/device/mqtt-webhook'
+        && $request['headers']['x-emqx-secret'] === 'emqx-webhook-secret');
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request->url() === $this->emqx.'/connectors/http:agronos_lora_webhook'
         && $request['url'] === 'http://web/api/v1/lora/webhook');
@@ -106,4 +110,15 @@ it('fails with the EMQX error and stops before the remaining resources', functio
     Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/actions')
         || str_contains($request->url(), '/rules')
         || str_contains($request->url(), 'agronos_lora_webhook'));
+});
+
+it('fails without contacting EMQX when no webhook secret is configured', function () {
+    config(['services.emqx.webhook_secret' => null]);
+    Http::fake();
+
+    $this->artisan('mqtt:setup-webhook')
+        ->expectsOutputToContain('EMQX_WEBHOOK_SECRET')
+        ->assertFailed();
+
+    Http::assertNothingSent();
 });

@@ -47,6 +47,14 @@ class SetupMqttWebhook extends Command
             return self::FAILURE;
         }
 
+        $secret = config('services.emqx.webhook_secret');
+
+        if (! filled($secret)) {
+            $this->error('Set EMQX_WEBHOOK_SECRET first: the webhooks reject every request without it.');
+
+            return self::FAILURE;
+        }
+
         $baseUrl = rtrim($this->option('base-url') ?: config('services.emqx.webhook_base_url'), '/');
 
         try {
@@ -54,7 +62,7 @@ class SetupMqttWebhook extends Command
                 $url = "{$baseUrl}/{$flow['path']}";
                 $sql = "SELECT username, payload, topic FROM \"{$flow['topic']}\"";
 
-                $this->line("Connector {$flow['webhook']}: ".$emqx->upsertWebhookConnector($flow['webhook'], $url));
+                $this->line("Connector {$flow['webhook']}: ".$emqx->upsertWebhookConnector($flow['webhook'], $url, ['x-emqx-secret' => $secret]));
                 $this->line("Action {$flow['webhook']}: ".$emqx->upsertWebhookAction($flow['webhook'], $flow['webhook']));
                 $this->line("Rule {$flow['rule']}: ".$emqx->upsertRule($flow['rule'], $sql, ["http:{$flow['webhook']}"]));
                 $this->info("EMQX now forwards {$flow['topic']} to {$url}.");
