@@ -8,11 +8,6 @@ import type { AlertItem } from '@/components/agronos/AlertList.vue';
  * render any of it show the SAMPLE DATA pill. Remove each export once its real data lands.
  */
 
-/** Organisation shown in the sidebar footer. Follow-up: organisation / tenant name. */
-export const sampleOrganisation = {
-    name: 'Your tenant name',
-};
-
 /** Follow-up: alerts (rules for moisture threshold, device offline, low battery). */
 export const sampleAlerts: AlertItem[] = [
     { id: 'gateway', title: 'Gateway not reporting', meta: 'Hilltop Greenhouse · 18 min ago', tone: 'danger' },

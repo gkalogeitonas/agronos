@@ -3,7 +3,6 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { sampleOrganisation } from '@/lib/sampleData';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { BellRing, Cpu, Folder, LayoutGrid, LucideWheat, QrCode, Radio, Settings, ToggleRight } from 'lucide-vue-next';
@@ -82,10 +81,6 @@ const footerNavItems: NavItem[] = [
 
         <SidebarFooter class="gap-3 px-3 pb-4">
             <NavFooter :items="footerNavItems" />
-            <div class="px-2 text-meta leading-normal text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
-                Organisation<br />
-                <span class="font-semibold text-white">{{ sampleOrganisation.name }}</span>
-            </div>
             <NavUser />
         </SidebarFooter>
     </Sidebar>
