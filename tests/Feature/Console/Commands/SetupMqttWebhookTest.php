@@ -86,7 +86,8 @@ it('updates the existing resources instead of creating them', function () {
         && $request['headers']['x-emqx-secret'] === 'emqx-webhook-secret');
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request->url() === $this->emqx.'/connectors/http:agronos_lora_webhook'
-        && $request['url'] === 'http://web/api/v1/lora/webhook');
+        && $request['url'] === 'http://web/api/v1/lora/webhook'
+        && $request['headers']['x-emqx-secret'] === 'emqx-webhook-secret');
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request->url() === $this->emqx.'/actions/http:agronos_lora_webhook'
         && $request['connector'] === 'agronos_lora_webhook');
@@ -114,11 +115,9 @@ it('fails with the EMQX error and stops before the remaining resources', functio
 
 it('fails without contacting EMQX when no webhook secret is configured', function () {
     config(['services.emqx.webhook_secret' => null]);
-    Http::fake();
 
+    // Http::preventStrayRequests() in beforeEach makes any EMQX call throw.
     $this->artisan('mqtt:setup-webhook')
         ->expectsOutputToContain('EMQX_WEBHOOK_SECRET')
         ->assertFailed();
-
-    Http::assertNothingSent();
 });
