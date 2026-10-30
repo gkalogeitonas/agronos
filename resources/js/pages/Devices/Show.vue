@@ -26,7 +26,6 @@ const props = defineProps<{
     device: DeviceDetail;
     sensors: (Sensor & { farm?: { id: number; name: string } | null })[];
     farms: { id: number; name: string }[];
-    batteryReading: number | string | null;
     batteryTimeSeries?: { time: string; value: number }[];
 }>();
 
@@ -40,10 +39,7 @@ const { formatAge, formatTimestamp } = useTimestamp();
 const liveReadings = useLiveSensorReadings(props.sensors);
 
 const isLoRa = computed(() => props.device.type === 'lora');
-const battery = computed<number | null>(() => {
-    const value = props.batteryReading ?? props.device.battery_level;
-    return value === null || value === '' || Number.isNaN(Number(value)) ? null : Number(value);
-});
+const battery = computed<number | null>(() => props.device.battery_level ?? null);
 
 /** The two most informative sensor readings, followed by battery and signal. */
 const readingTiles = computed(() =>

@@ -81,9 +81,6 @@ class DeviceController extends Controller
         $sensors = $device->load('sensors.farm:id,name')->sensors;
         $farms = $device->linkedFarms()->map->only(['id', 'name'])->values();
 
-        // Prefer device-level battery_level if present, otherwise use battery sensor last_reading
-        $batteryReading = $this->getBatteryLevel($device, $sensors);
-
         $ts = app(SensorTimeSeriesService::class);
 
         // Prepare deferred battery time-series (only if a battery sensor exists)
@@ -93,7 +90,6 @@ class DeviceController extends Controller
             'device' => (new DeviceDetailResource($device->withoutRelations()))->resolve(),
             'sensors' => $sensors,
             'farms' => $farms,
-            'batteryReading' => $batteryReading,
             'batteryTimeSeries' => Inertia::defer(fn () => $batterySensorId ? $ts->recentReadings((int) $batterySensorId, '-24h', 100) : []),
         ]);
     }
@@ -136,20 +132,5 @@ class DeviceController extends Controller
         $device->delete();
 
         return redirect()->route('devices.index')->with('success', 'Device deleted.');
-    }
-
-    private function getBatteryLevel(Device $device, $sensors): ?float
-    {
-
-        if ($device->battery_level !== null) {
-            return is_numeric($device->battery_level) ? (float) $device->battery_level : null;
-        }
-
-        $batterySensor = $sensors->firstWhere('type', SensorType::BATTERY->value);
-        if ($batterySensor && $batterySensor->last_reading !== null) {
-            return is_numeric($batterySensor->last_reading) ? (float) $batterySensor->last_reading : null;
-        }
-
-        return null;
     }
 }

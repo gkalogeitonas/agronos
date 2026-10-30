@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SensorType;
 use App\Events\SensorReadingEvent;
 use App\Jobs\ProcessSensorInfluxData;
 use App\Models\Sensor;
@@ -32,6 +33,11 @@ class SensorDataService
             $sensorModel->last_reading = $sensor['value'];
             $sensorModel->last_reading_at = now();
             $sensorModel->save();
+
+            if ($sensorModel->type === SensorType::BATTERY->value) {
+                $device->update(['battery_level' => (int) round((float) $sensor['value'])]);
+            }
+
             // Broadcast the new reading to any listeners (private per-sensor channel)
             event(new SensorReadingEvent(
                 $sensorModel->id,
