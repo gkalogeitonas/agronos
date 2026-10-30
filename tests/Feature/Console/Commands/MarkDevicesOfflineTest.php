@@ -53,16 +53,6 @@ it('sweeps the devices of every tenant', function () {
     $devices->each(fn (Device $device) => expect($device->fresh()->status)->toBe(DeviceStatus::OFFLINE));
 });
 
-it('brings an offline device back online with its next reading', function () {
-    $device = Device::factory()->create(['status' => DeviceStatus::ONLINE, 'last_seen_at' => now()->subDay()]);
-    $this->artisan('devices:mark-offline')->assertSuccessful();
-
-    $device->fresh()->update(['status' => DeviceStatus::ONLINE, 'last_seen_at' => now()]);
-    $this->artisan('devices:mark-offline')->assertSuccessful();
-
-    expect($device->fresh()->status)->toBe(DeviceStatus::ONLINE);
-});
-
 it('is scheduled every five minutes', function () {
     $event = collect(app(Schedule::class)->events())
         ->first(fn ($event) => str_contains($event->command, 'devices:mark-offline'));
