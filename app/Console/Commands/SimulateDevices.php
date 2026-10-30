@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\DeviceStatus;
+use App\Enums\ReadingStage;
 use App\Enums\SensorType;
 use App\Models\Device;
 use App\Models\Sensor;
@@ -159,13 +160,25 @@ class SimulateDevices extends Command
      */
     private function verifyReadings(Carbon $sentAfter, SensorTimeSeriesService $timeSeries): int
     {
+        if ($this->sentReadings === []) {
+            $this->error('Nothing was sent, so there is nothing to verify.');
+
+            return self::FAILURE;
+        }
+
         $timeout = max(1, (int) $this->option('verify-timeout'));
         $this->info('Verifying '.count($this->sentReadings)." reading(s), waiting up to {$timeout}s...");
 
-        for ($waited = 0; ; $waited++) {
-            $stages = collect($this->sentReadings)->map(fn (array $sent) => $this->stageReached($sent['sensor'], $sent['value'], $sentAfter, $timeSeries));
+        $stages = array_map(fn () => ReadingStage::Sent, $this->sentReadings);
 
-            if ($stages->every(fn (string $stage) => $stage === 'stored') || $waited >= $timeout) {
+        for ($waited = 0; ; $waited++) {
+            foreach ($this->sentReadings as $index => $sent) {
+                if ($stages[$index] !== ReadingStage::Stored) {
+                    $stages[$index] = $this->stageReached($sent['sensor'], $sent['value'], $sentAfter, $timeSeries);
+                }
+            }
+
+            if (! in_array(true, array_map(fn (ReadingStage $stage) => $stage !== ReadingStage::Stored, $stages), true) || $waited >= $timeout) {
                 break;
             }
 
@@ -174,19 +187,19 @@ class SimulateDevices extends Command
 
         foreach ($this->sentReadings as $index => $sent) {
             $this->line("[{$sent['sensor']->uuid}] ".match ($stages[$index]) {
-                'stored' => 'OK: stored in the database and InfluxDB',
-                'received' => 'received by Laravel, but not in InfluxDB',
-                default => 'NOT received by Laravel',
+                ReadingStage::Stored => 'OK: stored in the database and InfluxDB',
+                ReadingStage::Received => 'received by Laravel, but not in InfluxDB',
+                ReadingStage::Sent => 'NOT received by Laravel',
             });
         }
 
-        if ($stages->contains('sent')) {
+        if (in_array(ReadingStage::Sent, $stages, true)) {
             $this->error('Readings did not reach Laravel. Check the EMQX rule and webhook, and run `ddev artisan mqtt:setup-webhook`.');
 
             return self::FAILURE;
         }
 
-        if ($stages->contains('received')) {
+        if (in_array(ReadingStage::Received, $stages, true)) {
             $this->error('Readings reached Laravel but not InfluxDB. Check that the `sensor-data` queue worker is running.');
 
             return self::FAILURE;
@@ -198,9 +211,9 @@ class SimulateDevices extends Command
     }
 
     /**
-     * The furthest stage a sent reading reached: "sent", "received" (database updated) or "stored" (also in InfluxDB).
+     * The furthest stage a sent reading reached.
      */
-    private function stageReached(Sensor $sensor, float $value, Carbon $sentAfter, SensorTimeSeriesService $timeSeries): string
+    private function stageReached(Sensor $sensor, float $value, Carbon $sentAfter, SensorTimeSeriesService $timeSeries): ReadingStage
     {
         $fresh = Sensor::allTenants()->find($sensor->id);
 
@@ -208,14 +221,14 @@ class SimulateDevices extends Command
             || $fresh->last_reading_at === null
             || Carbon::parse($fresh->last_reading_at)->lt($sentAfter)
             || abs((float) $fresh->last_reading - $value) > 0.01) {
-            return 'sent';
+            return ReadingStage::Sent;
         }
 
         $inInflux = collect($timeSeries->recentReadings($sensor->id, '-5m', 20))
             ->contains(fn (array $point) => abs((float) $point['value'] - $value) <= 0.01
                 && Carbon::parse($point['time'], 'UTC')->gte($sentAfter));
 
-        return $inInflux ? 'stored' : 'received';
+        return $inInflux ? ReadingStage::Stored : ReadingStage::Received;
     }
 
     /**

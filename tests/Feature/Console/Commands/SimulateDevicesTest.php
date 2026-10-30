@@ -274,3 +274,33 @@ it('fails verification naming the queue worker when readings are missing from In
         ->expectsOutputToContain('sensor-data')
         ->assertFailed();
 });
+
+it('fails verification when no reading could be sent', function () {
+    config(['app.url' => 'https://agronos.test']);
+    Sleep::fake();
+    $device = Device::factory()->create(['type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id]);
+    Http::preventStrayRequests();
+    Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+    $this->artisan('devices:simulate', ['--via' => 'http', '--verify' => true])
+        ->expectsOutputToContain('Nothing was sent')
+        ->assertFailed();
+});
+
+it('does not count a reading stored before the round was sent', function () {
+    config(['app.url' => 'https://agronos.test']);
+    Sleep::fake();
+    $device = Device::factory()->create(['type' => 'wifi']);
+    $sensor = Sensor::factory()->create(['device_id' => $device->id, 'last_reading' => 50, 'last_reading_at' => now()->subHour()]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
+        'https://agronos.test/api/v1/device/data' => Http::response(['message' => 'Data received.']),
+    ]);
+    $this->mock(SensorTimeSeriesService::class, fn (MockInterface $mock) => $mock->shouldNotReceive('recentReadings'));
+
+    $this->artisan('devices:simulate', ['--via' => 'http', '--verify' => true, '--verify-timeout' => 1])
+        ->expectsOutputToContain('NOT received by Laravel')
+        ->assertFailed();
+});
