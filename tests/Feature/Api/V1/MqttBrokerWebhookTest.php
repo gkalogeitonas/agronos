@@ -2,10 +2,16 @@
 
 use App\Enums\DeviceStatus;
 use App\Models\Device;
+use App\Models\Sensor;
 use App\Services\SensorDataService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    config(['services.emqx.webhook_secret' => 'emqx-webhook-secret']);
+    $this->withHeader('X-EMQX-Secret', 'emqx-webhook-secret');
+});
 
 it('processes mqtt broker webhook and updates device status', function () {
     // create a device with uuid that will be used as username
@@ -56,17 +62,17 @@ it('updates sensors last_reading and last_reading_at from payload', function () 
     ]);
 
     // create sensors belonging to that device
-    $sensor1 = \App\Models\Sensor::factory()->create([
+    $sensor1 = Sensor::factory()->create([
         'uuid' => 'Test-Device-1-sensor-1',
         'device_id' => $device->id,
         'last_reading' => null,
         'last_reading_at' => null,
     ]);
-    $sensor2 = \App\Models\Sensor::factory()->create([
+    $sensor2 = Sensor::factory()->create([
         'uuid' => 'Test-Device-1-sensor-2',
         'device_id' => $device->id,
     ]);
-    $sensor3 = \App\Models\Sensor::factory()->create([
+    $sensor3 = Sensor::factory()->create([
         'uuid' => 'Test-Device-1-sensor-3',
         'device_id' => $device->id,
     ]);

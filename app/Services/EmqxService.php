@@ -148,15 +148,16 @@ class EmqxService
     /**
      * Create or update an HTTP connector that posts JSON to the given URL.
      *
+     * @param  array<string, string>  $headers  Extra headers sent with every request, e.g. a shared secret
      * @return 'created'|'updated'
      *
      * @throws RequestException
      */
-    public function upsertWebhookConnector(string $name, string $url): string
+    public function upsertWebhookConnector(string $name, string $url, array $headers = []): string
     {
         $config = [
             'url' => $url,
-            'headers' => ['content-type' => 'application/json'],
+            'headers' => ['content-type' => 'application/json', ...$headers],
             'enable' => true,
         ];
 

@@ -6,6 +6,11 @@ use App\Enums\SensorType;
 use App\Models\Device;
 use App\Models\Sensor;
 
+beforeEach(function () {
+    config(['services.emqx.webhook_secret' => 'emqx-webhook-secret']);
+    $this->withHeader('X-EMQX-Secret', 'emqx-webhook-secret');
+});
+
 /**
  * Helper: build the hex-encoded LoRa raw_payload.
  *
