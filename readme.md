@@ -75,6 +75,7 @@ Tests use a fake InfluxDB client (`INFLUXDB_FAKE=true` in `phpunit.xml`), so the
 ddev artisan devices:simulate                          # every device with sensors, one round every 10 s, until Ctrl+C
 ddev artisan devices:simulate --via=mqtt               # through the EMQX broker, like the firmware
 ddev artisan devices:simulate --via=http --once        # one round through the device HTTP API, then exit
+ddev artisan devices:simulate --via=mqtt --verify      # one round, then check it reached the database and InfluxDB
 ddev artisan devices:simulate Test-Device-1 --interval=5
 ddev artisan devices:simulate --help                   # all options
 ```
@@ -89,7 +90,7 @@ How readings are sent (`--via`):
 
 Before you run it:
 - **Seeded devices:** run `ddev artisan db:seed` (or `migrate:fresh --seed`). The seeder gives the dev devices the secret `secret` (`DevEnvironmentSeeder::DEVICE_SECRET`), which `http` and `mqtt` use to log in. A "login failed with HTTP 401" warning usually means the database was seeded before that, and re-seeding fixes it. The seeder only runs in `local` and `testing`.
-- **EMQX rules (`mqtt` only):** run `ddev artisan mqtt:setup-webhook` once. Without the rules, publishing succeeds but nothing reaches Laravel.
+- **EMQX rules (`mqtt` only):** run `ddev artisan mqtt:setup-webhook` once. Without the rules, publishing succeeds but nothing reaches Laravel. Add `--verify` to find out: it sends one round, waits up to `--verify-timeout` seconds (default 15) and exits non-zero, naming the missing stage, if the readings did not reach the database (check the EMQX rule and webhook) or InfluxDB (check the `sensor-data` queue worker). Run it after changing the EMQX config, the ACL or the rules, and after an EMQX volume reset.
 
 Notes:
 - The seeded Test-Device-1 has a `battery` sensor. The simulator drains it slowly (and resets to 100 % at 0) instead of drifting it.

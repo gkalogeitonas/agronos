@@ -5,10 +5,12 @@ use App\Jobs\ProcessSensorInfluxData;
 use App\Models\Device;
 use App\Models\Sensor;
 use App\Services\DeviceMqttPublisher;
+use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Mockery\MockInterface;
 use PhpMqtt\Client\Exceptions\ConnectingToBrokerFailedException;
 
@@ -225,4 +227,80 @@ it('keeps a device when the device API cannot be reached', function () {
     $this->artisan('devices:simulate', ['--via' => 'http', '--once' => true])
         ->expectsOutputToContain('[sim-device] Could not reach the device API: Connection refused. Retrying next round.')
         ->assertSuccessful();
+});
+
+it('verifies that readings reached the database and InfluxDB', function () {
+    Sleep::fake();
+    $sensor = Sensor::factory()->create(['type' => 'humidity', 'last_reading' => 50]);
+    Queue::fake([ProcessSensorInfluxData::class]);
+    $this->mock(SensorTimeSeriesService::class, function (MockInterface $mock) use ($sensor) {
+        $mock->shouldReceive('recentReadings')->andReturnUsing(fn () => [
+            ['time' => now()->utc()->format('Y-m-d H:i:s'), 'value' => (float) $sensor->refresh()->last_reading],
+        ]);
+    });
+
+    $this->artisan('devices:simulate', ['--verify' => true])
+        ->expectsOutputToContain('OK: stored in the database and InfluxDB')
+        ->assertSuccessful();
+});
+
+it('fails verification naming the stage when readings never reach Laravel', function () {
+    config(['app.url' => 'https://agronos.test']);
+    Sleep::fake();
+    $device = Device::factory()->create(['type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id, 'last_reading' => null]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
+        'https://agronos.test/api/v1/device/data' => Http::response(['message' => 'Data received.']),
+    ]);
+
+    $this->artisan('devices:simulate', ['--via' => 'http', '--verify' => true, '--verify-timeout' => 2])
+        ->expectsOutputToContain('NOT received by Laravel')
+        ->expectsOutputToContain('mqtt:setup-webhook')
+        ->assertFailed();
+
+    Sleep::assertSleptTimes(2);
+});
+
+it('fails verification naming the queue worker when readings are missing from InfluxDB', function () {
+    Sleep::fake();
+    Sensor::factory()->create(['type' => 'humidity', 'last_reading' => 50]);
+    Queue::fake([ProcessSensorInfluxData::class]);
+    $this->mock(SensorTimeSeriesService::class, fn (MockInterface $mock) => $mock->shouldReceive('recentReadings')->andReturn([]));
+
+    $this->artisan('devices:simulate', ['--verify' => true, '--verify-timeout' => 2])
+        ->expectsOutputToContain('received by Laravel, but not in InfluxDB')
+        ->expectsOutputToContain('sensor-data')
+        ->assertFailed();
+});
+
+it('fails verification when no reading could be sent', function () {
+    config(['app.url' => 'https://agronos.test']);
+    Sleep::fake();
+    $device = Device::factory()->create(['type' => 'wifi']);
+    Sensor::factory()->create(['device_id' => $device->id]);
+    Http::preventStrayRequests();
+    Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+    $this->artisan('devices:simulate', ['--via' => 'http', '--verify' => true])
+        ->expectsOutputToContain('Nothing was sent')
+        ->assertFailed();
+});
+
+it('does not count a reading stored before the round was sent', function () {
+    config(['app.url' => 'https://agronos.test']);
+    Sleep::fake();
+    $device = Device::factory()->create(['type' => 'wifi']);
+    $sensor = Sensor::factory()->create(['device_id' => $device->id, 'last_reading' => 50, 'last_reading_at' => now()->subHour()]);
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
+        'https://agronos.test/api/v1/device/data' => Http::response(['message' => 'Data received.']),
+    ]);
+    $this->mock(SensorTimeSeriesService::class, fn (MockInterface $mock) => $mock->shouldNotReceive('recentReadings'));
+
+    $this->artisan('devices:simulate', ['--via' => 'http', '--verify' => true, '--verify-timeout' => 1])
+        ->expectsOutputToContain('NOT received by Laravel')
+        ->assertFailed();
 });
