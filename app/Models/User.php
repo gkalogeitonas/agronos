@@ -34,11 +34,6 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected static function booted(): void
     {
         // The database cascade skips model events, so delete devices one by one to clean up their broker users
@@ -47,6 +42,11 @@ class User extends Authenticatable
         });
     }
 
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
