@@ -54,7 +54,7 @@ After seeding, log in as `johndoe@gmail.com` / `password`. The seeded dev device
 Notes:
 - **InfluxDB** is not part of DDEV. Point `INFLUXDB_URL`, `INFLUXDB_TOKEN`, `INFLUXDB_ORG` and `INFLUXDB_BUCKET` at an InfluxDB 2 instance, or set `INFLUXDB_FAKE=true` to work without one (no readings are stored).
 - **Queue:** readings reach InfluxDB through the `sensor-data` queue. If charts stay empty, check that the DDEV worker is running (`ddev describe`).
-- **EMQX rules:** set `EMQX_WEBHOOK_SECRET` in `.env`, then run `ddev artisan mqtt:setup-webhook`. Run it again after resetting the EMQX data volume or changing the secret. Re-running it is safe.
+- **EMQX rules:** set `EMQX_WEBHOOK_SECRET` in `.env`, then run `ddev artisan mqtt:setup-webhook`. It forwards only `agronos/devices/+/sensors` and `agronos/lora/+/data`, where `agronos` is `MQTT_TOPIC_PREFIX` ([ADR-0007](docs/adr/0007-mqtt-topic-namespace-and-per-user-acl.md)). Run it again after resetting the EMQX data volume or changing the secret or the prefix. Re-running it is safe.
 - **Private channels:** if websocket auth fails, check that `REVERB_HOST`/`REVERB_PORT` in `.env` match the DDEV setup. Private channels authenticate through `/broadcasting/auth` with the session cookie.
 
 ### Running tests
@@ -86,7 +86,7 @@ How readings are sent (`--via`):
 |---|---|---|
 | `direct` (default) | Calls `SensorDataService` in-process | Charts, live updates, InfluxDB writes |
 | `http` | `POST /api/v1/device/login` → token → `POST /api/v1/device/data` | The device HTTP API |
-| `mqtt` | Login → `GET /api/v1/device/mqtt-credentials` → publish to `devices/{uuid}/sensors` → EMQX rule → `/api/v1/device/mqtt-webhook` | The broker, ACL, EMQX rules and webhook |
+| `mqtt` | Login → `GET /api/v1/device/mqtt-credentials` → publish to `{topic_base}/sensors` → EMQX rule → `/api/v1/device/mqtt-webhook` | The broker, ACL, EMQX rules and webhook |
 
 Before you run it:
 - **Seeded devices:** run `ddev artisan db:seed` (or `migrate:fresh --seed`). The seeder gives the dev devices the secret `secret` (`DevEnvironmentSeeder::DEVICE_SECRET`), which `http` and `mqtt` use to log in. A "login failed with HTTP 401" warning usually means the database was seeded before that, and re-seeding fixes it. The seeder only runs in `local` and `testing`.
@@ -142,7 +142,7 @@ Then point `DB_HOST` at the shared MariaDB's internal hostname, and add these do
 - **Readings:** the API stores the latest value on the sensor and dispatches the `ProcessSensorInfluxData` job on the `sensor-data` queue, which writes to InfluxDB ([ADR-0001](docs/adr/0001-readings-in-influxdb.md)). Failed writes are retried up to 3 times and logged.
 - **MQTT:** devices publish to EMQX, and EMQX rules forward the messages to the app's webhooks ([ADR-0002](docs/adr/0002-emqx-webhooks-for-mqtt-ingestion.md)).
 - **Device auth:** devices log in with UUID and secret and receive a Sanctum token ([ADR-0004](docs/adr/0004-device-authentication.md)).
-- **LoRa:** a LoRa gateway publishes to `lora/+/data`, and EMQX forwards it to `POST /api/v1/lora/webhook`. Payloads are end-to-end encrypted ([ADR-0005](docs/adr/0005-lora-end-to-end-encryption.md)).
+- **LoRa:** a LoRa gateway publishes to `agronos/lora/+/data`, and EMQX forwards it to `POST /api/v1/lora/webhook`. Payloads are end-to-end encrypted ([ADR-0005](docs/adr/0005-lora-end-to-end-encryption.md)).
 
 InfluxDB points (`SensorMeasurementPayloadFactory`):
 - measurement: `sensor_measurement`
@@ -195,10 +195,11 @@ Response: `{ "message": "Data received." }`. If some sensor UUIDs don't belong t
   "mqtt_broker_url": "https://emqx.local",
   "username": "device-uuid-string",
   "password": "0123ab...",
+  "topic_base": "agronos/devices/device-uuid-string",
   "created": true
 }
 ```
 
-`MqttCredentialService` creates an EMQX user on the first call (username = device UUID, random password) and stores the credentials on the device. Later calls return the same credentials with `created: false`. The device then publishes readings to `devices/{uuid}/sensors`, and EMQX forwards them to `POST /api/v1/device/mqtt-webhook`.
+`MqttCredentialService` creates an EMQX user on the first call (username = device UUID, random password) and stores the credentials on the device. Later calls return the same credentials with `created: false`. The device publishes readings to `{topic_base}/sensors` (`agronos/devices/{uuid}/sensors` with the default prefix). EMQX forwards them to `POST /api/v1/device/mqtt-webhook`.
 
 The EMQX API settings are under `services.emqx.*` (`EMQX_API_URL`, `MQTT_API_KEY`, `MQTT_API_SECRET`). The app's base URL as seen from EMQX comes from `EMQX_WEBHOOK_BASE_URL` (default `http://web`) or `mqtt:setup-webhook --base-url`. The webhooks only accept requests whose `X-EMQX-Secret` header matches `EMQX_WEBHOOK_SECRET`, and reject everything with 401 while it is empty. `mqtt:setup-webhook` configures the EMQX connectors to send it.

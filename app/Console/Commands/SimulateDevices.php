@@ -73,6 +73,13 @@ class SimulateDevices extends Command
     private array $publishers = [];
 
     /**
+     * MQTT topic base per device id, from the device's provisioning response.
+     *
+     * @var array<int, string>
+     */
+    private array $topicBases = [];
+
+    /**
      * Sensor and value of every reading sent this run, collected for --verify.
      *
      * @var array<int, array{sensor: Sensor, value: float}>
@@ -337,7 +344,7 @@ class SimulateDevices extends Command
         $payloads = $this->readingsFor($device);
 
         try {
-            $publisher->publish("devices/{$device->uuid}/sensors", json_encode(['sensors' => $payloads]));
+            $publisher->publish("{$this->topicBases[$device->id]}/sensors", json_encode(['sensors' => $payloads]));
         } catch (MqttClientException $exception) {
             $this->warn("[{$device->uuid}] Publish failed: {$exception->getMessage()}. Reconnecting next round.");
             $publisher->disconnect();
@@ -366,7 +373,7 @@ class SimulateDevices extends Command
 
         $credentials = $this->api()->withToken($token)->get('api/v1/device/mqtt-credentials');
 
-        if ($credentials->failed() || ! $credentials->json('username')) {
+        if ($credentials->failed() || ! $credentials->json('username') || ! $credentials->json('topic_base')) {
             $reason = $credentials->json('error') ?? $credentials->body();
             $this->warn("[{$device->uuid}] Skipped: could not get MQTT credentials (HTTP {$credentials->status()}: {$reason}).");
 
@@ -387,6 +394,8 @@ class SimulateDevices extends Command
 
             return null;
         }
+
+        $this->topicBases[$device->id] = $credentials->json('topic_base');
 
         return $publisher;
     }

@@ -22,7 +22,7 @@ Route::prefix('v1')->group(function () {
     // EMQX rule engine webhooks (see mqtt:setup-webhook), authenticated by the X-EMQX-Secret header
     Route::middleware(VerifyEmqxWebhook::class)->group(function () {
         Route::post('/device/mqtt-webhook', [DeviceDataController::class, 'mqttBrokerWebhook']);
-        // LoRa gateway webhook (EMQX Rule Engine forwards lora/+/data topics here)
+        // LoRa gateway webhook (EMQX Rule Engine forwards {prefix}/lora/+/data topics here, see MqttTopics)
         Route::post('/lora/webhook', [LoRaDataController::class, 'webhook']);
     });
 });

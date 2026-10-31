@@ -154,14 +154,14 @@ it('connects to the broker with the provisioned credentials and publishes readin
     Http::preventStrayRequests();
     Http::fake([
         'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
-        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['username' => 'sim-device', 'password' => 'mqtt-pass', 'created' => false]),
+        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['username' => 'sim-device', 'password' => 'mqtt-pass', 'topic_base' => 'farm-a/devices/sim-device', 'created' => false]),
     ]);
     $this->mock(DeviceMqttPublisher::class, function (MockInterface $mock) {
         $mock->shouldReceive('connect')->once()->with('sim-device-simulator', 'sim-device', 'mqtt-pass', 60);
         $mock->shouldReceive('publish')->once()->withArgs(function (string $topic, string $payload) {
             $value = json_decode($payload, true)['sensors'][0]['value'] ?? null;
 
-            return $topic === 'devices/sim-device/sensors'
+            return $topic === 'farm-a/devices/sim-device/sensors'
                 && json_decode($payload, true)['sensors'][0]['uuid'] === 'sim-sensor'
                 && $value >= 48 && $value <= 52;
         });
@@ -197,7 +197,7 @@ it('skips a device the broker refuses to connect', function () {
     Http::preventStrayRequests();
     Http::fake([
         'https://agronos.test/api/v1/device/login' => Http::response(['token' => 'device-token']),
-        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['username' => 'sim-device', 'password' => 'stale-pass']),
+        'https://agronos.test/api/v1/device/mqtt-credentials' => Http::response(['username' => 'sim-device', 'password' => 'stale-pass', 'topic_base' => 'agronos/devices/sim-device']),
     ]);
     $this->mock(DeviceMqttPublisher::class, function (MockInterface $mock) {
         $mock->shouldReceive('connect')->once()->andThrow(new ConnectingToBrokerFailedException(5, 'not authorized'));

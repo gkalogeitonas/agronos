@@ -49,7 +49,7 @@ it('creates the device and LoRa connectors, actions and rules when they do not e
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
         && $request->url() === $this->emqx.'/rules'
         && $request['id'] === 'agronos_device_sensors'
-        && $request['sql'] === 'SELECT username, payload, topic FROM "devices/+/sensors"'
+        && $request['sql'] === 'SELECT username, payload, topic FROM "agronos/devices/+/sensors"'
         && $request['actions'] === ['http:agronos_device_webhook']);
 
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
@@ -64,7 +64,7 @@ it('creates the device and LoRa connectors, actions and rules when they do not e
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
         && $request->url() === $this->emqx.'/rules'
         && $request['id'] === 'agronos_lora_gateway'
-        && $request['sql'] === 'SELECT username, payload, topic FROM "lora/+/data"'
+        && $request['sql'] === 'SELECT username, payload, topic FROM "agronos/lora/+/data"'
         && $request['actions'] === ['http:agronos_lora_webhook']);
 });
 
@@ -96,6 +96,25 @@ it('updates the existing resources instead of creating them', function () {
     Http::assertNotSent(fn (Request $request) => $request->method() === 'PUT'
         && collect(['type', 'name', 'id'])->contains(fn (string $field) => $request->offsetExists($field)));
     Http::assertNotSent(fn (Request $request) => $request->method() === 'POST');
+});
+
+it('forwards only the topics under a non-default prefix', function () {
+    config(['services.emqx.topic_prefix' => 'farm-a']);
+    Http::fake([
+        $this->emqx.'/*' => Http::response(['enable' => true]),
+    ]);
+
+    $this->artisan('mqtt:setup-webhook')
+        ->expectsOutputToContain('EMQX now forwards farm-a/devices/+/sensors to http://web/api/v1/device/mqtt-webhook.')
+        ->expectsOutputToContain('EMQX now forwards farm-a/lora/+/data to http://web/api/v1/lora/webhook.')
+        ->assertSuccessful();
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
+        && $request->url() === $this->emqx.'/rules/agronos_device_sensors'
+        && $request['sql'] === 'SELECT username, payload, topic FROM "farm-a/devices/+/sensors"');
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
+        && $request->url() === $this->emqx.'/rules/agronos_lora_gateway'
+        && $request['sql'] === 'SELECT username, payload, topic FROM "farm-a/lora/+/data"');
 });
 
 it('fails with the EMQX error and stops before the remaining resources', function () {
