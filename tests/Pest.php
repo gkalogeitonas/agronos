@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
@@ -55,7 +57,32 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Fake the EMQX management API endpoints that provisioning a device user touches.
+ */
+function fakeEmqxProvisioning(string $username, int $userStatus = 201, int $rulesStatus = 204): void
 {
-    // ..
+    config([
+        'services.emqx.url' => 'http://emqx.test',
+        'services.emqx.base_path' => '/api/v5',
+        'services.emqx.authenticator_id' => 'password_based:built_in_database',
+    ]);
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'http://emqx.test/api/v5/authentication/password_based:built_in_database/users' => Http::response(['user_id' => $username], $userStatus),
+        "http://emqx.test/api/v5/authentication/password_based:built_in_database/users/{$username}" => Http::response(['user_id' => $username], 200),
+        "http://emqx.test/api/v5/authorization/sources/built_in_database/rules/users/{$username}" => Http::response(null, $rulesStatus),
+    ]);
+}
+
+/**
+ * Whether the device user's rules were written to allow only the given topic base.
+ */
+function emqxRulesWritten(string $username, string $topicBase): bool
+{
+    return Http::recorded(fn (Request $request) => $request->method() === 'PUT'
+        && str_ends_with($request->url(), "/rules/users/{$username}")
+        && $request['rules'] === [['action' => 'all', 'permission' => 'allow', 'topic' => "{$topicBase}/#"]]
+    )->isNotEmpty();
 }

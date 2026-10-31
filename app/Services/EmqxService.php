@@ -49,7 +49,7 @@ class EmqxService
     }
 
     /**
-     * Create or update a user in the built_in_database authenticator.
+     * Create or update a user in the built_in_database authenticator, so its password always matches the one given.
      * Returns decoded response on success, or an array with status/body on failure.
      */
     public function createUser(string $username, string $password): mixed
@@ -63,6 +63,12 @@ class EmqxService
         ];
 
         $response = $this->http->post($url, $payload);
+
+        if ($response->status() === 409) {
+            $url = $this->apiUrl("authentication/{$this->authId}/users/".rawurlencode($username));
+            $response = $this->http->put($url, ['password' => $password]);
+        }
+
         if ($response->successful()) {
             return $response->json();
         }
@@ -74,7 +80,7 @@ class EmqxService
             $body = $response->body();
         }
 
-        Log::error('EMQX createUser failed', ['url' => $url, 'status' => $response->status(), 'body' => $body, 'payload' => $payload]);
+        Log::error('EMQX createUser failed', ['url' => $url, 'status' => $response->status(), 'body' => $body, 'username' => $username]);
 
         return [
             'status' => $response->status(),
@@ -95,40 +101,24 @@ class EmqxService
     }
 
     /**
-     * Authorize a username so it may only publish on its own topic prefix and deny broader publishes.
-     * Example payload posted to EMQX:
-     * [
-     *   {
-     *     "rules": [
-     *       {"action":"publish","permission":"allow","topic":"devices/{username}/#"},
-     *       {"action":"publish","permission":"deny","topic":"devices/#"}
-     *     ],
-     *     "username": "{username}"
-     *   }
-     * ]
+     * Create or replace the user's rules in the built_in_database authorization source,
+     * allowing publish and subscribe under its topic base only (ADR-0007).
      *
-     * @param  string  $deviceTopicPrefix  example: devices/{username}/# or devices/device1/#
-     * @return bool|array true on success, or array with status/body on failure
+     * @param  string  $topicBase  e.g. agronos/devices/{uuid}
+     * @return true|array{status: int, body: mixed}
      */
-    /**
-     * Authorize a username with a set of rules.
-     * If $rules is null, a default set is applied that allows publish to devices/{username}/# and denies devices/#.
-     *
-     * @param  array|null  $rules  Array of rule arrays, each with keys: action, permission, topic
-     * @return bool|array
-     */
-    public function authorizeUser(string $username, ?array $rules = null)
+    public function authorizeUser(string $username, string $topicBase): true|array
     {
-        $url = $this->apiUrl('authorization/sources/built_in_database/rules/users');
+        $url = $this->apiUrl('authorization/sources/built_in_database/rules/users/'.rawurlencode($username));
 
         $payload = [
-            [
-                'rules' => $rules,
-                'username' => $username,
+            'username' => $username,
+            'rules' => [
+                ['action' => 'all', 'permission' => 'allow', 'topic' => "{$topicBase}/#"],
             ],
         ];
 
-        $response = $this->http->post($url, $payload);
+        $response = $this->http->put($url, $payload);
 
         if ($response->successful()) {
             return true;
@@ -140,7 +130,7 @@ class EmqxService
             $body = $response->body();
         }
 
-        Log::error('EMQX authorizePublishOnly failed', ['url' => $url, 'status' => $response->status(), 'body' => $body, 'payload' => $payload]);
+        Log::error('EMQX authorizeUser failed', ['url' => $url, 'status' => $response->status(), 'body' => $body, 'payload' => $payload]);
 
         return ['status' => $response->status(), 'body' => $body];
     }

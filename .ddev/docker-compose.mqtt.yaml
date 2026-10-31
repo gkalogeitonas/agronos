@@ -12,6 +12,12 @@ services:
       - EMQX_API_KEY__BOOTSTRAP_FILE=etc/default_api_key.conf
       - EMQX_AUTHENTICATION__1__MECHANISM=password_based
       - EMQX_AUTHENTICATION__1__BACKEND=built_in_database
+      # Per-user rules written by Agronos (ADR-0007) must be checked before acl.conf, which ends in {deny, all}
+      - EMQX_AUTHORIZATION__SOURCES__1__TYPE=built_in_database
+      - EMQX_AUTHORIZATION__SOURCES__1__ENABLE=true
+      - EMQX_AUTHORIZATION__SOURCES__2__TYPE=file
+      - EMQX_AUTHORIZATION__SOURCES__2__ENABLE=true
+      - EMQX_AUTHORIZATION__SOURCES__2__PATH=etc/acl.conf
       - EMQX_LOG__CONSOLE__LEVEL=info
       - EMQX_LOG__FILE__LEVEL=info
     volumes:
