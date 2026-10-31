@@ -3,10 +3,14 @@
 namespace Database\Factories;
 
 use App\Enums\SensorType;
+use App\Models\Device;
+use App\Models\Farm;
+use App\Models\Sensor;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Sensor>
+ * @extends Factory<Sensor>
  */
 class SensorFactory extends Factory
 {
@@ -18,9 +22,9 @@ class SensorFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => \App\Models\User::factory(),
-            'device_id' => \App\Models\Device::factory(),
-            'farm_id' => \App\Models\Farm::factory(),
+            'user_id' => User::factory(),
+            'device_id' => Device::factory(),
+            'farm_id' => Farm::factory(),
             'name' => $this->faker->words(3, true),
             'uuid' => $this->faker->uuid,
             'type' => $this->faker->randomElement(SensorType::values()),

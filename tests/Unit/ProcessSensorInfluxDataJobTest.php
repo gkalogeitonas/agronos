@@ -36,9 +36,9 @@ test('job rethrows exception on failure', function () {
     $influxMock = Mockery::mock(InfluxDBService::class);
     $influxMock->shouldReceive('writeArray')
         ->once()
-        ->andThrow(new \Exception('InfluxDB connection failed'));
+        ->andThrow(new Exception('InfluxDB connection failed'));
 
-    expect(fn () => $job->handle($influxMock))->toThrow(\Exception::class);
+    expect(fn () => $job->handle($influxMock))->toThrow(Exception::class);
 });
 
 test('job has correct configuration', function () {

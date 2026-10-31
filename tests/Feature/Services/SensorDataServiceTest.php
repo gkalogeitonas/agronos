@@ -11,7 +11,7 @@ test('processing sensor data updates model and broadcasts reading', function () 
     Event::fake();
 
     // Create a device and a sensor for that device
-    $device = \App\Models\Device::factory()->create();
+    $device = Device::factory()->create();
     $sensor = Sensor::factory()->create([
         'device_id' => $device->id,
         'uuid' => 'sensor-uuid-123',

@@ -1,15 +1,21 @@
 <?php
 
 use App\Jobs\ProcessSensorInfluxData;
+use App\Models\Device;
+use App\Models\Farm;
+use App\Models\Sensor;
+use App\Models\User;
+use App\Services\InfluxDBFake;
+use App\Services\InfluxDBService;
 use Illuminate\Support\Facades\Queue;
 
 test('dispatches job to write sensor data to InfluxDB', function () {
     Queue::fake();
 
-    $user = \App\Models\User::factory()->create();
-    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
-    $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
-    $sensor = \App\Models\Sensor::factory()->create([
+    $user = User::factory()->create();
+    $device = Device::factory()->create(['user_id' => $user->id]);
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $sensor = Sensor::factory()->create([
         'uuid' => 'sensor-uuid-1',
         'user_id' => $user->id,
         'device_id' => $device->id,
@@ -41,10 +47,10 @@ test('dispatches job to write sensor data to InfluxDB', function () {
 });
 
 test('job writes correct data to InfluxDBFake when processed', function () {
-    $user = \App\Models\User::factory()->create();
-    $device = \App\Models\Device::factory()->create(['user_id' => $user->id]);
-    $farm = \App\Models\Farm::factory()->create(['user_id' => $user->id]);
-    $sensor = \App\Models\Sensor::factory()->create([
+    $user = User::factory()->create();
+    $device = Device::factory()->create(['user_id' => $user->id]);
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $sensor = Sensor::factory()->create([
         'uuid' => 'sensor-uuid-1',
         'user_id' => $user->id,
         'device_id' => $device->id,
@@ -54,11 +60,11 @@ test('job writes correct data to InfluxDBFake when processed', function () {
 
     // Create and process the job directly
     $job = new ProcessSensorInfluxData($sensor, 22.5, time());
-    $job->handle(app(\App\Services\InfluxDBService::class));
+    $job->handle(app(InfluxDBService::class));
 
-    $influx = app(\App\Services\InfluxDBService::class);
-    expect($influx)->toBeInstanceOf(\App\Services\InfluxDBFake::class);
-    /** @var \App\Services\InfluxDBFake $influx */
+    $influx = app(InfluxDBService::class);
+    expect($influx)->toBeInstanceOf(InfluxDBFake::class);
+    /** @var InfluxDBFake $influx */
     $writes = $influx->writes();
     expect($writes)->toHaveCount(1);
     expect($writes[0]['tags'])->toMatchArray([

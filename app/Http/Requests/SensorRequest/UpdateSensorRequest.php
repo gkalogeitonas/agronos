@@ -2,8 +2,7 @@
 
 namespace App\Http\Requests\SensorRequest;
 
-use Illuminate\Validation\Rule;
-use App\Enums\SensorType;
+use Illuminate\Contracts\Validation\ValidationRule;
 
 class UpdateSensorRequest extends SensorRequest
 {
@@ -18,7 +17,7 @@ class UpdateSensorRequest extends SensorRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

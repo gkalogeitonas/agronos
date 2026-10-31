@@ -3,6 +3,7 @@
 use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
@@ -82,5 +83,5 @@ test('device secret is hashed when device is registered', function () {
     // dd($device);
     expect($device)->not->toBeNull();
     expect($device->secret)->not->toBe($plainSecret);
-    expect(\Illuminate\Support\Facades\Hash::check($plainSecret, $device->secret))->toBeTrue();
+    expect(Hash::check($plainSecret, $device->secret))->toBeTrue();
 });

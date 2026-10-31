@@ -14,9 +14,7 @@ withDefaults(
 </script>
 
 <template>
-    <header
-        class="flex h-14 shrink-0 items-center gap-2 border-b border-border px-6 md:px-8"
-    >
+    <header class="flex h-14 shrink-0 items-center gap-2 border-b border-border px-6 md:px-8">
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
