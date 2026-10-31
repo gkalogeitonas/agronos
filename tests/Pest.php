@@ -86,3 +86,13 @@ function emqxRulesWritten(string $username, string $topicBase): bool
         && $request['rules'] === [['action' => 'all', 'permission' => 'allow', 'topic' => "{$topicBase}/#"]]
     )->isNotEmpty();
 }
+
+/**
+ * The password carried by the last request that created or updated an EMQX user, or null when none was sent.
+ */
+function emqxPasswordSent(): ?string
+{
+    $recorded = Http::recorded(fn (Request $request) => str_contains($request->url(), '/authentication/'))->last();
+
+    return $recorded ? $recorded[0]['password'] : null;
+}

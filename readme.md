@@ -138,11 +138,11 @@ Then point `DB_HOST` at the shared MariaDB's internal hostname, and add these do
 
 ## Architecture overview
 
-- **Tenancy:** farms, devices and sensors belong to a user and are filtered by the `BelongsToTenant` trait and `TenantScope` ([ADR-0003](docs/adr/0003-per-user-tenancy.md)). Code that runs without a signed-in user (device API, webhooks, jobs, commands) uses `allTenants()`.
+- **Tenancy:** farms, devices, sensors and gateways belong to a user and are filtered by the `BelongsToTenant` trait and `TenantScope` ([ADR-0003](docs/adr/0003-per-user-tenancy.md)). Code that runs without a signed-in user (device API, webhooks, jobs, commands) uses `allTenants()`.
 - **Readings:** the API stores the latest value on the sensor and dispatches the `ProcessSensorInfluxData` job on the `sensor-data` queue, which writes to InfluxDB ([ADR-0001](docs/adr/0001-readings-in-influxdb.md)). Failed writes are retried up to 3 times and logged.
 - **MQTT:** devices publish to EMQX, and EMQX rules forward the messages to the app's webhooks ([ADR-0002](docs/adr/0002-emqx-webhooks-for-mqtt-ingestion.md)).
 - **Device auth:** devices log in with UUID and secret and receive a Sanctum token ([ADR-0004](docs/adr/0004-device-authentication.md)).
-- **LoRa:** a LoRa gateway publishes to `agronos/lora/+/data`, and EMQX forwards it to `POST /api/v1/lora/webhook`. Payloads are end-to-end encrypted ([ADR-0005](docs/adr/0005-lora-end-to-end-encryption.md)).
+- **LoRa:** a LoRa gateway publishes to `agronos/lora/{username}/data`, and EMQX forwards it to `POST /api/v1/lora/webhook`. Payloads are end-to-end encrypted ([ADR-0005](docs/adr/0005-lora-end-to-end-encryption.md)). To set up a gateway, add it on the Gateways screen and enter the broker, username, password and topic it shows in the gateway's web config; Agronos creates the EMQX user and its ACL rules. The broker row shows `MQTT_PUBLIC_URL`, the broker address as reachable from the field (e.g. `mqtts://mqtt.example.com:8883`), and is hidden while that is empty.
 
 InfluxDB points (`SensorMeasurementPayloadFactory`):
 - measurement: `sensor_measurement`

@@ -32,10 +32,18 @@ class MqttTopics
     }
 
     /**
+     * The topic base a LoRa gateway publishes under, e.g. agronos/lora/{username}.
+     */
+    public static function loraGatewayBase(string $username): string
+    {
+        return self::prefix()."/lora/{$username}";
+    }
+
+    /**
      * The filter matching every LoRa gateway's uplinks.
      */
     public static function loraDataFilter(): string
     {
-        return self::prefix().'/lora/+/data';
+        return self::loraGatewayBase('+').'/data';
     }
 }

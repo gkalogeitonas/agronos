@@ -46,6 +46,8 @@ return [
         // MQTT broker host and port as reachable from the app (used by devices:simulate --via=mqtt)
         'host' => env('MQTT_HOST', 'mqtt'),
         'port' => (int) env('MQTT_PORT', 1883),
+        // Broker address as reachable from the field, shown to growers setting up a gateway, e.g. mqtts://mqtt.example.com:8883
+        'public_url' => env('MQTT_PUBLIC_URL'),
     ],
     'emqx' => [
         // Management API base url (include scheme and host, without path)

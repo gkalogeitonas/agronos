@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Models\Device;
 use App\Models\Farm;
+use App\Models\Gateway;
 use App\Models\Sensor;
 use App\Policies\DevicePolicy;
 use App\Policies\FarmPolicy;
+use App\Policies\GatewayPolicy;
 use App\Policies\SensorPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
@@ -21,6 +23,7 @@ class AuthServiceProvider extends ServiceProvider
         Farm::class => FarmPolicy::class,
         Device::class => DevicePolicy::class,
         Sensor::class => SensorPolicy::class,
+        Gateway::class => GatewayPolicy::class,
     ];
 
     /**

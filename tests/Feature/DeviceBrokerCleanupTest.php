@@ -1,6 +1,6 @@
 <?php
 
-use App\Jobs\RemoveDeviceFromBroker;
+use App\Jobs\RemoveBrokerUser;
 use App\Models\Device;
 use App\Models\User;
 use App\Services\EmqxService;
@@ -32,7 +32,7 @@ test('deleting a device with mqtt credentials queues its broker cleanup', functi
 
     $device->delete();
 
-    Bus::assertDispatched(RemoveDeviceFromBroker::class, fn (RemoveDeviceFromBroker $job) => $job->username === 'device-user');
+    Bus::assertDispatched(RemoveBrokerUser::class, fn (RemoveBrokerUser $job) => $job->username === 'device-user');
 });
 
 test('deleting a device without mqtt credentials queues nothing', function () {
@@ -41,7 +41,7 @@ test('deleting a device without mqtt credentials queues nothing', function () {
 
     $device->delete();
 
-    Bus::assertNotDispatched(RemoveDeviceFromBroker::class);
+    Bus::assertNotDispatched(RemoveBrokerUser::class);
 });
 
 test('the owner deleting a device removes its EMQX user and rules', function () {
@@ -63,14 +63,14 @@ test('another user cannot see the device to delete it so the broker is left alon
 
     $this->actingAs(User::factory()->create())->delete(route('devices.destroy', $device))->assertNotFound();
 
-    Bus::assertNotDispatched(RemoveDeviceFromBroker::class);
+    Bus::assertNotDispatched(RemoveBrokerUser::class);
     $this->assertDatabaseHas('devices', ['id' => $device->id]);
 });
 
 test('cleanup treats a user or rules already gone from the broker as done', function () {
     fakeEmqxRemoval('device-user', 404, 404);
 
-    (new RemoveDeviceFromBroker('device-user'))->handle(app(EmqxService::class));
+    (new RemoveBrokerUser('device-user'))->handle(app(EmqxService::class));
 
     Http::assertSentCount(2);
 });
@@ -78,7 +78,7 @@ test('cleanup treats a user or rules already gone from the broker as done', func
 test('cleanup fails so the queue retries when EMQX errors', function () {
     fakeEmqxRemoval('device-user', 503, 204);
 
-    (new RemoveDeviceFromBroker('device-user'))->handle(app(EmqxService::class));
+    (new RemoveBrokerUser('device-user'))->handle(app(EmqxService::class));
 })->throws(RuntimeException::class);
 
 test('deleting a user account queues broker cleanup for each of their devices', function () {
@@ -90,7 +90,7 @@ test('deleting a user account queues broker cleanup for each of their devices', 
 
     $user->delete();
 
-    Bus::assertDispatchedTimes(RemoveDeviceFromBroker::class, 2);
-    Bus::assertNotDispatched(RemoveDeviceFromBroker::class, fn (RemoveDeviceFromBroker $job) => $job->username === 'other-device');
+    Bus::assertDispatchedTimes(RemoveBrokerUser::class, 2);
+    Bus::assertNotDispatched(RemoveBrokerUser::class, fn (RemoveBrokerUser $job) => $job->username === 'other-device');
     $this->assertDatabaseHas('devices', ['id' => $other->id]);
 });

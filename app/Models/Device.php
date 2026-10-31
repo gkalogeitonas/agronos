@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\DeviceStatus;
 use App\Enums\DeviceType;
-use App\Jobs\RemoveDeviceFromBroker;
+use App\Jobs\RemoveBrokerUser;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -47,7 +47,7 @@ class Device extends Authenticatable
     {
         static::deleted(function (Device $device): void {
             if ($device->mqtt_username) {
-                RemoveDeviceFromBroker::dispatch($device->mqtt_username);
+                RemoveBrokerUser::dispatch($device->mqtt_username);
             }
         });
     }

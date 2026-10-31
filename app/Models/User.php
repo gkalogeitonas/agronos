@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -36,9 +37,10 @@ class User extends Authenticatable
 
     protected static function booted(): void
     {
-        // The database cascade skips model events, so delete devices one by one to clean up their broker users
+        // The database cascade skips model events, so delete devices and gateways one by one to clean up their broker users
         static::deleting(function (User $user): void {
             Device::forTenant($user->id)->get()->each->delete();
+            Gateway::forTenant($user->id)->get()->each->delete();
         });
     }
 
@@ -68,5 +70,10 @@ class User extends Authenticatable
     public function sensors()
     {
         return $this->hasMany(Sensor::class);
+    }
+
+    public function gateways(): HasMany
+    {
+        return $this->hasMany(Gateway::class);
     }
 }

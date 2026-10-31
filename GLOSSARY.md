@@ -39,7 +39,7 @@ How a device reaches the platform: Wi-Fi (directly over HTTP or MQTT) or LoRa (r
 _Avoid_: Connectivity, transport
 
 **Gateway**:
-A relay that receives LoRa radio packets and forwards them to the platform. It is untrusted and never sees readable data.
+A relay that receives LoRa radio packets and forwards them to the platform. It is untrusted and never sees readable data. A tenant registers each gateway by name, and the platform issues the credentials the gateway uses to connect. A gateway belongs to a tenant, not to a farm or a device.
 _Avoid_: Hub, bridge
 
 **Sensor**:

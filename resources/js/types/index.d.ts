@@ -88,6 +88,14 @@ export interface Device {
     farms?: string[];
 }
 
+/** Shaped by App\Http\Controllers\GatewayController; the password is passed separately on the detail page. */
+export interface Gateway {
+    id: number;
+    name: string;
+    mqtt_username: string;
+    created_at: string;
+}
+
 /** Shaped by App\Http\Resources\DeviceDetailResource. */
 export interface DeviceDetail extends Device {
     created_at: string;
