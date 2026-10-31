@@ -88,14 +88,14 @@ it('does not create credentials when broker is offline and returns no error', fu
     expect($device->mqtt_password)->toBeNull();
 });
 
-it('does not save new credentials when the broker rejects the rules', function () {
+it('returns 503 and does not save new credentials when the broker rejects the rules', function () {
     $device = Device::factory()->create(['uuid' => 'device-norules']);
     $token = $device->createToken('device-token')->plainTextToken;
     fakeEmqxProvisioning('device-norules', rulesStatus: 500);
 
     $this->withHeader('Authorization', 'Bearer '.$token)
         ->getJson('/api/v1/device/mqtt-credentials')
-        ->assertStatus(503)
+        ->assertServiceUnavailable()
         ->assertJson(['created' => false, 'error' => 'emqx_unavailable']);
 
     expect($device->refresh()->mqtt_password)->toBeNull();

@@ -82,7 +82,7 @@ describe('DeviceController@createMqttCredentials', function () {
         expect($device->mqtt_password)->toBeNull();
     });
 
-    it('forbids provisioning another user\'s device', function () {
+    it('hides another user\'s device and does not provision it', function () {
         $device = Device::factory()->create();
         Http::preventStrayRequests();
 

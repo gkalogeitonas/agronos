@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\EmqxService;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 it('sends correct request when creating a user', function () {
@@ -57,7 +58,7 @@ it('allows the user only its own topic base when authorizing', function () {
 
     expect($result)->toBeTrue();
 
-    Http::assertSent(fn ($request) => $request->method() === 'PUT'
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request->data() === [
             'username' => 'device1',
             'rules' => [
@@ -85,7 +86,7 @@ it('updates the password when creating a user that already exists', function () 
 
     expect($result)->toBe(['user_id' => 'device1']);
 
-    Http::assertSent(fn ($request) => $request->method() === 'PUT'
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request->url() === 'http://emqx.test/api/v5/authentication/password_based:built_in_database/users/device1'
         && $request->data() === ['password' => 'p@ss']);
 });
