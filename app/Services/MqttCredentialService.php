@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Log;
 class MqttCredentialService
 {
     /**
-     * Ensure the device has mqtt credentials. Returns ['username' => ..., 'password' => ..., 'created' => bool]
+     * Ensure the device has mqtt credentials. On failure only the broker url, created=false and an error are returned.
+     *
+     * @return array{mqtt_broker_url: string, username?: string, password?: string, topic_base?: string, created: bool, error?: string}
      */
     public function createCredentials(Device $device): array
     {
@@ -17,6 +19,7 @@ class MqttCredentialService
                 'mqtt_broker_url' => config('services.emqx.url', '/'),
                 'username' => $device->mqtt_username,
                 'password' => $device->mqtt_password,
+                'topic_base' => MqttTopics::deviceBase($device->uuid),
                 'created' => false,
             ];
         }
@@ -68,6 +71,7 @@ class MqttCredentialService
             'mqtt_broker_url' => config('services.emqx.url', '/'),
             'username' => $username,
             'password' => $password,
+            'topic_base' => MqttTopics::deviceBase($device->uuid),
             'created' => true,
         ];
     }

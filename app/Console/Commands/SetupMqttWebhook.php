@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\EmqxService;
+use App\Services\MqttTopics;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -21,22 +22,25 @@ class SetupMqttWebhook extends Command
     /**
      * Each flow is an HTTP connector and action (sharing the webhook name) plus a rule that feeds the action.
      *
-     * @var list<array{webhook: string, rule: string, topic: string, path: string}>
+     * @return list<array{webhook: string, rule: string, topic: string, path: string}>
      */
-    public const FLOWS = [
-        [
-            'webhook' => 'agronos_device_webhook',
-            'rule' => 'agronos_device_sensors',
-            'topic' => 'devices/+/sensors',
-            'path' => 'api/v1/device/mqtt-webhook',
-        ],
-        [
-            'webhook' => 'agronos_lora_webhook',
-            'rule' => 'agronos_lora_gateway',
-            'topic' => 'lora/+/data',
-            'path' => 'api/v1/lora/webhook',
-        ],
-    ];
+    private function flows(): array
+    {
+        return [
+            [
+                'webhook' => 'agronos_device_webhook',
+                'rule' => 'agronos_device_sensors',
+                'topic' => MqttTopics::deviceSensorsFilter(),
+                'path' => 'api/v1/device/mqtt-webhook',
+            ],
+            [
+                'webhook' => 'agronos_lora_webhook',
+                'rule' => 'agronos_lora_gateway',
+                'topic' => MqttTopics::loraDataFilter(),
+                'path' => 'api/v1/lora/webhook',
+            ],
+        ];
+    }
 
     /**
      * Execute the console command.
@@ -58,7 +62,7 @@ class SetupMqttWebhook extends Command
         $baseUrl = rtrim($this->option('base-url') ?: config('services.emqx.webhook_base_url'), '/');
 
         try {
-            foreach (self::FLOWS as $flow) {
+            foreach ($this->flows() as $flow) {
                 $url = "{$baseUrl}/{$flow['path']}";
                 $sql = "SELECT username, payload, topic FROM \"{$flow['topic']}\"";
 

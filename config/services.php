@@ -61,5 +61,7 @@ return [
         'webhook_base_url' => env('EMQX_WEBHOOK_BASE_URL', 'http://web'),
         // Pre-shared secret EMQX sends in the X-EMQX-Secret header; the webhooks reject every request while it is empty
         'webhook_secret' => env('EMQX_WEBHOOK_SECRET'),
+        // Every Agronos MQTT topic lives under this prefix so the broker can be shared (ADR-0007); re-run mqtt:setup-webhook after changing it
+        'topic_prefix' => env('MQTT_TOPIC_PREFIX', 'agronos'),
     ],
 ];
