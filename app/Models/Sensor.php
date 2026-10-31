@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DeviceStatus;
 use App\Enums\SensorType;
 use App\Traits\BelongsToTenant;
+use Database\Factories\SensorFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Sensor extends Model
 {
-    /** @use HasFactory<\Database\Factories\SensorFactory> */
+    /** @use HasFactory<SensorFactory> */
     use BelongsToTenant, HasFactory;
 
     protected $fillable = [

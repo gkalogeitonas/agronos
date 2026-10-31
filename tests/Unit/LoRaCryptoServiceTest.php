@@ -104,7 +104,7 @@ it('handles zero values', function () {
 
 it('throws on binary payload length not a multiple of 6', function () {
     expect(fn () => $this->service->deserialize('short'))  // 5 bytes
-        ->toThrow(\InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class);
 });
 
 // ---------- Encryption / Decryption ----------
@@ -156,14 +156,14 @@ it('throws on invalid base64 ciphertext', function () {
     $device = Device::factory()->lora()->create();
 
     expect(fn () => $this->service->decrypt($device, 1, '!!!not-base64!!!'))
-        ->toThrow(\InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class);
 });
 
 it('throws on device with missing AES key', function () {
     $device = Device::factory()->lora()->create(['lora_aes_key' => null]);
 
     expect(fn () => $this->service->decrypt($device, 1, base64_encode('test')))
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(RuntimeException::class);
 });
 
 // ---------- Real Device Test Vector: Test-LoRa-Battery ----------

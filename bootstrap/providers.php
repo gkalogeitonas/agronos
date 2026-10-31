@@ -1,7 +1,11 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\InfluxDBServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\AuthServiceProvider::class,
-    App\Providers\InfluxDBServiceProvider::class,
+    AppServiceProvider::class,
+    AuthServiceProvider::class,
+    InfluxDBServiceProvider::class,
 ];

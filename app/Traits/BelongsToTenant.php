@@ -3,7 +3,9 @@
 namespace App\Traits;
 
 use App\Scopes\TenantScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
 trait BelongsToTenant
@@ -28,7 +30,7 @@ trait BelongsToTenant
     /**
      * Get all models without tenant scope applied.
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public static function allTenants()
     {
@@ -39,7 +41,7 @@ trait BelongsToTenant
      * Get models for a specific tenant.
      *
      * @param  int  $userId
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public static function forTenant($userId)
     {
@@ -49,7 +51,7 @@ trait BelongsToTenant
     /**
      * Define a relationship to the user.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function user()
     {

@@ -13,6 +13,13 @@ Feature tests for a tenant-scoped resource cover, per action, both the owner suc
 
 Prefer [ShadCN](https://ui.shadcn.com/) Vue components for frontend UI.
 
+## Before opening a PR
+
+Run the same checks as `.github/workflows/lint.yml` locally and fix everything they report before pushing:
+- `ddev exec vendor/bin/pint --test` (fix with `ddev exec vendor/bin/pint`)
+- `ddev exec npm run format:check` (fix with `ddev exec npm run format`)
+- `ddev exec npx eslint .` (fix with `--fix`)
+
 ## Device Simulator (local development)
 
 To exercise devices without hardware, use `ddev artisan devices:simulate` (`app/Console/Commands/SimulateDevices.php`). It sends fake readings for the seeded devices `--via=direct|http|mqtt`.

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Farm;
+use App\Models\Sensor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -35,8 +36,8 @@ describe('Farm model', function () {
     });
 
     it('returns sensors related to the farm', function () {
-        $farm = \App\Models\Farm::factory()->create();
-        $sensors = \App\Models\Sensor::factory()->count(3)->create(['farm_id' => $farm->id]);
+        $farm = Farm::factory()->create();
+        $sensors = Sensor::factory()->count(3)->create(['farm_id' => $farm->id]);
         $farmSensors = $farm->sensors;
         expect($farmSensors)->toHaveCount(3);
         foreach ($sensors as $sensor) {

@@ -2,6 +2,7 @@
 
 namespace App\Services\TimeSeries;
 
+use App\Enums\TimeRange;
 use App\Services\InfluxDBService;
 use Carbon\Carbon;
 
@@ -132,11 +133,11 @@ class SensorTimeSeriesService
 
         // Progressive widening if nothing found — use TimeRange enum values
         if (($stats['count'] ?? 0) === 0) {
-            if ($range === \App\Enums\TimeRange::DAY->value) {
-                return $this->stats($sensorId, \App\Enums\TimeRange::WEEK->value);
+            if ($range === TimeRange::DAY->value) {
+                return $this->stats($sensorId, TimeRange::WEEK->value);
             }
-            if ($range === \App\Enums\TimeRange::WEEK->value) {
-                return $this->stats($sensorId, \App\Enums\TimeRange::MONTH->value);
+            if ($range === TimeRange::WEEK->value) {
+                return $this->stats($sensorId, TimeRange::MONTH->value);
             }
         }
 
@@ -150,7 +151,7 @@ class SensorTimeSeriesService
         // Determine aggregate window based on requested range via TimeRange enum
         $every = '15m';
         try {
-            $tr = \App\Enums\TimeRange::tryFrom($range);
+            $tr = TimeRange::tryFrom($range);
             if ($tr !== null) {
                 $every = $tr->aggregateWindow();
             }

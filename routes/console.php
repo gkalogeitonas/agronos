@@ -22,7 +22,7 @@ Artisan::command('test:broadcast {sensorId=1}', function (int $sensorId) {
         event(new SensorReadingEvent($sensorId, $payload));
 
         $this->info('Event dispatched successfully!');
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         $this->error('Failed to broadcast event: '.$e->getMessage());
     }
 })->purpose('Test broadcasting to Reverb');
