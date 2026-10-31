@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Services\MqttCredentialService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class DeviceAuthController extends Controller
@@ -24,13 +25,19 @@ class DeviceAuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        // Update status to ONLINE on successful auth
-        $device->update([
-            'status' => DeviceStatus::ONLINE,
-            'last_seen_at' => now(),
-        ]);
+        $token = DB::transaction(function () use ($device): string {
+            $device->tokens()->delete();
 
-        $token = $device->createToken('device-token')->plainTextToken;
+            $token = $device->createToken('device-token')->plainTextToken;
+
+            // Update status to ONLINE on successful auth
+            $device->update([
+                'status' => DeviceStatus::ONLINE,
+                'last_seen_at' => now(),
+            ]);
+
+            return $token;
+        });
 
         return response()->json(['token' => $token]);
     }
