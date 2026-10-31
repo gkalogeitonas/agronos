@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DeviceStatus;
 use App\Enums\DeviceType;
+use App\Jobs\RemoveDeviceFromBroker;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -41,6 +42,15 @@ class Device extends Authenticatable
     protected $casts = [
         'status' => DeviceStatus::class,
     ];
+
+    protected static function booted(): void
+    {
+        static::deleted(function (Device $device): void {
+            if ($device->mqtt_username) {
+                RemoveDeviceFromBroker::dispatch($device->mqtt_username);
+            }
+        });
+    }
 
     public function user(): BelongsTo
     {
