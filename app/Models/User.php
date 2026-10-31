@@ -3,13 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -38,6 +39,14 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+    protected static function booted(): void
+    {
+        // The database cascade skips model events, so delete devices one by one to clean up their broker users
+        static::deleting(function (User $user): void {
+            Device::forTenant($user->id)->get()->each->delete();
+        });
+    }
+
     protected function casts(): array
     {
         return [

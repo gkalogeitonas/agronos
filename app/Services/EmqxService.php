@@ -89,15 +89,26 @@ class EmqxService
     }
 
     /**
-     * Delete a user from the built_in_database authenticator.
+     * Delete a user from the built_in_database authenticator. A user that is already gone counts as deleted.
      */
     public function deleteUser(string $username): bool
     {
-        $url = $this->apiUrl("authentication/{$this->authId}/users/".rawurlencode($username));
+        return $this->deleteIdempotently($this->apiUrl("authentication/{$this->authId}/users/".rawurlencode($username)));
+    }
 
+    /**
+     * Delete the user's rules from the built_in_database authorization source. Rules that are already gone count as deleted.
+     */
+    public function deleteUserRules(string $username): bool
+    {
+        return $this->deleteIdempotently($this->apiUrl('authorization/sources/built_in_database/rules/users/'.rawurlencode($username)));
+    }
+
+    private function deleteIdempotently(string $url): bool
+    {
         $response = $this->http->delete($url);
 
-        return $response->successful();
+        return $response->successful() || $response->notFound();
     }
 
     /**
