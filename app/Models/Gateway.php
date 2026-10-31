@@ -9,6 +9,7 @@ use Database\Factories\GatewayFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * A LoRa gateway the tenant registered so it can publish to the broker (GLOSSARY: Gateway).
@@ -58,10 +59,26 @@ class Gateway extends Model
     }
 
     /**
+     * A new broker username, prefixed so gateways are recognisable on the shared broker, e.g. gw-{uuid}.
+     */
+    public static function generateUsername(): string
+    {
+        return 'gw-'.Str::uuid();
+    }
+
+    /**
+     * The topic base the gateway's ACL rules cover, e.g. agronos/lora/{username}.
+     */
+    public function topicBase(): string
+    {
+        return MqttTopics::loraGatewayBase($this->mqtt_username);
+    }
+
+    /**
      * The topic the gateway's web config must publish to, e.g. agronos/lora/{username}/data.
      */
     public function dataTopic(): string
     {
-        return MqttTopics::loraGatewayBase($this->mqtt_username).'/data';
+        return $this->topicBase().'/data';
     }
 }

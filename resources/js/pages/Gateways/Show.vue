@@ -15,6 +15,8 @@ const props = defineProps<{
     gateway: Gateway;
     password: string;
     topic: string;
+    /** Public broker address from MQTT_PUBLIC_URL; null when the setting is empty. */
+    brokerUrl: string | null;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -25,6 +27,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const showPassword = ref(false);
 
 const credentials = computed(() => [
+    ...(props.brokerUrl ? [{ mono: true, stacked: true, label: 'Broker', value: props.brokerUrl }] : []),
     { mono: true, stacked: true, label: 'Username', value: props.gateway.mqtt_username },
     { mono: true, stacked: true, key: 'password', label: 'Password', value: props.password },
     { mono: true, stacked: true, label: 'Topic', value: props.topic },

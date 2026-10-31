@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Gateway;
 use App\Models\User;
+use App\Services\MqttCredentialService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,8 +22,8 @@ class GatewayFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name' => $this->faker->word().' Gateway',
-            'mqtt_username' => 'gw-'.$this->faker->uuid(),
-            'mqtt_password' => bin2hex(random_bytes(16)),
+            'mqtt_username' => Gateway::generateUsername(),
+            'mqtt_password' => MqttCredentialService::generatePassword(),
         ];
     }
 }
