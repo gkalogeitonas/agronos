@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\EmqxService;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 it('sends correct request when creating a user', function () {
@@ -40,7 +41,33 @@ it('sends correct request when creating a user', function () {
     });
 });
 
-it('sends correct rules when authorizing a user with defaults', function () {
+it('allows the user only its own topic base when authorizing', function () {
+    config([
+        'services.emqx.url' => 'http://emqx.test',
+        'services.emqx.base_path' => '/api/v5',
+        'services.emqx.api_key' => 'api-key',
+        'services.emqx.secret_key' => 'secret',
+    ]);
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'http://emqx.test/api/v5/authorization/sources/built_in_database/rules/users/device1' => Http::response(null, 204),
+    ]);
+
+    $result = (new EmqxService)->authorizeUser('device1', 'agronos/devices/device1');
+
+    expect($result)->toBeTrue();
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
+        && $request->data() === [
+            'username' => 'device1',
+            'rules' => [
+                ['action' => 'all', 'permission' => 'allow', 'topic' => 'agronos/devices/device1/#'],
+            ],
+        ]);
+});
+
+it('updates the password when creating a user that already exists', function () {
     config([
         'services.emqx.url' => 'http://emqx.test',
         'services.emqx.base_path' => '/api/v5',
@@ -49,38 +76,17 @@ it('sends correct rules when authorizing a user with defaults', function () {
         'services.emqx.secret_key' => 'secret',
     ]);
 
+    Http::preventStrayRequests();
     Http::fake([
-        '*' => Http::response(null, 200),
+        'http://emqx.test/api/v5/authentication/password_based:built_in_database/users' => Http::response(['code' => 'ALREADY_EXISTS'], 409),
+        'http://emqx.test/api/v5/authentication/password_based:built_in_database/users/device1' => Http::response(['user_id' => 'device1'], 200),
     ]);
 
-    $svc = new EmqxService;
+    $result = (new EmqxService)->createUser('device1', 'p@ss');
 
-    $rules = [
-        ['permission' => 'allow', 'topic' => 'devices/device1/#'],
-        ['permission' => 'deny', 'topic' => '#'],
-    ];
+    expect($result)->toBe(['user_id' => 'device1']);
 
-    $result = $svc->authorizeUser('device1', $rules);
-
-    expect($result)->toBeTrue();
-
-    Http::assertSent(function ($request) {
-        $expectedUrl = 'http://emqx.test/api/v5/authorization/sources/built_in_database/rules/users';
-        $body = $request->data();
-
-        // Body should be an array with one element containing rules and username
-        if (! is_array($body) || count($body) < 1) {
-            return false;
-        }
-
-        $entry = $body[0];
-
-        return $request->method() === 'POST'
-            && $request->url() === $expectedUrl
-            && isset($entry['username'])
-            && $entry['username'] === 'device1'
-            && isset($entry['rules'])
-            && is_array($entry['rules'])
-            && collect($entry['rules'])->contains(fn ($r) => ($r['permission'] ?? null) === 'allow' && ($r['topic'] ?? '') === 'devices/device1/#');
-    });
+    Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
+        && $request->url() === 'http://emqx.test/api/v5/authentication/password_based:built_in_database/users/device1'
+        && $request->data() === ['password' => 'p@ss']);
 });

@@ -6,8 +6,8 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
-use App\Services\EmqxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -17,13 +17,7 @@ describe('DeviceController@createMqttCredentials', function () {
         $user = User::factory()->create();
         $device = Device::factory()->create(['user_id' => $user->id]);
 
-        $mockEmqx = \Mockery::mock(EmqxService::class);
-        $mockEmqx->shouldReceive('createUser')
-            ->once()
-            ->with($device->uuid, \Mockery::type('string'))
-            ->andReturn(['user_id' => $device->uuid]);
-
-        $this->app->instance(EmqxService::class, $mockEmqx);
+        fakeEmqxProvisioning($device->uuid);
 
         $response = $this->actingAs($user)
             ->post(route('devices.mqtt.create', $device));
@@ -44,9 +38,10 @@ describe('DeviceController@createMqttCredentials', function () {
             'mqtt_username' => $device->uuid,
             'mqtt_password' => $device->mqtt_password,
         ]);
+        expect(emqxRulesWritten($device->uuid, "agronos/devices/{$device->uuid}"))->toBeTrue();
     });
 
-    it('returns existing credentials without creating new ones', function () {
+    it('returns existing credentials and ensures their broker user and rules', function () {
         $user = User::factory()->create();
         $device = Device::factory()->create([
             'user_id' => $user->id,
@@ -54,10 +49,7 @@ describe('DeviceController@createMqttCredentials', function () {
             'mqtt_password' => 'existing-pass',
         ]);
 
-        $mockEmqx = \Mockery::mock(EmqxService::class);
-        $mockEmqx->shouldNotReceive('createUser');
-
-        $this->app->instance(EmqxService::class, $mockEmqx);
+        fakeEmqxProvisioning('existing-user', userStatus: 409);
 
         $response = $this->actingAs($user)
             ->post(route('devices.mqtt.create', $device));
@@ -67,21 +59,15 @@ describe('DeviceController@createMqttCredentials', function () {
                 && $credentials['username'] === 'existing-user'
                 && $credentials['password'] === 'existing-pass';
         });
+        expect($device->refresh()->mqtt_password)->toBe('existing-pass');
+        expect(emqxRulesWritten('existing-user', "agronos/devices/{$device->uuid}"))->toBeTrue();
     });
 
     it('flashes error when emqx returns error response', function () {
         $user = User::factory()->create();
         $device = Device::factory()->create(['user_id' => $user->id]);
 
-        $mockEmqx = \Mockery::mock(EmqxService::class);
-        $mockEmqx->shouldReceive('createUser')
-            ->once()
-            ->andReturn([
-                'status' => 400,
-                'body' => 'Bad request',
-            ]);
-
-        $this->app->instance(EmqxService::class, $mockEmqx);
+        fakeEmqxProvisioning($device->uuid, userStatus: 400);
 
         $response = $this->actingAs($user)
             ->post(route('devices.mqtt.create', $device));
@@ -94,6 +80,17 @@ describe('DeviceController@createMqttCredentials', function () {
         $device->refresh();
         expect($device->mqtt_username)->toBeNull();
         expect($device->mqtt_password)->toBeNull();
+    });
+
+    it('hides another user\'s device and does not provision it', function () {
+        $device = Device::factory()->create();
+        Http::preventStrayRequests();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('devices.mqtt.create', $device))
+            ->assertNotFound();
+
+        Http::assertNothingSent();
     });
 
     it('requires authentication', function () {
