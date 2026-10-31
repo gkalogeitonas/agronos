@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
+use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -62,6 +63,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::delete('/devices/{device}', [DeviceController::class, 'destroy'])
         ->name('devices.destroy');
+});
+
+// LoRa gateway routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::resource('gateways', GatewayController::class)
+        ->only(['index', 'create', 'store', 'show', 'destroy']);
+
+    Route::post('/gateways/{gateway}/rotate-password', [GatewayController::class, 'rotatePassword'])
+        ->name('gateways.rotate-password');
 });
 
 // Device QR Tool route

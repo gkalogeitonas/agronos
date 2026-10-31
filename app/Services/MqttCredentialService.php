@@ -21,7 +21,7 @@ class MqttCredentialService
         $password = $created ? bin2hex(random_bytes(16)) : $device->mqtt_password;
         $topicBase = MqttTopics::deviceBase($device->uuid);
 
-        if (! $this->provisionBrokerUser($device, $username, $password, $topicBase)) {
+        if (! $this->provisionBrokerUser($username, $password, $topicBase, ['device_id' => $device->id, 'device_uuid' => $device->uuid])) {
             return [
                 'mqtt_broker_url' => config('services.emqx.url', '/'),
                 'created' => false,
@@ -46,9 +46,11 @@ class MqttCredentialService
     }
 
     /**
-     * Create or update the device's EMQX user and its rules, returning whether both succeeded.
+     * Create or update an EMQX user and its rules for a device or gateway, returning whether both succeeded.
+     *
+     * @param  array<string, mixed>  $logContext  Identifies the owner of the user in failure logs
      */
-    private function provisionBrokerUser(Device $device, string $username, string $password, string $topicBase): bool
+    public function provisionBrokerUser(string $username, string $password, string $topicBase, array $logContext = []): bool
     {
         // Resolve EmqxService from the container so it can be mocked in tests
         $emqx = app(EmqxService::class);
@@ -62,8 +64,7 @@ class MqttCredentialService
             }
         } catch (\Throwable $e) {
             Log::error('MQTT credential provisioning failed: EMQX service error', [
-                'device_id' => $device->id,
-                'device_uuid' => $device->uuid,
+                ...$logContext,
                 'error' => $e->getMessage(),
             ]);
 
@@ -72,8 +73,7 @@ class MqttCredentialService
 
         if (is_array($result) && array_key_exists('status', $result)) {
             Log::error('MQTT credential provisioning failed: EMQX returned error response', [
-                'device_id' => $device->id,
-                'device_uuid' => $device->uuid,
+                ...$logContext,
                 'emqx_response' => $result,
             ]);
 

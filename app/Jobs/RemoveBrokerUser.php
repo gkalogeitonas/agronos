@@ -8,7 +8,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
-class RemoveDeviceFromBroker implements ShouldQueue
+class RemoveBrokerUser implements ShouldQueue
 {
     use Queueable;
 
@@ -28,11 +28,11 @@ class RemoveDeviceFromBroker implements ShouldQueue
     }
 
     /**
-     * Takes the username rather than the device, which no longer exists once this runs.
+     * Takes the username rather than the device or gateway, which no longer exists once this runs.
      */
     public function __construct(public string $username)
     {
-        // Run only once the surrounding delete has committed, so a rolled-back delete never removes a live device's broker user
+        // Run only once the surrounding delete has committed, so a rolled-back delete never removes a live broker user
         $this->afterCommit();
     }
 
