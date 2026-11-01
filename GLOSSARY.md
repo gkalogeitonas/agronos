@@ -55,3 +55,17 @@ _Avoid_: Technical sensor, internal sensor
 **Reading**:
 A single value a sensor reported at a point in time.
 _Avoid_: Measurement, data point, sample
+
+### Monitoring
+
+**Alert**:
+A record that a condition needing attention started on a subject (a farm, device or sensor). It is open from when the condition starts until it clears, then resolved. The platform resolves it; a user cannot dismiss it. Each occurrence is its own alert, and resolved alerts stay as history.
+_Avoid_: Notification, warning, incident
+
+**Alert Rule**:
+A condition the platform checks to open and resolve alerts, such as a device being offline or its battery being low. Each rule gives its alerts a fixed severity.
+_Avoid_: Trigger, check
+
+**Severity**:
+How serious an alert is: danger, warning or info.
+_Avoid_: Priority, level, tone
