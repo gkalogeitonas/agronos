@@ -23,8 +23,12 @@ _Avoid_: Farm status
 ### Hardware
 
 **Device**:
-A physical unit deployed on a farm that carries one or more sensors and talks to the platform.
+A physical unit that carries one or more sensors and talks to the platform. A tenant places it on one farm at a time; until then it is unassigned.
 _Avoid_: Node, board, unit
+
+**Unassigned**:
+The state of a device that is registered but not placed on any farm. It appears on no farm and counts toward no farm's health.
+_Avoid_: Unplaced, orphaned
 
 **Offline**:
 The state of a device that has reported before but has sent nothing for longer than the offline threshold. It goes back online with its next reading.
@@ -43,7 +47,7 @@ A relay that receives LoRa radio packets and forwards them to the platform. It i
 _Avoid_: Hub, bridge
 
 **Sensor**:
-One measuring element on a device, of a single type (moisture, temperature, humidity, light, battery).
+One measuring element on a device, of a single type (moisture, temperature, humidity, light, battery). It is on its device's farm, at its own position within it.
 _Avoid_: Probe, channel
 
 **Diagnostic Sensor**:
@@ -53,7 +57,7 @@ _Avoid_: Technical sensor, internal sensor
 ### Data
 
 **Reading**:
-A single value a sensor reported at a point in time.
+A single value a sensor reported at a point in time. It belongs to the farm its device was on when it was taken, even after the device moves.
 _Avoid_: Measurement, data point, sample
 
 ### Monitoring
