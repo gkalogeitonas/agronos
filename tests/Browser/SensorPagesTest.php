@@ -140,3 +140,22 @@ it('does not repeat a toast when going back to the page that showed it', functio
         ->wait(1)
         ->assertDontSee('Sensor updated.');
 });
+
+it('groups and filters the sensor list by the device\'s farm', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Field']);
+    $placedDevice = Device::factory()->onFarm($farm)->create();
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $placedDevice->id, 'name' => 'North probe']);
+
+    visit(route('sensors.index', absolute: false))
+        ->assertSee('North Field')
+        ->assertSee('Unassigned')
+        ->assertSee('North probe')
+        ->assertSee('Zone A probe')
+        ->select('#farm-filter', 'unassigned')
+        ->assertSee('Zone A probe')
+        ->assertDontSee('North probe')
+        ->select('#farm-filter', (string) $farm->id)
+        ->assertSee('North probe')
+        ->assertDontSee('Zone A probe')
+        ->assertNoJavaScriptErrors();
+});

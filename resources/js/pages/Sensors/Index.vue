@@ -34,7 +34,19 @@ const farmId = ref(new URL(window.location.href).searchParams.get('farm') ?? 'al
 const status = ref('all');
 const groupBy = ref<'farm' | 'type'>('farm');
 
-const farmName = (id: number | null): string => props.farms.find((farm) => farm.id === id)?.name ?? 'No farm';
+/** Filter value for sensors whose device is on no farm. */
+const UNASSIGNED = 'unassigned';
+
+const sensorFarmId = (sensor: Sensor): number | null => sensor.device?.farm_id ?? null;
+const farmName = (id: number | null): string => props.farms.find((farm) => farm.id === id)?.name ?? 'Unassigned';
+const hasUnassigned = computed(() => props.sensors.some((sensor) => sensorFarmId(sensor) === null));
+const matchesFarm = (sensor: Sensor): boolean => {
+    if (farmId.value === 'all') {
+        return true;
+    }
+    const id = sensorFarmId(sensor);
+    return farmId.value === UNASSIGNED ? id === null : String(id) === farmId.value;
+};
 const sensorStatus = (sensor: Sensor): string => sensor.device?.status ?? 'unknown';
 
 const typeOptions = computed<FilterChipOption[]>(() => {
@@ -53,12 +65,12 @@ const groupOptions: FilterChipOption<'farm' | 'type'>[] = [
 const filtered = computed(() =>
     props.sensors
         .filter((sensor) => type.value === 'all' || sensor.type === type.value)
-        .filter((sensor) => farmId.value === 'all' || String(sensor.farm_id) === farmId.value)
+        .filter(matchesFarm)
         .filter((sensor) => status.value === 'all' || sensorStatus(sensor) === status.value),
 );
 
 const groups = computed(() => {
-    const keyOf = (sensor: Sensor) => (groupBy.value === 'farm' ? farmName(sensor.farm_id) : sensorTypeLabel(sensor.type));
+    const keyOf = (sensor: Sensor) => (groupBy.value === 'farm' ? farmName(sensorFarmId(sensor)) : sensorTypeLabel(sensor.type));
     const titles = [...new Set(filtered.value.map(keyOf))].sort();
 
     return titles.map((title) => {
@@ -67,7 +79,7 @@ const groups = computed(() => {
             .map((sensor) => ({
                 id: sensor.id,
                 name: sensor.name,
-                context: groupBy.value === 'farm' ? sensorTypeLabel(sensor.type) : farmName(sensor.farm_id),
+                context: groupBy.value === 'farm' ? sensorTypeLabel(sensor.type) : farmName(sensorFarmId(sensor)),
                 latest: formatReading(liveReadings[sensor.id]?.value, sensorUnit(sensor.type)),
                 seen: formatAge(liveReadings[sensor.id]?.time),
                 status: sensorStatus(sensor),
@@ -102,9 +114,10 @@ const columns = computed<DataTableColumn[]>(() => [
                 <section aria-label="Filters" class="flex flex-col gap-4">
                     <FilterChips v-model="type" :options="typeOptions" label="Filter by sensor type" />
                     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-                        <FilterSelect v-model="farmId" label="Farm">
+                        <FilterSelect id="farm-filter" v-model="farmId" label="Farm">
                             <option value="all">All farms</option>
                             <option v-for="farm in farms" :key="farm.id" :value="String(farm.id)">{{ farm.name }}</option>
+                            <option v-if="hasUnassigned" :value="UNASSIGNED">Unassigned</option>
                         </FilterSelect>
                         <FilterSelect v-model="status" label="Status">
                             <option value="all">All statuses</option>
@@ -136,7 +149,7 @@ const columns = computed<DataTableColumn[]>(() => [
                 </SectionCard>
             </template>
 
-            <EmptyState v-else title="No sensors yet" text="Add a sensor to a device and a farm to start collecting readings."
+            <EmptyState v-else title="No sensors yet" text="Add a sensor to a device to start collecting readings."
                 ><Button as-child>
                     <Link :href="route('sensors.create')">Add your first sensor</Link>
                 </Button></EmptyState

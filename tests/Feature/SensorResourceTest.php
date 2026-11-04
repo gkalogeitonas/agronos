@@ -171,3 +171,48 @@ it('can create a sensor with a farm', function () {
         'farm_id' => $farm->id,
     ]);
 });
+
+it('shows the farm of the sensor\'s device', function () {
+    $farm = Farm::factory(['user_id' => $this->user->id, 'name' => 'North field'])->create();
+    $device = Device::factory()->onFarm($farm)->create();
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $device->id]);
+
+    get(route('sensors.show', $sensor))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Sensors/Show')
+            ->where('sensor.farm.id', $farm->id)
+            ->where('sensor.farm.name', 'North field')
+            ->has('sensor.farm.coordinates'));
+});
+
+it('shows no farm for a sensor whose device is unassigned', function () {
+    $sensor = Sensor::factory()->create([
+        'user_id' => $this->user->id,
+        'device_id' => $this->device->id,
+        'farm_id' => Farm::factory(['user_id' => $this->user->id])->create()->id,
+    ]);
+
+    get(route('sensors.show', $sensor))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Sensors/Show')
+            ->where('sensor.farm', null));
+});
+
+it('lists each sensor with the farm of its device', function () {
+    $farm = Farm::factory(['user_id' => $this->user->id])->create();
+    $device = Device::factory()->onFarm($farm)->create();
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $device->id, 'name' => 'A placed']);
+    Sensor::factory()->create([
+        'user_id' => $this->user->id,
+        'device_id' => $this->device->id,
+        'farm_id' => $farm->id,
+        'name' => 'B unassigned',
+    ]);
+
+    get(route('sensors.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Sensors/Index')
+            ->where('sensors.0.device.farm_id', $farm->id)
+            ->where('sensors.1.device.farm_id', null)
+            ->where('farms.0.id', $farm->id));
+});
