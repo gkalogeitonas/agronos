@@ -74,6 +74,12 @@ export interface FarmSummary {
     temperature: number | null;
 }
 
+/** A farm a device can be placed on, as App\Http\Controllers\DeviceController offers it. */
+export interface FarmOption {
+    id: number;
+    name: string;
+}
+
 /** Shaped by App\Http\Resources\DeviceResource. */
 export interface Device {
     id: number;
@@ -84,8 +90,8 @@ export interface Device {
     signal_strength: number | null;
     battery_level: number | null;
     last_seen_at: string | null;
-    /** Names of the farms the device's sensors are on; present when the sensors were loaded. */
-    farms?: string[];
+    /** The farm the device is on, null while it is unassigned; present when the farm was loaded. */
+    farm?: FarmOption | null;
 }
 
 /** Shaped by App\Http\Controllers\GatewayController; the password is passed separately on the detail page. */

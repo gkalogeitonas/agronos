@@ -15,11 +15,10 @@ import { type BreadcrumbItem, type Device } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-type DeviceRow = Device & { farms: string[] };
 type StatusFilter = 'all' | Device['status'];
 
 const props = defineProps<{
-    devices: DeviceRow[];
+    devices: Device[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: route('devices.index') }];
@@ -38,7 +37,12 @@ const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
     })),
 ]);
 
-const farmOptions = computed(() => [...new Set(props.devices.flatMap((device) => device.farms))].sort());
+const farmOptions = computed(() =>
+    [...new Map(props.devices.flatMap((device) => (device.farm ? [[device.farm.id, device.farm]] : []))).values()].sort((a, b) =>
+        a.name.localeCompare(b.name),
+    ),
+);
+const hasUnassigned = computed(() => props.devices.some((device) => !device.farm));
 const linkOptions = computed(() => [...new Set(props.devices.map((device) => device.type))].sort());
 
 const filteredDevices = computed(() => {
@@ -46,7 +50,7 @@ const filteredDevices = computed(() => {
 
     return props.devices
         .filter((device) => status.value === 'all' || device.status === status.value)
-        .filter((device) => farm.value === 'all' || device.farms.includes(farm.value))
+        .filter((device) => farm.value === 'all' || (farm.value === 'unassigned' ? !device.farm : String(device.farm?.id) === farm.value))
         .filter((device) => link.value === 'all' || device.type === link.value)
         .filter((device) => query === '' || `${device.name} ${device.uuid}`.toLowerCase().includes(query));
 });
@@ -78,7 +82,8 @@ const filteredDevices = computed(() => {
                         />
                         <FilterSelect v-model="farm" label="Farm">
                             <option value="all">All farms</option>
-                            <option v-for="name in farmOptions" :key="name" :value="name">{{ name }}</option>
+                            <option v-for="option in farmOptions" :key="option.id" :value="String(option.id)">{{ option.name }}</option>
+                            <option v-if="hasUnassigned" value="unassigned">Unassigned</option>
                         </FilterSelect>
                         <FilterSelect v-model="link" label="Link">
                             <option value="all">All links</option>

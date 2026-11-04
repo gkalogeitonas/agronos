@@ -53,6 +53,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/devices/{device}', [DeviceController::class, 'show'])
         ->name('devices.show');
 
+    Route::get('/devices/{device}/edit', [DeviceController::class, 'edit'])
+        ->name('devices.edit');
+
+    Route::match(['put', 'patch'], '/devices/{device}', [DeviceController::class, 'update'])
+        ->name('devices.update');
+
     // Register device (store)
     Route::post('/devices', [DeviceController::class, 'store'])
         ->name('devices.store');

@@ -145,6 +145,7 @@ class DevEnvironmentSeeder extends Seeder
                 $device = null;
                 if ($deviceData) {
                     $deviceData['user_id'] = $user->id;
+                    $deviceData['farm_id'] = $farm->id;
                     $device = Device::updateOrCreate(
                         ['uuid' => $deviceData['uuid']],
                         $deviceData

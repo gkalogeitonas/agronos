@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Device;
+use App\Models\Farm;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -23,15 +24,15 @@ test('authenticated user can register a device with valid data', function () {
         ->actingAs($this->user, 'web')
         ->post(route('devices.store'), $deviceData);
 
-    $response->assertRedirect(route('devices.index'));
+    $device = Device::allTenants()->where('uuid', $deviceData['uuid'])->sole();
+    $response->assertRedirect(route('devices.show', $device));
     $response->assertSessionHas('success', 'Device registered successfully');
 
-    $this->assertDatabaseHas('devices', [
-        'uuid' => $deviceData['uuid'],
-        'name' => $deviceData['name'],
-        'user_id' => $this->user->id,
-        'status' => 'registered',
-    ]);
+    expect($device)
+        ->name->toBe('Test Soil Sensor')
+        ->user_id->toBe($this->user->id)
+        ->farm_id->toBeNull()
+        ->status->value->toBe('registered');
 });
 
 test('guest cannot register a device', function () {
@@ -84,4 +85,35 @@ test('device secret is hashed when device is registered', function () {
     expect($device)->not->toBeNull();
     expect($device->secret)->not->toBe($plainSecret);
     expect(Hash::check($plainSecret, $device->secret))->toBeTrue();
+});
+
+test('a grower can register a device on one of their farms', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+
+    $response = $this->actingAs($this->user)->post(route('devices.store'), [
+        'uuid' => 'device-on-farm',
+        'secret' => 'a-secret',
+        'type' => 'wifi',
+        'farm_id' => $farm->id,
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $device = Device::query()->where('uuid', 'device-on-farm')->sole();
+    $response->assertRedirect(route('devices.show', $device));
+    expect($device->farm_id)->toBe($farm->id);
+});
+
+test('registering a device on another tenant\'s farm fails validation', function () {
+    $otherFarm = Farm::factory()->create();
+
+    $this->actingAs($this->user)
+        ->post(route('devices.store'), [
+            'uuid' => 'device-on-other-farm',
+            'secret' => 'a-secret',
+            'type' => 'wifi',
+            'farm_id' => $otherFarm->id,
+        ])
+        ->assertSessionHasErrors('farm_id');
+
+    expect(Device::allTenants()->where('uuid', 'device-on-other-farm')->exists())->toBeFalse();
 });

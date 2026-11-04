@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Device;
+use App\Models\Farm;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -20,17 +21,37 @@ it('shows device commands as disabled and explains why', function () {
         ->assertPresent('span[title="Coming soon: device commands are not available yet"]');
 });
 
-it('registers a device from the form', function () {
-    visit(route('devices.create', absolute: false))
+it('registers a device on the farm from the URL and opens its page', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Field']);
+
+    $page = visit(route('devices.create', ['farm' => $farm->id], absolute: false))
+        ->assertSelected('#farm_id', (string) $farm->id)
         ->fill('#name', 'Sensor node 01')
         ->fill('#uuid', 'node-01-uuid')
         ->fill('#secret', 'a-long-secret')
         ->select('#type', 'wifi')
-        ->press('Register device')
-        ->assertPathIs(route('devices.index', absolute: false))
-        ->assertSee('Sensor node 01');
+        ->press('Register device');
 
-    $this->assertDatabaseHas('devices', ['uuid' => 'node-01-uuid', 'name' => 'Sensor node 01', 'user_id' => $this->user->id]);
+    $device = Device::query()->where('uuid', 'node-01-uuid')->sole();
+    $page->assertPathIs(route('devices.show', $device, absolute: false))
+        ->assertSee('Sensor node 01')
+        ->assertSee('North Field');
+
+    expect($device)->name->toBe('Sensor node 01')->farm_id->toBe($farm->id);
+});
+
+it('warns that sensor positions stay when the farm changes on the edit form', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Field']);
+    Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'South Field']);
+    $device = Device::factory()->onFarm($farm)->create();
+    $warning = "This device's sensors keep their positions.";
+
+    visit(route('devices.edit', $device, absolute: false))
+        ->assertDontSee($warning)
+        ->select('#farm_id', 'South Field')
+        ->assertSee($warning)
+        ->select('#farm_id', 'North Field')
+        ->assertDontSee($warning);
 });
 
 it('shows the validation error under the field when the device uuid is already taken', function () {

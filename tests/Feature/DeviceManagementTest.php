@@ -2,7 +2,6 @@
 
 use App\Models\Device;
 use App\Models\Farm;
-use App\Models\Sensor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -69,19 +68,18 @@ test('guest cannot access device index', function () {
     $response->assertRedirect(route('login'));
 });
 
-test('device index lists each device with its farms and without credentials', function () {
+test('device index lists each device with its farm and without credentials', function () {
     $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
     $device = $this->devices->first();
-    $device->update(['mqtt_username' => 'device-user', 'mqtt_password' => 'device-pass']);
-    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $device->id, 'farm_id' => $farm->id]);
+    $device->update(['farm_id' => $farm->id, 'mqtt_username' => 'device-user', 'mqtt_password' => 'device-pass']);
 
     $this->actingAs($this->user)
         ->get(route('devices.index'))
-        ->assertInertia(function ($page) use ($device) {
+        ->assertInertia(function ($page) use ($device, $farm) {
             $page->component('Devices/Index')->has('devices', 3);
             $row = collect($page->toArray()['props']['devices'])->firstWhere('id', $device->id);
 
-            expect($row['farms'])->toBe(['North Orchard'])
+            expect($row['farm'])->toBe(['id' => $farm->id, 'name' => 'North Orchard'])
                 ->and($row)->not->toHaveKeys(['mqtt_username', 'mqtt_password', 'secret']);
         });
 });

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeviceFarmField from '@/components/agronos/DeviceFarmField.vue';
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import QrScanCard, { type QrPayload } from '@/components/agronos/QrScanCard.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
@@ -8,7 +9,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type FarmOption } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ScanLine } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -16,6 +17,8 @@ import { ref } from 'vue';
 const props = defineProps<{
     deviceTypes: { value: string; label: string }[];
     prefillUuid?: string | null;
+    prefillFarmId?: number | null;
+    farms: FarmOption[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,6 +32,7 @@ const form = useForm({
     secret: '',
     type: '',
     lora_aes_key: '',
+    farm_id: props.prefillFarmId ?? ('' as number | ''),
 });
 
 const showScanner = ref(false);
@@ -89,6 +93,7 @@ function onScan(data: QrPayload): void {
                             maxlength="32"
                             class="font-mono"
                     /></FormField>
+                    <DeviceFarmField v-model="form.farm_id" :farms="farms" :error="form.errors.farm_id" />
                     <div class="flex justify-end gap-3">
                         <Button variant="outline" as-child><Link :href="route('devices.index')">Cancel</Link></Button>
                         <Button type="submit" :disabled="form.processing">Register device</Button>

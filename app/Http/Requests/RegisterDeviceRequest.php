@@ -4,9 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\DeviceType;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 
-class RegisterDeviceRequest extends FormRequest
+class RegisterDeviceRequest extends DeviceRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -29,6 +28,7 @@ class RegisterDeviceRequest extends FormRequest
             'name' => 'nullable|string|max:255',
             'type' => 'required|string|in:'.implode(',', DeviceType::values()),
             'lora_aes_key' => 'nullable|string|size:32|required_if:type,lora',
+            'farm_id' => $this->farmRules(),
         ];
     }
 }
