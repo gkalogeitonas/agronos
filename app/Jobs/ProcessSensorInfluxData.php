@@ -26,13 +26,21 @@ class ProcessSensorInfluxData implements ShouldQueue
     public int $timeout = 30;
 
     /**
+     * The farm the device was on when the reading arrived, null if unassigned.
+     * A plain property with a default so jobs queued before it existed still unserialize.
+     */
+    public ?int $farmId = null;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
         public Sensor $sensor,
         public float $value,
-        public int $timestamp
+        public int $timestamp,
+        ?int $farmId,
     ) {
+        $this->farmId = $farmId;
         // Set queue name for time-series data processing
         $this->onQueue('sensor-data');
     }
@@ -43,7 +51,7 @@ class ProcessSensorInfluxData implements ShouldQueue
     public function handle(InfluxDBService $influx): void
     {
         try {
-            $payload = SensorMeasurementPayloadFactory::make($this->sensor, $this->value);
+            $payload = SensorMeasurementPayloadFactory::make($this->sensor, $this->value, $this->farmId);
 
             // Override timestamp if provided (for historical data)
             if ($this->timestamp) {
