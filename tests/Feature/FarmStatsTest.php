@@ -5,6 +5,7 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Services\InfluxDBService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
 
 it('provides farm statistics data on show page', function () {
@@ -204,4 +205,36 @@ it('shows the first ten sensors and devices of a large farm, with totals and eve
             ->has('sensorLocations', 12)
             ->has('sensorLocations.0', fn ($location) => $location->hasAll(['id', 'name', 'lat', 'lon'])->etc())
         );
+});
+
+it('filters the farm time-series stats on the farm tag and the farm-relevant sensor types, not on sensor ids', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $device = Device::factory()->onFarm($farm)->create();
+    $sensor = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'type' => SensorType::MOISTURE->value]);
+
+    $queries = [];
+    $influx = Mockery::mock(InfluxDBService::class);
+    $influx->shouldReceive('queryPipeline')->andReturnUsing(function (string $pipeline) use (&$queries) {
+        $queries[] = $pipeline;
+
+        return [];
+    });
+    $this->app->instance(InfluxDBService::class, $influx);
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->missing('timeSeriesStats')
+            ->loadDeferredProps(fn ($reload) => $reload->has('timeSeriesStats.readingStatsByType'))
+        );
+
+    expect($queries)->not->toBeEmpty();
+    foreach ($queries as $query) {
+        expect($query)
+            ->toContain("r.farm_id == \"{$farm->id}\"")
+            ->toContain('contains(value: r.sensor_type, set: ["moisture", "temperature", "humidity", "light", "other"])')
+            ->not->toContain('sensor_id')
+            ->not->toContain('"battery"');
+    }
 });

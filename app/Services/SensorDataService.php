@@ -28,7 +28,7 @@ class SensorDataService
             }
 
             // Dispatch job to write to InfluxDB asynchronously
-            ProcessSensorInfluxData::dispatch($sensorModel, (float) $sensor['value'], time());
+            ProcessSensorInfluxData::dispatch($sensorModel, (float) $sensor['value'], time(), $device->farm_id);
 
             $sensorModel->last_reading = $sensor['value'];
             $sensorModel->last_reading_at = now();

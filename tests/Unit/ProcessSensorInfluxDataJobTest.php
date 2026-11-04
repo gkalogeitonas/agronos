@@ -9,7 +9,7 @@ test('job processes sensor data successfully', function () {
     $value = 25.5;
     $timestamp = time();
 
-    $job = new ProcessSensorInfluxData($sensor, $value, $timestamp);
+    $job = new ProcessSensorInfluxData($sensor, $value, $timestamp, null);
 
     // Mock InfluxDB service
     $influxMock = Mockery::mock(InfluxDBService::class);
@@ -30,7 +30,7 @@ test('job rethrows exception on failure', function () {
     $value = 25.5;
     $timestamp = time();
 
-    $job = new ProcessSensorInfluxData($sensor, $value, $timestamp);
+    $job = new ProcessSensorInfluxData($sensor, $value, $timestamp, null);
 
     // Mock InfluxDB service to throw exception
     $influxMock = Mockery::mock(InfluxDBService::class);
@@ -43,7 +43,7 @@ test('job rethrows exception on failure', function () {
 
 test('job has correct configuration', function () {
     $sensor = Sensor::factory()->create(['type' => 'temperature']);
-    $job = new ProcessSensorInfluxData($sensor, 25.5, time());
+    $job = new ProcessSensorInfluxData($sensor, 25.5, time(), null);
 
     expect($job->tries)->toBe(3);
     expect($job->timeout)->toBe(30);
