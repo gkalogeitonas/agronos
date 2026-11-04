@@ -2,6 +2,7 @@
 
 use App\Enums\FarmHealth;
 use App\Enums\SensorType;
+use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
@@ -372,6 +373,20 @@ describe('Update (Modifying Farms)', function () {
 });
 
 describe('Delete (Removing Farms)', function () {
+    test('deleting a farm keeps its devices, unassigned, and deletes its sensors', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $device = Device::factory()->onFarm($farm)->create();
+        $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $device->id, 'farm_id' => $farm->id]);
+
+        actingAs($this->user);
+
+        delete(route('farms.destroy', $farm))->assertRedirect(route('farms.index'));
+
+        expect($device->fresh())->not->toBeNull()
+            ->and($device->fresh()->farm_id)->toBeNull();
+        assertDatabaseMissing('sensors', ['id' => $sensor->id]);
+    });
+
     test('user can delete their own farm', function () {
         $farm = Farm::factory()->create([
             'user_id' => $this->user->id,

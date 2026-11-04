@@ -8,7 +8,7 @@ import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 interface Props {
-    /** `farms` holds the names of the farms the device reports to; only shown with `showFarm`. */
+    /** The device's farm, or Unassigned, is only shown with `showFarm`. */
     devices: Device[];
     showFarm?: boolean;
     minWidth?: string;
@@ -36,7 +36,7 @@ const columns = computed<DataTableColumn[]>(() => [
 const rows = computed(() =>
     props.devices.map((device) => ({
         ...device,
-        farm: device.farms?.length ? device.farms.join(', ') : '–',
+        farm: device.farm?.name ?? 'Unassigned',
         link: deviceTypeLabel(device.type),
         signal: formatSignal(device.signal_strength),
         battery: formatBattery(device.battery_level),

@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Device summary for list views, matching the `Device` frontend type.
- * Includes the device's farm names when `sensors.farm` is loaded.
+ * Includes the device's farm (null while unassigned) when `farm` is loaded.
  *
  * @mixin Device
  */
@@ -28,7 +28,7 @@ class DeviceResource extends JsonResource
             'signal_strength' => $this->signal_strength,
             'battery_level' => $this->battery_level,
             'last_seen_at' => $this->last_seen_at,
-            'farms' => $this->whenLoaded('sensors', fn () => $this->linkedFarms()->pluck('name')->values()),
+            'farm' => $this->whenLoaded('farm', fn () => $this->farm->only(['id', 'name'])),
         ];
     }
 }

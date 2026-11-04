@@ -104,24 +104,51 @@ describe('DeviceController@createMqttCredentials', function () {
 
 describe('DeviceController@index', function () {
 
-    it('lists only the tenant devices with their farm names', function () {
+    it('lists only the tenant devices with their farm, or none when unassigned', function () {
         $user = User::factory()->create();
         $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
-        $device = Device::factory()->create(['user_id' => $user->id]);
-        Sensor::factory()->count(2)->create(['user_id' => $user->id, 'device_id' => $device->id, 'farm_id' => $farm->id]);
+        Device::factory()->onFarm($farm)->create(['name' => 'A placed']);
+        Device::factory()->create(['user_id' => $user->id, 'name' => 'B unassigned']);
         Device::factory()->create();
 
         $this->actingAs($user)
             ->get(route('devices.index'))
             ->assertInertia(fn ($page) => $page
                 ->component('Devices/Index')
-                ->has('devices', 1)
-                ->where('devices.0.farms', ['North Field'])
+                ->has('devices', 2)
+                ->where('devices.0.farm', ['id' => $farm->id, 'name' => 'North Field'])
+                ->where('devices.1.farm', null)
                 ->missing('devices.0.secret'));
     });
 
     it('requires authentication', function () {
         $this->get(route('devices.index'))->assertRedirect(route('login'));
+    });
+});
+
+describe('DeviceController@show', function () {
+
+    it('shows the device farm, not the farms of its sensors', function () {
+        $user = User::factory()->create();
+        $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
+        $device = Device::factory()->onFarm($farm)->create();
+        $otherFarm = Farm::factory()->create(['user_id' => $user->id]);
+        Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'farm_id' => $otherFarm->id]);
+
+        $this->actingAs($user)
+            ->get(route('devices.show', $device))
+            ->assertInertia(fn ($page) => $page
+                ->where('device.farm', ['id' => $farm->id, 'name' => 'North Field'])
+                ->missing('farms'));
+    });
+
+    it('shows an unassigned device with no farm', function () {
+        $user = User::factory()->create();
+        $device = Device::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->get(route('devices.show', $device))
+            ->assertInertia(fn ($page) => $page->where('device.farm', null));
     });
 });
 
@@ -133,5 +160,126 @@ describe('DeviceController@create', function () {
             ->assertInertia(fn ($page) => $page
                 ->component('Devices/Create')
                 ->where('prefillUuid', 'scanned-device-uuid'));
+    });
+
+    it('offers only the tenant farms and preselects the farm from the query string', function () {
+        $user = User::factory()->create();
+        $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
+        Farm::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('devices.create', ['farm' => $farm->id]))
+            ->assertInertia(fn ($page) => $page
+                ->component('Devices/Create')
+                ->has('farms', 1)
+                ->where('farms.0', ['id' => $farm->id, 'name' => 'North Field'])
+                ->where('prefillFarmId', $farm->id));
+    });
+
+    it('does not preselect a farm of another tenant', function () {
+        $otherFarm = Farm::factory()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('devices.create', ['farm' => $otherFarm->id]))
+            ->assertInertia(fn ($page) => $page->where('prefillFarmId', null));
+    });
+});
+
+describe('DeviceController@edit', function () {
+
+    it('shows the owner the device name, farm and the tenant farms', function () {
+        $user = User::factory()->create();
+        $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
+        $device = Device::factory()->onFarm($farm)->create(['name' => 'Node 7']);
+        Farm::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('devices.edit', $device))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Devices/Edit')
+                ->where('device.name', 'Node 7')
+                ->where('device.farm_id', $farm->id)
+                ->where('farms', [['id' => $farm->id, 'name' => 'North Field']])
+                ->missing('device.secret')
+                ->missing('device.lora_aes_key'));
+    });
+
+    it('is not found for another tenant', function () {
+        $device = Device::factory()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('devices.edit', $device))
+            ->assertNotFound();
+    });
+});
+
+describe('DeviceController@update', function () {
+
+    it('lets the owner rename a device and move it to another farm', function () {
+        $user = User::factory()->create();
+        $device = Device::factory()->onFarm()->create(['user_id' => $user->id]);
+        $newFarm = Farm::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->put(route('devices.update', $device), ['name' => 'Renamed node', 'farm_id' => $newFarm->id])
+            ->assertRedirect(route('devices.show', $device))
+            ->assertSessionHasNoErrors();
+
+        expect($device->fresh())
+            ->name->toBe('Renamed node')
+            ->farm_id->toBe($newFarm->id);
+    });
+
+    it('lets the owner unassign a device without touching its sensor positions', function () {
+        $user = User::factory()->create();
+        $device = Device::factory()->onFarm()->create(['user_id' => $user->id]);
+        $sensor = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'lat' => 37.5, 'lon' => 25.25]);
+
+        $this->actingAs($user)
+            ->put(route('devices.update', $device), ['name' => $device->name, 'farm_id' => ''])
+            ->assertSessionHasNoErrors();
+
+        expect($device->fresh()->farm_id)->toBeNull()
+            ->and((float) $sensor->fresh()->lat)->toBe(37.5)
+            ->and((float) $sensor->fresh()->lon)->toBe(25.25);
+    });
+
+    it('does not change the uuid, secret, type or LoRa key', function () {
+        $user = User::factory()->create();
+        $device = Device::factory()->lora()->create(['user_id' => $user->id]);
+        $original = $device->only(['uuid', 'secret', 'type', 'lora_aes_key']);
+
+        $this->actingAs($user)->put(route('devices.update', $device), [
+            'name' => 'Node',
+            'uuid' => 'new-uuid',
+            'secret' => 'new-secret',
+            'type' => 'wifi',
+            'lora_aes_key' => str_repeat('a', 32),
+        ]);
+
+        expect($device->fresh()->only(['uuid', 'secret', 'type', 'lora_aes_key']))->toBe($original);
+    });
+
+    it('rejects a farm of another tenant', function () {
+        $user = User::factory()->create();
+        $device = Device::factory()->create(['user_id' => $user->id]);
+        $otherFarm = Farm::factory()->create();
+
+        $this->actingAs($user)
+            ->put(route('devices.update', $device), ['name' => 'Node', 'farm_id' => $otherFarm->id])
+            ->assertSessionHasErrors('farm_id');
+
+        expect($device->fresh()->farm_id)->toBeNull();
+    });
+
+    it('is not found for another tenant', function () {
+        $device = Device::factory()->create(['name' => 'Original']);
+
+        $this->actingAs(User::factory()->create())
+            ->put(route('devices.update', $device), ['name' => 'Hijacked'])
+            ->assertNotFound();
+
+        expect(Device::allTenants()->find($device->id)->name)->toBe('Original');
     });
 });

@@ -49,3 +49,12 @@ test('the dev environment seeder does not create devices with the public secret 
 
     expect(Device::allTenants()->where('uuid', 'Test-Device-1')->exists())->toBeFalse();
 });
+
+test('the seeded devices are on the farms their sensors are on', function () {
+    $this->seed(DatabaseSeeder::class);
+
+    $device = Device::allTenants()->with('sensors')->where('uuid', 'Test-Device-1')->sole();
+
+    expect($device->farm_id)->not->toBeNull()
+        ->and($device->sensors->pluck('farm_id')->unique()->all())->toBe([$device->farm_id]);
+});

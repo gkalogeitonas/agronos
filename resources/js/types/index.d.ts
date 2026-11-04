@@ -84,8 +84,8 @@ export interface Device {
     signal_strength: number | null;
     battery_level: number | null;
     last_seen_at: string | null;
-    /** Names of the farms the device's sensors are on; present when the sensors were loaded. */
-    farms?: string[];
+    /** The farm the device is on, null while it is unassigned; present when the farm was loaded. */
+    farm?: { id: number; name: string } | null;
 }
 
 /** Shaped by App\Http\Controllers\GatewayController; the password is passed separately on the detail page. */

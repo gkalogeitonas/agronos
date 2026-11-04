@@ -25,7 +25,6 @@ import { computed, ref } from 'vue';
 const props = defineProps<{
     device: DeviceDetail;
     sensors: (Sensor & { farm?: { id: number; name: string } | null })[];
-    farms: { id: number; name: string }[];
     batteryTimeSeries?: { time: string; value: number }[];
 }>();
 
@@ -98,14 +97,15 @@ const comingSoon = 'Coming soon: device commands are not available yet';
             <PageHeader :title="device.name" sample-data>
                 <template #meta>
                     <StatusBadge :status="device.status" />
-                    <span v-if="farms.length > 0" class="text-body text-muted-foreground">
-                        <template v-for="(farm, index) in farms" :key="farm.id"
-                            ><template v-if="index > 0">, </template
-                            ><Link :href="route('farms.show', farm.id)" class="text-muted-foreground hover:text-info">{{ farm.name }}</Link></template
-                        >
+                    <span class="text-body text-muted-foreground">
+                        <Link v-if="device.farm" :href="route('farms.show', device.farm.id)" class="text-muted-foreground hover:text-info">{{
+                            device.farm.name
+                        }}</Link>
+                        <template v-else>Unassigned</template>
                     </span>
                 </template>
                 <template #actions>
+                    <Button variant="outline" as-child><Link :href="route('devices.edit', device.id)">Edit device</Link></Button>
                     <ComingSoonButton variant="outline" :reason="comingSoon">Restart device</ComingSoonButton>
                     <ComingSoonButton :reason="comingSoon">Update firmware</ComingSoonButton>
                 </template>

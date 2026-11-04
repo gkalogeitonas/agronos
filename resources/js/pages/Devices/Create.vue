@@ -16,6 +16,8 @@ import { ref } from 'vue';
 const props = defineProps<{
     deviceTypes: { value: string; label: string }[];
     prefillUuid?: string | null;
+    prefillFarmId?: number | null;
+    farms: { id: number; name: string }[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,6 +31,7 @@ const form = useForm({
     secret: '',
     type: '',
     lora_aes_key: '',
+    farm_id: props.prefillFarmId ?? ('' as number | ''),
 });
 
 const showScanner = ref(false);
@@ -89,6 +92,12 @@ function onScan(data: QrPayload): void {
                             maxlength="32"
                             class="font-mono"
                     /></FormField>
+                    <FormField id="farm_id" label="Farm" :error="form.errors.farm_id"
+                        ><NativeSelect id="farm_id" v-model="form.farm_id">
+                            <option value="">Unassigned</option>
+                            <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
+                        </NativeSelect></FormField
+                    >
                     <div class="flex justify-end gap-3">
                         <Button variant="outline" as-child><Link :href="route('devices.index')">Cancel</Link></Button>
                         <Button type="submit" :disabled="form.processing">Register device</Button>
