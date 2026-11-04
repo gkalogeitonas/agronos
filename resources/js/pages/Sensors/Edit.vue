@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
@@ -13,13 +12,6 @@ import { sensorTypeLabel } from '@/lib/enums';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
-import { computed } from 'vue';
-
-interface FarmOption {
-    id: number;
-    name: string;
-    coordinates: Polygon | null;
-}
 
 const props = defineProps<{
     sensor: {
@@ -27,16 +19,13 @@ const props = defineProps<{
         name: string;
         uuid: string;
         type: string;
-        farm_id: number | null;
         lat: number | string;
         lon: number | string;
-        device?: { uuid: string } | null;
+        device?: { uuid: string; farm: { coordinates: Polygon | null } | null } | null;
     };
-    farms: FarmOption[];
 }>();
 
 const sensor = props.sensor;
-const farms = computed(() => props.farms);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sensors', href: route('sensors.index') },
@@ -52,7 +41,6 @@ const details: DescriptionItem[] = [
 
 const form = useForm({
     name: sensor.name || '',
-    farm_id: sensor.farm_id ?? ('' as number | ''),
     lat: String(sensor.lat ?? ''),
     lon: String(sensor.lon ?? ''),
 });
@@ -61,7 +49,7 @@ function submit() {
     form.put(route('sensors.update', sensor.id));
 }
 
-const farmPolygon = computed(() => farms.value.find((farm) => farm.id === form.farm_id)?.coordinates ?? null);
+const farmPolygon = sensor.device?.farm?.coordinates ?? null;
 </script>
 
 <template>
@@ -75,12 +63,6 @@ const farmPolygon = computed(() => farms.value.find((farm) => farm.id === form.f
                     <SectionCard title="Details" class="flex-[1_1_320px]">
                         <DescriptionList :items="details" />
                         <FormField id="name" label="Name" :error="form.errors.name"><Input id="name" v-model="form.name" /></FormField>
-                        <FormField id="farm_id" label="Farm" :error="form.errors.farm_id"
-                            ><NativeSelect id="farm_id" v-model="form.farm_id">
-                                <option value="" disabled>Select a farm</option>
-                                <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
-                            </NativeSelect></FormField
-                        >
                     </SectionCard>
 
                     <SectionCard title="Location" class="flex-[2_1_480px]">
@@ -88,10 +70,10 @@ const farmPolygon = computed(() => farms.value.find((farm) => farm.id === form.f
                         <SensorLocationPicker v-model:lat="form.lat" v-model:lon="form.lon" :farm-polygon="farmPolygon" />
                         <div class="grid gap-4 sm:grid-cols-2">
                             <FormField id="lat" label="Latitude" :error="form.errors.lat"
-                                ><Input id="lat" v-model="form.lat" type="number" step="any" required class="font-mono"
+                                ><Input id="lat" v-model="form.lat" type="number" step="any" class="font-mono"
                             /></FormField>
                             <FormField id="lon" label="Longitude" :error="form.errors.lon"
-                                ><Input id="lon" v-model="form.lon" type="number" step="any" required class="font-mono"
+                                ><Input id="lon" v-model="form.lon" type="number" step="any" class="font-mono"
                             /></FormField>
                         </div>
                     </SectionCard>

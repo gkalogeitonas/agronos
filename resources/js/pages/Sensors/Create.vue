@@ -12,27 +12,33 @@ import { Label } from '@/components/ui/label';
 import Switch from '@/components/ui/switch/Switch.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sensorTypeLabel } from '@/lib/enums';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type FarmOption } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
 import { ScanLine } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 
-interface Farm {
+interface Farm extends FarmOption {
+    coordinates: Polygon | null;
+}
+
+interface DeviceOption {
     id: number;
     name: string;
-    coordinates?: Polygon | null;
+    uuid: string;
+    farm: Farm | null;
 }
 
 const props = defineProps<{
-    farms: Farm[];
+    devices: DeviceOption[];
+    /** The farm the form was opened from, if any. */
     selectedFarm: Farm | null;
+    prefillDeviceUuid: string | null;
     SensorTypes: string[];
     unregisteredDeviceMessage: string;
 }>();
 
 const SensorTypes = computed(() => props.SensorTypes ?? []);
-const farms = computed(() => props.farms ?? []);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sensors', href: route('sensors.index') },
@@ -41,10 +47,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const form = useForm({
     name: '',
-    farm_id: '' as number | '',
     type: '',
     uuid: '',
-    device_uuid: '',
+    device_uuid: props.prefillDeviceUuid ?? '',
     lat: '',
     lon: '',
     manual_entry: false,
@@ -59,10 +64,20 @@ const locationError = ref<string | null>(null);
 
 const allowEdit = ref(false);
 
-const farmPolygon = computed(() => {
-    const farm = props.selectedFarm ?? farms.value.find((option) => option.id === form.farm_id);
+const device = computed(() => props.devices.find((option) => option.uuid === form.device_uuid) ?? null);
 
-    return farm?.coordinates ?? null;
+/** The device's farm decides the boundary; until a device is entered, the farm the form was opened from stands in. */
+const farmPolygon = computed(() => (form.device_uuid ? device.value?.farm?.coordinates : props.selectedFarm?.coordinates) ?? null);
+
+/** Set when the sensor will not appear on the farm the form was opened from. */
+const farmNotice = computed(() => {
+    if (!props.selectedFarm || !device.value || device.value.farm?.id === props.selectedFarm.id) {
+        return null;
+    }
+
+    return device.value.farm
+        ? `This device is on ${device.value.farm.name}, so the sensor will appear there.`
+        : `This device is unassigned, so the sensor will not appear on ${props.selectedFarm.name}.`;
 });
 
 function submit(): void {
@@ -109,16 +124,6 @@ function getLocation() {
 }
 
 onMounted(getLocation);
-
-watch(
-    () => props.selectedFarm,
-    (selectedFarm) => {
-        if (selectedFarm) {
-            form.farm_id = selectedFarm.id;
-        }
-    },
-    { immediate: true },
-);
 </script>
 
 <template>
@@ -146,13 +151,6 @@ watch(
                         <FormField id="name" label="Name" :error="form.errors.name"
                             ><Input id="name" v-model="form.name" placeholder="Zone A soil probe"
                         /></FormField>
-                        <FormField id="farm_id" label="Farm" :error="form.errors.farm_id"
-                            ><NativeSelect v-if="!selectedFarm" id="farm_id" v-model="form.farm_id" required>
-                                <option value="" disabled>Select a farm</option>
-                                <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
-                            </NativeSelect>
-                            <Input v-else id="farm_id" :model-value="selectedFarm.name" readonly class="bg-muted"
-                        /></FormField>
                         <div class="flex items-center gap-3">
                             <Switch id="allow-edit-switch" v-model="allowEdit" />
                             <Label for="allow-edit-switch" class="cursor-pointer">Edit the scanned fields manually</Label>
@@ -173,6 +171,16 @@ watch(
                         <Button v-if="form.errors.device_uuid === props.unregisteredDeviceMessage" variant="outline" as-child class="self-start">
                             <a :href="route('devices.create', { uuid: form.device_uuid })" target="_blank" rel="noopener">Add device in a new tab</a>
                         </Button>
+                        <div
+                            v-if="device && farmNotice"
+                            role="status"
+                            class="flex flex-wrap items-center justify-between gap-3 rounded-md bg-warning-soft p-3 text-sm text-warning-foreground"
+                        >
+                            <p class="m-0">{{ farmNotice }}</p>
+                            <Button variant="outline" size="sm" as-child>
+                                <a :href="route('devices.edit', device.id)" target="_blank" rel="noopener">Edit device in a new tab</a>
+                            </Button>
+                        </div>
                     </SectionCard>
 
                     <SectionCard title="Location" class="flex-[2_1_480px]">
@@ -185,10 +193,10 @@ watch(
                         <SensorLocationPicker v-model:lat="form.lat" v-model:lon="form.lon" :farm-polygon="farmPolygon" />
                         <div class="grid gap-4 sm:grid-cols-2">
                             <FormField id="lat" label="Latitude" :error="form.errors.lat"
-                                ><Input id="lat" v-model="form.lat" type="number" step="any" required class="font-mono"
+                                ><Input id="lat" v-model="form.lat" type="number" step="any" class="font-mono"
                             /></FormField>
                             <FormField id="lon" label="Longitude" :error="form.errors.lon"
-                                ><Input id="lon" v-model="form.lon" type="number" step="any" required class="font-mono"
+                                ><Input id="lon" v-model="form.lon" type="number" step="any" class="font-mono"
                             /></FormField>
                         </div>
                     </SectionCard>

@@ -20,6 +20,7 @@ import { signalColors } from '@/lib/theme';
 import { type BreadcrumbItem as BreadcrumbItemType, type DeviceDetail } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Plus } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -156,7 +157,12 @@ const comingSoon = 'Coming soon: device commands are not available yet';
             <div class="flex flex-wrap items-stretch gap-4">
                 <SectionCard title="Sensors on this device" class="flex-[2_1_480px]">
                     <template #actions>
-                        <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
+                            <Button variant="outline" size="sm" as-child>
+                                <Link :href="route('sensors.create', { device: device.id })"><Plus /> Add sensor</Link>
+                            </Button>
+                        </div>
                     </template>
                     <SensorTable :sensors="sensors" :readings="liveReadings" min-width="520px" empty-text="No sensors on this device yet." />
                 </SectionCard>

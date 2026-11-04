@@ -25,7 +25,6 @@ abstract class SensorRequest extends FormRequest
     {
         return [
             'name' => ['nullable', 'string', 'max:255'],
-            'farm_id' => ['nullable', Rule::exists('farms', 'id')->where('user_id', $this->user()->id)],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lon' => ['nullable', 'numeric', 'between:-180,180'],
             'type' => ['nullable', Rule::in(SensorType::values())],
@@ -46,7 +45,6 @@ abstract class SensorRequest extends FormRequest
     {
         return [
             'device_uuid' => 'device UUID',
-            'farm_id' => 'farm',
             'lat' => 'latitude',
             'lon' => 'longitude',
         ];

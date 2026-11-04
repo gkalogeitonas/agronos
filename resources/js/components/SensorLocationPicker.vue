@@ -38,6 +38,14 @@ const { whenLoaded } = useMapbox(
 
 let marker: mapboxgl.Marker | null = null;
 
+/** The boundary on the map, exposed on the container as `data-boundary` because the canvas cannot be inspected. */
+const drawnBoundary = ref<Polygon | null>(null);
+
+function drawBoundary(map: mapboxgl.Map, boundary: Polygon | null): void {
+    setFarmPolygon(map, boundary);
+    drawnBoundary.value = boundary;
+}
+
 function setPosition({ lng, lat: latitude }: mapboxgl.LngLat): void {
     lat.value = latitude.toString();
     lon.value = lng.toString();
@@ -53,7 +61,7 @@ function placeMarker(map: mapboxgl.Map, lngLat: [number, number]): void {
 }
 
 whenLoaded((map) => {
-    setFarmPolygon(map, initialPolygon);
+    drawBoundary(map, initialPolygon);
     if (position.value) {
         placeMarker(map, position.value);
     }
@@ -78,7 +86,7 @@ watch(
     (polygon) => {
         const boundary = isPolygon(polygon) ? polygon : null;
         whenLoaded((map) => {
-            setFarmPolygon(map, boundary);
+            drawBoundary(map, boundary);
             if (boundary) {
                 fitToPolygon(map, boundary);
             }
@@ -88,5 +96,9 @@ watch(
 </script>
 
 <template>
-    <div ref="container" class="h-[320px] w-full overflow-hidden rounded-md border"></div>
+    <div
+        ref="container"
+        :data-boundary="drawnBoundary ? JSON.stringify(drawnBoundary.coordinates) : undefined"
+        class="h-[320px] w-full overflow-hidden rounded-md border"
+    ></div>
 </template>

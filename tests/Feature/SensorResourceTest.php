@@ -153,7 +153,7 @@ it('cannot create a sensor with a device_uuid that does not belong to the user',
     $this->assertDatabaseMissing('sensors', ['uuid' => 'wrong-owner-device']);
 });
 
-it('can create a sensor with a farm', function () {
+it('does not store a farm sent with a new sensor', function () {
     $farm = Farm::factory(['user_id' => $this->user->id])->create();
     $payload = [
         'uuid' => 'sensor-with-farm',
@@ -168,7 +168,7 @@ it('can create a sensor with a farm', function () {
     $response->assertSessionHas('success', 'Sensor added.');
     $this->assertDatabaseHas('sensors', [
         'uuid' => 'sensor-with-farm',
-        'farm_id' => $farm->id,
+        'farm_id' => null,
     ]);
 });
 

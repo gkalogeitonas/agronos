@@ -88,7 +88,6 @@ it('asks before a typed uuid updates an existing sensor and confirms the update 
     $page = visit(route('sensors.create', absolute: false))
         ->click('#allow-edit-switch')
         ->fill('#name', 'Typed name')
-        ->select('#farm_id', (string) $this->farm->id)
         ->select('#type', 'moisture')
         ->fill('#uuid', $this->sensor->uuid)
         ->fill('#device_uuid', $this->device->uuid)
@@ -112,7 +111,6 @@ it('shows a toast after adding a sensor with a new uuid', function () {
     visit(route('sensors.create', absolute: false))
         ->click('#allow-edit-switch')
         ->fill('#name', 'Zone B probe')
-        ->select('#farm_id', (string) $this->farm->id)
         ->select('#type', 'moisture')
         ->fill('#uuid', 'typed-new-uuid')
         ->fill('#device_uuid', $this->device->uuid)
@@ -159,3 +157,138 @@ it('groups and filters the sensor list by the device\'s farm', function () {
         ->assertDontSee('Zone A probe')
         ->assertNoJavaScriptErrors();
 });
+
+it('tells the user when the device entered from a farm page is on another farm', function () {
+    $otherFarm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
+    $otherDevice = Device::factory()->onFarm($otherFarm)->create();
+    $placedDevice = Device::factory()->onFarm($this->farm)->create();
+
+    visit(route('farms.sensors.create', $this->farm, absolute: false))
+        ->click('#allow-edit-switch')
+        ->fill('#device_uuid', $placedDevice->uuid)
+        ->assertDontSee('so the sensor will appear there')
+        ->fill('#device_uuid', $otherDevice->uuid)
+        ->assertSee('This device is on North Orchard, so the sensor will appear there.')
+        ->assertPresent('a[href$="'.route('devices.edit', $otherDevice, absolute: false).'"]')
+        ->assertNoJavaScriptErrors();
+});
+
+it('tells the user when the device entered from a farm page is unassigned', function () {
+    $this->farm->update(['name' => 'South Field']);
+
+    visit(route('farms.sensors.create', $this->farm, absolute: false))
+        ->click('#allow-edit-switch')
+        ->fill('#device_uuid', $this->device->uuid)
+        ->assertSee('This device is unassigned, so the sensor will not appear on South Field.')
+        ->assertPresent('a[href$="'.route('devices.edit', $this->device, absolute: false).'"]')
+        ->assertNoJavaScriptErrors();
+});
+
+it('saves the sensor despite the notice, on the device\'s farm', function () {
+    $otherFarm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
+    $otherDevice = Device::factory()->onFarm($otherFarm)->create();
+
+    visit(route('farms.sensors.create', $this->farm, absolute: false))
+        ->click('#allow-edit-switch')
+        ->select('#type', 'moisture')
+        ->fill('#uuid', 'noticed-uuid')
+        ->fill('#device_uuid', $otherDevice->uuid)
+        ->assertSee('so the sensor will appear there')
+        ->fill('#lat', '37.1')
+        ->fill('#lon', '25.5')
+        ->press('button[type="submit"]')
+        ->assertPathIs(route('sensors.index', absolute: false))
+        ->assertNoJavaScriptErrors();
+
+    $this->assertDatabaseHas('sensors', ['uuid' => 'noticed-uuid', 'device_id' => $otherDevice->id, 'farm_id' => null]);
+});
+
+it('adds a sensor without a position', function () {
+    visit(route('sensors.create', absolute: false))
+        ->click('#allow-edit-switch')
+        ->select('#type', 'moisture')
+        ->fill('#uuid', 'no-position-uuid')
+        ->fill('#device_uuid', $this->device->uuid)
+        ->press('button[type="submit"]')
+        ->assertPathIs(route('sensors.index', absolute: false))
+        ->assertNoJavaScriptErrors();
+
+    $this->assertDatabaseHas('sensors', ['uuid' => 'no-position-uuid', 'lat' => null, 'lon' => null]);
+});
+
+it('shows no notice for a device that is not recognised, and no boundary', function () {
+    $this->farm->update(['coordinates' => squareBoundary(25.4)]);
+
+    $page = visit(route('farms.sensors.create', $this->farm, absolute: false));
+    waitForBoundary($page, squareBoundary(25.4));
+
+    $page->click('#allow-edit-switch')->fill('#device_uuid', 'not-a-device');
+    waitForNoBoundary($page);
+
+    $page->assertDontSee('This device is')->assertNoJavaScriptErrors();
+})->group('maps');
+
+it('shows the boundary of the entered device\'s farm in the location picker', function () {
+    $this->farm->update(['coordinates' => squareBoundary(25.4)]);
+    $otherFarm = Farm::factory()->create(['user_id' => $this->user->id, 'coordinates' => squareBoundary(26.1)]);
+    $otherDevice = Device::factory()->onFarm($otherFarm)->create();
+
+    $page = visit(route('farms.sensors.create', $this->farm, absolute: false));
+    waitForBoundary($page, squareBoundary(25.4));
+
+    $page->click('#allow-edit-switch')->fill('#device_uuid', $otherDevice->uuid);
+    waitForBoundary($page, squareBoundary(26.1));
+
+    $page->fill('#device_uuid', $this->device->uuid);
+    waitForNoBoundary($page);
+
+    $page->assertNoJavaScriptErrors();
+})->group('maps');
+
+it('shows the boundary of the device\'s farm on the sensor edit page', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'coordinates' => squareBoundary(25.4)]);
+    $this->device->update(['farm_id' => $farm->id]);
+
+    $page = visit(route('sensors.edit', $this->sensor, absolute: false));
+
+    waitForBoundary($page, squareBoundary(25.4));
+    $page->assertNoJavaScriptErrors();
+})->group('maps');
+
+/**
+ * @return array{type: string, coordinates: array<int, array<int, array<int, float>>>}
+ */
+function squareBoundary(float $lng): array
+{
+    return [
+        'type' => 'Polygon',
+        'coordinates' => [[[$lng, 37.05], [$lng + 0.01, 37.05], [$lng + 0.01, 37.06], [$lng, 37.06], [$lng, 37.05]]],
+    ];
+}
+
+/**
+ * @param  array{type: string, coordinates: array<int, array<int, array<int, float>>>}  $boundary
+ */
+function waitForBoundary(mixed $page, array $boundary): void
+{
+    $expected = json_encode(json_encode($boundary['coordinates']));
+
+    $page->script(<<<JS
+        async () => {
+            while (document.querySelector('[data-boundary]')?.dataset.boundary !== {$expected}) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+        }
+        JS);
+}
+
+function waitForNoBoundary(mixed $page): void
+{
+    $page->script(<<<'JS'
+        async () => {
+            while (document.querySelector('[data-boundary]')) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+        }
+        JS);
+}
