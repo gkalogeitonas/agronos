@@ -47,9 +47,13 @@ class DeviceFactory extends Factory
      */
     public function onFarm(?Farm $farm = null): static
     {
-        return $this->state(fn (array $attributes) => [
-            'user_id' => $farm?->user_id ?? $attributes['user_id'],
-            'farm_id' => $farm?->id ?? Farm::factory()->state(['user_id' => $attributes['user_id']]),
+        if ($farm) {
+            return $this->state(['user_id' => $farm->user_id, 'farm_id' => $farm->id]);
+        }
+
+        // Resolved after create() overrides, so the farm belongs to the device's final tenant.
+        return $this->state([
+            'farm_id' => fn (array $attributes) => Farm::factory()->create(['user_id' => $attributes['user_id']])->id,
         ]);
     }
 }

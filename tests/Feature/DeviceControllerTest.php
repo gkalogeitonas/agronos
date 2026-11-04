@@ -235,6 +235,7 @@ describe('DeviceController@update', function () {
         $user = User::factory()->create();
         $device = Device::factory()->onFarm()->create(['user_id' => $user->id]);
         $sensor = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'lat' => 37.5, 'lon' => 25.25]);
+        expect(Farm::allTenants()->find($device->farm_id)->user_id)->toBe($user->id);
 
         $this->actingAs($user)
             ->put(route('devices.update', $device), ['name' => $device->name, 'farm_id' => ''])

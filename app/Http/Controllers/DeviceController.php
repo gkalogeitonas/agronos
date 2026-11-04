@@ -62,7 +62,7 @@ class DeviceController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(RegisterDeviceRequest $request)
+    public function store(RegisterDeviceRequest $request): RedirectResponse
     {
         $validated = $request->validated();
 
