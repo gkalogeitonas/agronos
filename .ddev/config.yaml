@@ -16,7 +16,13 @@ database:
     version: "10.11"
 use_dns_when_possible: true
 composer_version: "2"
-web_environment: []
+web_environment:
+    # Keep the Playwright browsers in the bind-mounted project, so they survive restarts (the container's home does not).
+    - PLAYWRIGHT_BROWSERS_PATH=/var/www/html/node_modules/.cache/ms-playwright
+hooks:
+    post-start:
+        # Installs the browser matching the locked Playwright version; a no-op when it is already there.
+        - exec: "if [ -x node_modules/.bin/playwright ]; then npx playwright install chromium; fi"
 corepack_enable: false
 
 # Key features of DDEV's config.yaml:
