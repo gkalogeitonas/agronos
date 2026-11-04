@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import DeviceFarmField from '@/components/agronos/DeviceFarmField.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
@@ -9,13 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { deviceTypeLabel } from '@/lib/format';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type FarmOption } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 const props = defineProps<{
     device: { id: number; name: string | null; uuid: string; type: string; farm_id: number | null };
-    farms: { id: number; name: string }[];
+    farms: FarmOption[];
 }>();
 
 const title = props.device.name || 'Device';
@@ -53,12 +53,7 @@ function submit() {
                 <form class="flex flex-col gap-6" @submit.prevent="submit">
                     <DescriptionList :items="details" />
                     <FormField id="name" label="Device name" :error="form.errors.name"><Input id="name" v-model="form.name" required /></FormField>
-                    <FormField id="farm_id" label="Farm" :error="form.errors.farm_id"
-                        ><NativeSelect id="farm_id" v-model="form.farm_id">
-                            <option value="">Unassigned</option>
-                            <option v-for="farm in farms" :key="farm.id" :value="farm.id">{{ farm.name }}</option>
-                        </NativeSelect></FormField
-                    >
+                    <DeviceFarmField v-model="form.farm_id" :farms="farms" :error="form.errors.farm_id" />
                     <p v-if="farmChanged" role="alert" class="m-0 rounded-md bg-warning-soft p-3 text-sm text-warning-foreground">
                         This device's sensors keep their positions. Check them and update them for the new farm if needed.
                     </p>

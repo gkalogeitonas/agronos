@@ -3,13 +3,11 @@
 namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
  * Edits the device's name and farm. The UUID, secret, type and LoRa key are fixed at registration.
  */
-class UpdateDeviceRequest extends FormRequest
+class UpdateDeviceRequest extends DeviceRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -28,17 +26,7 @@ class UpdateDeviceRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'farm_id' => ['nullable', Rule::exists('farms', 'id')->where('user_id', $this->user()->id)],
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'farm_id' => 'farm',
+            'farm_id' => $this->farmRules(),
         ];
     }
 }
