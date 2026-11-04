@@ -15,6 +15,7 @@ use App\Models\Sensor;
 use App\Scopes\TenantScope;
 use App\Services\TimeSeries\SensorTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -41,14 +42,22 @@ class SensorController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(?Farm $farm = null)
+    public function create(Request $request, ?Farm $farm = null): Response
     {
         $this->authorize('create', Sensor::class);
-        $farms = request()->user()->farms;
+
+        $devices = $request->user()->devices()
+            ->with('farm:id,name,coordinates')
+            ->orderBy('name')
+            ->get(['id', 'name', 'uuid', 'farm_id']);
 
         return Inertia::render('Sensors/Create', [
-            'farms' => $farms,
-            'selectedFarm' => $farm,
+            'devices' => $devices->map(fn (Device $device): array => [
+                ...$device->only(['id', 'name', 'uuid']),
+                'farm' => $device->farm?->only(['id', 'name', 'coordinates']),
+            ]),
+            'selectedFarm' => $farm?->only(['id', 'name', 'coordinates']),
+            'prefillDeviceUuid' => $devices->firstWhere('id', $request->integer('device'))?->uuid,
             'SensorTypes' => SensorType::values(),
             'unregisteredDeviceMessage' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE,
         ]);
@@ -107,15 +116,13 @@ class SensorController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Sensor $sensor)
+    public function edit(Sensor $sensor): Response
     {
         $this->authorize('update', $sensor);
-        $sensor->load(['farm', 'device']);
-        $farms = request()->user()->farms;
+        $sensor->load('device:id,uuid,farm_id', 'device.farm:id,name,coordinates');
 
         return Inertia::render('Sensors/Edit', [
             'sensor' => $sensor,
-            'farms' => $farms,
         ]);
     }
 

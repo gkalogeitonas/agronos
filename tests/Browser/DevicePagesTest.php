@@ -40,6 +40,16 @@ it('registers a device on the farm from the URL and opens its page', function ()
     expect($device)->name->toBe('Sensor node 01')->farm_id->toBe($farm->id);
 });
 
+it('opens sensor create with the device filled in from the device page', function () {
+    $device = Device::factory()->create(['user_id' => $this->user->id]);
+
+    visit(route('devices.show', $device, absolute: false))
+        ->click('Add sensor')
+        ->assertPathIs(route('sensors.create', absolute: false))
+        ->assertValue('#device_uuid', $device->uuid)
+        ->assertNoJavaScriptErrors();
+});
+
 it('warns that sensor positions stay when the farm changes on the edit form', function () {
     $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Field']);
     Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'South Field']);
