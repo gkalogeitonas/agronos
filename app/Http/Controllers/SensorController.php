@@ -29,7 +29,7 @@ class SensorController extends Controller
     public function index(): Response
     {
         $this->authorize('viewAny', Sensor::class);
-        $sensors = request()->user()->sensors()->with('device:id,name,status')->orderBy('name')->get();
+        $sensors = request()->user()->sensors()->with('device:id,name,status,farm_id')->orderBy('name')->get();
         $farms = request()->user()->farms()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Sensors/Index', [
@@ -84,7 +84,7 @@ class SensorController extends Controller
     public function show(Sensor $sensor)
     {
         $this->authorize('view', $sensor);
-        $sensor->load(['farm', 'device']);
+        $sensor->load('device.farm');
 
         // Prepare time-series service; defer heavy/time-series work so initial page is fast
         $ts = app(SensorTimeSeriesService::class);

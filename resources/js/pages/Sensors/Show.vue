@@ -22,7 +22,7 @@ import type { Polygon } from 'geojson';
 import { Pencil } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
-/** Shape of App\Http\Resources\SensorResource with `farm` and `device` loaded. */
+/** Shape of App\Http\Resources\SensorResource with `device.farm` loaded; `farm` is the device's farm, null while it is unassigned. */
 interface SensorDetail {
     id: number;
     name: string | null;
@@ -203,7 +203,7 @@ useEcho<{ value?: number | string; time?: string }>(`sensor.${props.sensor.id}`,
                             <Link v-if="sensor.farm" :href="route('farms.show', sensor.farm.id)" class="text-info hover:text-foreground">{{
                                 sensor.farm.name
                             }}</Link>
-                            <template v-else>–</template>
+                            <template v-else>Unassigned</template>
                         </template>
                     </DescriptionList>
                 </SectionCard>
