@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
@@ -35,13 +36,16 @@ describe('Farm model', function () {
         expect($center)->toHaveKeys(['lng', 'lat']);
     });
 
-    it('returns sensors related to the farm', function () {
+    it('returns the sensors of the devices on the farm', function () {
         $farm = Farm::factory()->create();
-        $sensors = Sensor::factory()->count(3)->create(['farm_id' => $farm->id]);
+        $device = Device::factory()->onFarm($farm)->create();
+        $sensors = Sensor::factory()->count(3)->create(['user_id' => $farm->user_id, 'device_id' => $device->id]);
+        $sensorWithOnlyItsOwnFarm = Sensor::factory()->create(['farm_id' => $farm->id]);
         $farmSensors = $farm->sensors;
         expect($farmSensors)->toHaveCount(3);
         foreach ($sensors as $sensor) {
             expect($farmSensors->pluck('id'))->toContain($sensor->id);
         }
+        expect($farmSensors->pluck('id'))->not->toContain($sensorWithOnlyItsOwnFarm->id);
     });
 });

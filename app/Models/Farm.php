@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Farm extends Model
 {
@@ -78,8 +79,13 @@ class Farm extends Model
         return $this->hasMany(Device::class);
     }
 
-    public function sensors(): HasMany
+    /**
+     * The sensors of the devices on this farm: a sensor takes its farm from its device (ADR-0008).
+     *
+     * @return HasManyThrough<Sensor, Device, $this>
+     */
+    public function sensors(): HasManyThrough
     {
-        return $this->hasMany(Sensor::class);
+        return $this->hasManyThrough(Sensor::class, Device::class);
     }
 }

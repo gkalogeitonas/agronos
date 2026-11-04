@@ -2,7 +2,6 @@
 
 use App\Models\Device;
 use App\Models\Farm;
-use App\Models\Sensor;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -15,8 +14,7 @@ beforeEach(function () {
 
 it('shows each farm on the overview with its status and device count', function () {
     $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
-    $device = Device::factory()->create(['user_id' => $this->user->id, 'status' => 'online']);
-    Sensor::factory()->create(['user_id' => $this->user->id, 'farm_id' => $farm->id, 'device_id' => $device->id]);
+    Device::factory()->onFarm($farm)->create(['status' => 'online']);
 
     $page = visit(route('dashboard', absolute: false))
         ->assertSee('North Orchard')
@@ -24,6 +22,35 @@ it('shows each farm on the overview with its status and device count', function 
         ->assertNoJavaScriptErrors();
 
     expect($page->text('article dl.grid'))->toContain('1 / 1');
+});
+
+it('opens device registration with the farm preselected from the farm page', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->click('header >> text=Add device')
+        ->assertPathIs(route('devices.create', absolute: false))
+        ->assertSelected('#farm_id', $farm->id)
+        ->assertNoJavaScriptErrors();
+});
+
+it('points an empty farm to adding a device before its sensors', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->assertSeeIn('section[aria-label="Sensors"]', 'Add device')
+        ->assertDontSeeIn('section[aria-label="Sensors"]', 'Add sensor')
+        ->assertNoJavaScriptErrors();
+});
+
+it('offers adding a sensor once the farm has a device', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+    Device::factory()->onFarm($farm)->create();
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->click('section[aria-label="Sensors"] >> text=Add sensor')
+        ->assertPathIs(route('farms.sensors.create', $farm, absolute: false))
+        ->assertNoJavaScriptErrors();
 });
 
 it('saves edits to a farm and shows them on its page', function () {

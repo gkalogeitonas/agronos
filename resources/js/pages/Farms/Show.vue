@@ -3,6 +3,7 @@ import AlertList from '@/components/agronos/AlertList.vue';
 import ConfirmDeleteButton from '@/components/agronos/ConfirmDeleteButton.vue';
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import DeviceTable from '@/components/agronos/DeviceTable.vue';
+import EmptyState from '@/components/agronos/EmptyState.vue';
 import LineChart from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import SensorTable from '@/components/agronos/SensorTable.vue';
@@ -61,6 +62,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const liveReadings = useLiveSensorReadings(props.sensors);
 
+const hasDevices = computed(() => props.devices.length > 0);
+
 const devicesOnline = computed(() => props.devices.filter((device) => device.status === 'online').length);
 
 /** One tile per sensor type the farm has a recent average for, in a fixed signal order. */
@@ -111,7 +114,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     </Button>
                     <ConfirmDeleteButton :url="route('farms.destroy', farm.id)" :item-name="farm.name" />
                     <Button as-child>
-                        <Link :href="route('farms.sensors.create', { farm: farm.id })"><Plus /> Add sensor</Link>
+                        <Link :href="route('devices.create', { farm: farm.id })"><Plus /> Add device</Link>
                     </Button>
                 </template>
             </PageHeader>
@@ -158,7 +161,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
             </div>
 
             <SectionCard title="Devices">
-                <DeviceTable :devices="devices" empty-text="No devices report to this farm yet." />
+                <DeviceTable :devices="devices" empty-text="No devices on this farm yet." />
             </SectionCard>
 
             <div class="flex flex-wrap items-stretch gap-4">
@@ -177,9 +180,19 @@ const farmInfo = computed<DescriptionItem[]>(() => [
 
             <SectionCard title="Sensors">
                 <template #actions>
-                    <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
+                        <Button v-if="hasDevices" variant="outline" size="sm" as-child>
+                            <Link :href="route('farms.sensors.create', { farm: farm.id })"><Plus /> Add sensor</Link>
+                        </Button>
+                    </div>
                 </template>
-                <SensorTable :sensors="sensors" :readings="liveReadings" empty-text="No sensors on this farm yet." />
+                <SensorTable v-if="hasDevices" :sensors="sensors" :readings="liveReadings" empty-text="No sensors on this farm yet." />
+                <EmptyState v-else title="No devices on this farm yet" text="Sensors are added to a device. Add a device to this farm first.">
+                    <Button as-child>
+                        <Link :href="route('devices.create', { farm: farm.id })"><Plus /> Add device</Link>
+                    </Button>
+                </EmptyState>
             </SectionCard>
         </PageContainer>
     </AppLayout>

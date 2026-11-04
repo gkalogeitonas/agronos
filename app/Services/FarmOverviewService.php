@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class FarmOverviewService
 {
     /**
-     * Health summary per farm, derived from the farm's sensors and the devices they belong to.
+     * Health summary per farm, derived from the devices on the farm and their sensors.
      *
      * Counts and averages are aggregated in SQL, so the cost does not grow with the number of sensors.
      *
@@ -23,10 +23,10 @@ class FarmOverviewService
      */
     public function summarize(EloquentCollection $farms): Collection
     {
-        $farms->loadCount('sensors');
+        $farms->loadCount(['sensors' => fn (Builder $query) => $query->farmRelevant()]);
         $farms->loadAggregate([
-            'sensors as moisture_avg' => fn (Builder $query) => $query->where('type', SensorType::MOISTURE->value),
-            'sensors as temperature_avg' => fn (Builder $query) => $query->where('type', SensorType::TEMPERATURE->value),
+            'sensors as moisture_avg' => fn (Builder $query) => $query->where('sensors.type', SensorType::MOISTURE->value),
+            'sensors as temperature_avg' => fn (Builder $query) => $query->where('sensors.type', SensorType::TEMPERATURE->value),
         ], 'last_reading', 'avg');
 
         $deviceCounts = $this->deviceCounts($farms->modelKeys());
@@ -54,9 +54,9 @@ class FarmOverviewService
     }
 
     /**
-     * Distinct devices per farm (through the farm's sensors) and how many of them are online.
+     * Devices per farm and how many of them are online.
      *
-     * The farm ids come from an already tenant-scoped query, so the join needs no further scoping.
+     * The farm ids come from an already tenant-scoped query, so the query needs no further scoping.
      *
      * @param  array<int, int>  $farmIds
      * @return Collection<int, object{farm_id: int, total: int, online: int}>
@@ -67,13 +67,12 @@ class FarmOverviewService
             return collect();
         }
 
-        return DB::table('sensors')
-            ->join('devices', 'devices.id', '=', 'sensors.device_id')
-            ->whereIn('sensors.farm_id', $farmIds)
-            ->groupBy('sensors.farm_id')
-            ->select('sensors.farm_id')
-            ->selectRaw('COUNT(DISTINCT devices.id) AS total')
-            ->selectRaw('COUNT(DISTINCT CASE WHEN devices.status = ? THEN devices.id END) AS online', [DeviceStatus::ONLINE->value])
+        return DB::table('devices')
+            ->whereIn('farm_id', $farmIds)
+            ->groupBy('farm_id')
+            ->select('farm_id')
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw('COUNT(CASE WHEN status = ? THEN 1 END) AS online', [DeviceStatus::ONLINE->value])
             ->get()
             ->keyBy('farm_id');
     }

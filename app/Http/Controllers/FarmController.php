@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\FarmHealth;
 use App\Http\Requests\FarmRequest;
 use App\Http\Resources\DeviceResource;
-use App\Models\Device;
 use App\Models\Farm;
 use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
@@ -68,9 +67,9 @@ class FarmController extends Controller
         $totalSensors = $farm->sensors()->farmRelevant()->count();
         $sensorTypeStats = $farm->sensors()
             ->farmRelevant()
-            ->selectRaw('type, COUNT(*) as count')
-            ->whereNotNull('type')
-            ->groupBy('type')
+            ->selectRaw('sensors.type, COUNT(*) as count')
+            ->whereNotNull('sensors.type')
+            ->groupBy('sensors.type')
             ->pluck('count', 'type')
             ->toArray();
 
@@ -79,10 +78,10 @@ class FarmController extends Controller
         $lastAvgByType = $farm->sensors()
             ->farmRelevant()
             ->deviceOnline()
-            ->selectRaw('type, AVG(last_reading) as avg_last_reading')
-            ->whereNotNull('type')
-            ->whereNotNull('last_reading')
-            ->groupBy('type')
+            ->selectRaw('sensors.type, AVG(sensors.last_reading) as avg_last_reading')
+            ->whereNotNull('sensors.type')
+            ->whereNotNull('sensors.last_reading')
+            ->groupBy('sensors.type')
             ->pluck('avg_last_reading', 'type')
             ->mapWithKeys(function ($v, $k) {
                 // cast to float and keep keys as type
@@ -99,10 +98,7 @@ class FarmController extends Controller
             'lastAvgByType' => $lastAvgByType,
         ];
 
-        $devices = Device::query()
-            ->whereIn('id', $farm->sensors()->select('device_id'))
-            ->orderBy('name')
-            ->get();
+        $devices = $farm->devices()->orderBy('name')->get();
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
