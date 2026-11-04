@@ -18,6 +18,23 @@ class DevEnvironmentSeeder extends Seeder
     public const DEVICE_SECRET = 'secret';
 
     /**
+     * Name of the seeded farm with many devices, for exercising farm screens at scale.
+     */
+    public const LARGE_FARM_NAME = 'Λιβάδι Δρυμαλίας';
+
+    /**
+     * How many devices the large farm gets.
+     */
+    private const LARGE_FARM_DEVICE_COUNT = 50;
+
+    /**
+     * The large farm's boundary as [west, south, east, north]; devices sit on a grid inside it.
+     *
+     * @var array{float, float, float, float}
+     */
+    private const LARGE_FARM_BOUNDS = [25.4300, 37.0700, 25.4400, 37.0760];
+
+    /**
      * Seed the application's database with current dev environment data.
      */
     public function run(): void
@@ -137,8 +154,10 @@ class DevEnvironmentSeeder extends Seeder
             );
 
             $farmData = $entry['farm'] ?? [];
-            $farmData['user_id'] = $user->id;
-            $farm = Farm::create($farmData);
+            $farm = Farm::allTenants()->updateOrCreate(
+                ['user_id' => $user->id, 'name' => $farmData['name']],
+                $farmData
+            );
 
             foreach ($entry['sensors'] as $sentry) {
                 $deviceData = $sentry['device'] ?? null;
@@ -162,6 +181,84 @@ class DevEnvironmentSeeder extends Seeder
                 Sensor::updateOrCreate(
                     ['uuid' => $sensorData['uuid']],
                     $sensorData
+                );
+            }
+        }
+
+        $this->seedLargeFarm($deviceSecret);
+    }
+
+    /**
+     * A farm with many devices. Each device has one or two reading sensors and a battery sensor.
+     * Devices and sensors are keyed by UUID and the farm by name, so re-seeding updates them in place.
+     */
+    private function seedLargeFarm(string $deviceSecret): void
+    {
+        $user = User::firstOrCreate(
+            ['email' => 'johndoe@gmail.com'],
+            ['name' => 'john Doe', 'password' => bcrypt('password')]
+        );
+
+        [$west, $south, $east, $north] = self::LARGE_FARM_BOUNDS;
+
+        $farm = Farm::allTenants()->updateOrCreate(
+            ['user_id' => $user->id, 'name' => self::LARGE_FARM_NAME],
+            [
+                'location' => 'Δρυμαλία Νάξου',
+                'size' => '488000.00',
+                'coordinates' => [
+                    'type' => 'Polygon',
+                    'coordinates' => [[[$west, $south], [$east, $south], [$east, $north], [$west, $north], [$west, $south]]],
+                ],
+                'description' => 'Large demo farm for checking farm screens with many devices and sensors.',
+            ]
+        );
+
+        $columns = 10;
+        $rows = (int) ceil(self::LARGE_FARM_DEVICE_COUNT / $columns);
+
+        for ($index = 0; $index < self::LARGE_FARM_DEVICE_COUNT; $index++) {
+            $number = sprintf('%02d', $index + 1);
+            $uuid = "Drymalia-Device-{$number}";
+            $lon = round($west + ($east - $west) * (($index % $columns) + 0.5) / $columns, 7);
+            $lat = round($south + ($north - $south) * (intdiv($index, $columns) + 0.5) / $rows, 7);
+            $batteryLevel = 100 - ($index * 7) % 95;
+
+            $device = Device::allTenants()->updateOrCreate(
+                ['uuid' => $uuid],
+                [
+                    'user_id' => $user->id,
+                    'farm_id' => $farm->id,
+                    'name' => $uuid,
+                    'secret' => $deviceSecret,
+                    'type' => 'wifi',
+                    'status' => $index % 6 === 5 ? 'offline' : 'online',
+                    'battery_level' => $batteryLevel,
+                    'signal_strength' => 1 + $index % 5,
+                    'last_seen_at' => now(),
+                ]
+            );
+
+            $sensors = [
+                ['suffix' => 'moisture', 'type' => 'moisture', 'last_reading' => 25 + ($index * 3) % 30],
+                ...($index % 2 === 1 ? [['suffix' => 'temperature', 'type' => 'temperature', 'last_reading' => 16 + ($index * 5) % 12]] : []),
+                ['suffix' => 'battery', 'type' => 'battery', 'last_reading' => $batteryLevel],
+            ];
+
+            foreach ($sensors as $sensor) {
+                Sensor::allTenants()->updateOrCreate(
+                    ['uuid' => "{$uuid}-{$sensor['suffix']}"],
+                    [
+                        'user_id' => $user->id,
+                        'device_id' => $device->id,
+                        'farm_id' => $farm->id,
+                        'name' => "{$uuid}-{$sensor['suffix']}",
+                        'type' => $sensor['type'],
+                        'lat' => $lat,
+                        'lon' => $lon,
+                        'last_reading' => $sensor['last_reading'],
+                        'last_reading_at' => now(),
+                    ]
                 );
             }
         }
