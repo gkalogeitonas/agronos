@@ -29,7 +29,8 @@ const { formatAge } = useTimestamp();
 const liveReadings = useLiveSensorReadings(props.sensors);
 
 const type = ref('all');
-const farmId = ref('all');
+/** Preselected by `?farm=<id>`, as the farm page's "View all" link does. */
+const farmId = ref(new URL(window.location.href).searchParams.get('farm') ?? 'all');
 const status = ref('all');
 const groupBy = ref<'farm' | 'type'>('farm');
 

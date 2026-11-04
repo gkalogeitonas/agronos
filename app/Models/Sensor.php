@@ -59,6 +59,6 @@ class Sensor extends Model
      */
     public function scopeFarmRelevant(Builder $query): Builder
     {
-        return $query->whereIn('type', SensorType::farmRelevantValues());
+        return $query->whereIn($query->qualifyColumn('type'), SensorType::farmRelevantValues());
     }
 }

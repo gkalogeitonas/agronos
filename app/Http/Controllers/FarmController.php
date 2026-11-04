@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeviceStatus;
 use App\Enums\FarmHealth;
 use App\Http\Requests\FarmRequest;
 use App\Http\Resources\DeviceResource;
-use App\Models\Device;
 use App\Models\Farm;
 use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
@@ -17,6 +17,11 @@ use Inertia\Response;
 class FarmController extends Controller
 {
     use AuthorizesRequests;
+
+    /**
+     * How many sensors and devices the farm page lists before linking to the full, filtered list.
+     */
+    private const SHOW_PAGE_LIST_LIMIT = 10;
 
     public function __construct() {}
 
@@ -62,15 +67,16 @@ class FarmController extends Controller
     public function show(Farm $farm)
     {
         $this->authorize('view', $farm);
-        $sensors = $farm->sensors()->farmRelevant()->get();
+        $sensors = $farm->sensors()->farmRelevant()->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
+        $sensorLocations = $farm->sensors()->farmRelevant()->get(['sensors.id', 'sensors.name', 'sensors.lat', 'sensors.lon']);
 
         // Calculate sensor statistics from database (exclude internal-only types)
         $totalSensors = $farm->sensors()->farmRelevant()->count();
         $sensorTypeStats = $farm->sensors()
             ->farmRelevant()
-            ->selectRaw('type, COUNT(*) as count')
-            ->whereNotNull('type')
-            ->groupBy('type')
+            ->selectRaw('sensors.type, COUNT(*) as count')
+            ->whereNotNull('sensors.type')
+            ->groupBy('sensors.type')
             ->pluck('count', 'type')
             ->toArray();
 
@@ -79,10 +85,10 @@ class FarmController extends Controller
         $lastAvgByType = $farm->sensors()
             ->farmRelevant()
             ->deviceOnline()
-            ->selectRaw('type, AVG(last_reading) as avg_last_reading')
-            ->whereNotNull('type')
-            ->whereNotNull('last_reading')
-            ->groupBy('type')
+            ->selectRaw('sensors.type, AVG(sensors.last_reading) as avg_last_reading')
+            ->whereNotNull('sensors.type')
+            ->whereNotNull('sensors.last_reading')
+            ->groupBy('sensors.type')
             ->pluck('avg_last_reading', 'type')
             ->mapWithKeys(function ($v, $k) {
                 // cast to float and keep keys as type
@@ -99,15 +105,15 @@ class FarmController extends Controller
             'lastAvgByType' => $lastAvgByType,
         ];
 
-        $devices = Device::query()
-            ->whereIn('id', $farm->sensors()->select('device_id'))
-            ->orderBy('name')
-            ->get();
+        $devices = $farm->devices()->orderBy('name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
+            'sensorLocations' => $sensorLocations->map->only(['id', 'name', 'lat', 'lon'])->values(),
             'devices' => DeviceResource::collection($devices)->resolve(),
+            'devicesTotal' => $farm->devices()->count(),
+            'devicesOnline' => $farm->devices()->where('status', DeviceStatus::ONLINE)->count(),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),

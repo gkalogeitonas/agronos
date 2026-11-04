@@ -19,8 +19,7 @@ function farmWithDevices(array $statuses): Farm
     $farm = Farm::factory()->create(['user_id' => $user->id]);
 
     foreach ($statuses as $status) {
-        $device = Device::factory()->create(['user_id' => $user->id, 'status' => $status]);
-        Sensor::factory()->create(['user_id' => $user->id, 'farm_id' => $farm->id, 'device_id' => $device->id]);
+        Device::factory()->onFarm($farm)->create(['status' => $status]);
     }
 
     return $farm;
@@ -37,11 +36,21 @@ it('derives farm health from its devices', function (array $statuses, FarmHealth
     'no devices' => [[], FarmHealth::UNKNOWN],
 ]);
 
-it('counts a device once when it has several sensors on the farm', function () {
-    $user = User::factory()->create();
-    $farm = Farm::factory()->create(['user_id' => $user->id]);
-    $device = Device::factory()->create(['user_id' => $user->id, 'status' => DeviceStatus::ONLINE]);
-    Sensor::factory()->count(3)->create(['user_id' => $user->id, 'farm_id' => $farm->id, 'device_id' => $device->id]);
+it('counts an unassigned device toward no farm', function () {
+    $farm = farmWithDevices([DeviceStatus::ONLINE]);
+    Device::factory()->create(['user_id' => $farm->user_id, 'status' => DeviceStatus::OFFLINE]);
+
+    $summary = app(FarmOverviewService::class)->summarize(new EloquentCollection([$farm]))->first();
+
+    expect($summary['devicesTotal'])->toBe(1)
+        ->and($summary['health'])->toBe(FarmHealth::OK->value);
+});
+
+it('counts a device once when it has several sensors, and leaves diagnostic sensors out of the sensor count', function () {
+    $farm = farmWithDevices([DeviceStatus::ONLINE]);
+    $device = $farm->devices()->sole();
+    Sensor::factory()->count(3)->create(['user_id' => $farm->user_id, 'device_id' => $device->id, 'type' => SensorType::MOISTURE->value]);
+    Sensor::factory()->create(['user_id' => $farm->user_id, 'device_id' => $device->id, 'type' => SensorType::BATTERY->value]);
 
     $summary = app(FarmOverviewService::class)->summarize(new EloquentCollection([$farm]))->first();
 
@@ -50,10 +59,8 @@ it('counts a device once when it has several sensors on the farm', function () {
 });
 
 it('averages the latest readings per sensor type, ignoring sensors without a reading', function () {
-    $user = User::factory()->create();
-    $farm = Farm::factory()->create(['user_id' => $user->id]);
-    $device = Device::factory()->create(['user_id' => $user->id]);
-    $sensorOnFarm = ['user_id' => $user->id, 'farm_id' => $farm->id, 'device_id' => $device->id];
+    $farm = farmWithDevices([DeviceStatus::ONLINE]);
+    $sensorOnFarm = ['user_id' => $farm->user_id, 'device_id' => $farm->devices()->sole()->id];
 
     Sensor::factory()->create([...$sensorOnFarm, 'type' => SensorType::MOISTURE->value, 'last_reading' => 30]);
     Sensor::factory()->create([...$sensorOnFarm, 'type' => SensorType::MOISTURE->value, 'last_reading' => 35.5]);

@@ -25,7 +25,8 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: route('devices.
 
 const status = ref<StatusFilter>('all');
 const search = ref('');
-const farm = ref('all');
+/** Preselected by `?farm=<id>`, as the farm page's "View all" link does. */
+const farm = ref(new URL(window.location.href).searchParams.get('farm') ?? 'all');
 const link = ref('all');
 
 const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [

@@ -162,12 +162,13 @@ describe('Show (Viewing a Single Farm)', function () {
         );
     });
 
-    test('farm details page includes sensors belonging to the farm', function () {
+    test('farm details page includes the sensors of the devices on the farm', function () {
         $farm = Farm::factory()->create([
             'user_id' => $this->user->id,
         ]);
-        $sensors = Sensor::factory()->count(2)->create([
-            'farm_id' => $farm->id,
+        $device = Device::factory()->onFarm($farm)->create();
+        $sensors = Sensor::factory()->count(2)->sequence(['name' => 'Probe A'], ['name' => 'Probe B'])->create([
+            'device_id' => $device->id,
             'user_id' => $this->user->id,
             'type' => SensorType::MOISTURE->value,
         ]);
