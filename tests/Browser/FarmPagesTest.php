@@ -53,6 +53,20 @@ it('offers adding a sensor once the farm has a device', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('links from the farm page to all of its devices', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+    Device::factory()->onFarm($farm)->create(['name' => 'Farm node']);
+    Device::factory()->create(['user_id' => $this->user->id, 'name' => 'Loose node']);
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->click('section[aria-label="Devices"] >> text=View all')
+        ->assertPathIs(route('devices.index', absolute: false))
+        ->assertQueryStringHas('farm', (string) $farm->id)
+        ->assertSee('Farm node')
+        ->assertDontSee('Loose node')
+        ->assertNoJavaScriptErrors();
+});
+
 it('saves edits to a farm and shows them on its page', function () {
     $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
 

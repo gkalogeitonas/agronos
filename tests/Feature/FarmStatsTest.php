@@ -176,3 +176,32 @@ it('shows the sensors of the devices on the farm, without diagnostic sensors', f
             ->where('sensorDbStats.sensorTypeStats', ['moisture' => 1])
         );
 });
+
+it('shows the first ten sensors and devices of a large farm, with totals and every sensor on the map', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $devices = Device::factory()->count(12)->onFarm($farm)->sequence(fn ($sequence) => [
+        'name' => sprintf('Node %02d', $sequence->index),
+        'status' => $sequence->index < 3 ? 'online' : 'offline',
+    ])->create();
+    $devices->each(fn (Device $device) => Sensor::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => $device->id,
+        'name' => "Sensor of {$device->name}",
+        'type' => SensorType::MOISTURE->value,
+    ]));
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->has('devices', 10)
+            ->where('devices.0.name', 'Node 00')
+            ->where('devicesTotal', 12)
+            ->where('devicesOnline', 3)
+            ->has('sensors', 10)
+            ->where('sensors.0.name', 'Sensor of Node 00')
+            ->where('sensorDbStats.totalSensors', 12)
+            ->has('sensorLocations', 12)
+            ->has('sensorLocations.0', fn ($location) => $location->hasAll(['id', 'name', 'lat', 'lon'])->etc())
+        );
+});

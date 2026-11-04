@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeviceStatus;
 use App\Enums\FarmHealth;
 use App\Http\Requests\FarmRequest;
 use App\Http\Resources\DeviceResource;
@@ -16,6 +17,11 @@ use Inertia\Response;
 class FarmController extends Controller
 {
     use AuthorizesRequests;
+
+    /**
+     * How many sensors and devices the farm page lists before linking to the full, filtered list.
+     */
+    private const SHOW_PAGE_LIST_LIMIT = 10;
 
     public function __construct() {}
 
@@ -61,7 +67,8 @@ class FarmController extends Controller
     public function show(Farm $farm)
     {
         $this->authorize('view', $farm);
-        $sensors = $farm->sensors()->farmRelevant()->get();
+        $sensors = $farm->sensors()->farmRelevant()->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
+        $sensorLocations = $farm->sensors()->farmRelevant()->get(['sensors.id', 'sensors.name', 'sensors.lat', 'sensors.lon']);
 
         // Calculate sensor statistics from database (exclude internal-only types)
         $totalSensors = $farm->sensors()->farmRelevant()->count();
@@ -98,12 +105,15 @@ class FarmController extends Controller
             'lastAvgByType' => $lastAvgByType,
         ];
 
-        $devices = $farm->devices()->orderBy('name')->get();
+        $devices = $farm->devices()->orderBy('name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
 
         return Inertia::render('Farms/Show', [
             'farm' => $farm,
             'sensors' => $sensors,
+            'sensorLocations' => $sensorLocations->map->only(['id', 'name', 'lat', 'lon'])->values(),
             'devices' => DeviceResource::collection($devices)->resolve(),
+            'devicesTotal' => $farm->devices()->count(),
+            'devicesOnline' => $farm->devices()->where('status', DeviceStatus::ONLINE)->count(),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),

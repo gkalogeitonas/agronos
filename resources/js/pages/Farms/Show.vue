@@ -43,8 +43,14 @@ const props = defineProps<{
         updated_at: string;
         center: { lng: number; lat: number } | null;
     };
+    /** The first sensors of the farm, by name; `sensorDbStats.totalSensors` has the full count. */
     sensors: Sensor[];
+    /** Every sensor of the farm, with only what the map needs. */
+    sensorLocations: { id: number; name: string; lat: number | string | null; lon: number | string | null }[];
+    /** The first devices of the farm, by name. */
     devices: Device[];
+    devicesTotal: number;
+    devicesOnline: number;
     sensorDbStats?: {
         totalSensors: number;
         sensorTypeStats: Record<string, number>;
@@ -62,9 +68,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const liveReadings = useLiveSensorReadings(props.sensors);
 
-const hasDevices = computed(() => props.devices.length > 0);
-
-const devicesOnline = computed(() => props.devices.filter((device) => device.status === 'online').length);
+const hasDevices = computed(() => props.devicesTotal > 0);
+const sensorsTotal = computed(() => props.sensorDbStats?.totalSensors ?? props.sensors.length);
 
 /** One tile per sensor type the farm has a recent average for, in a fixed signal order. */
 const readingTiles = computed(() => {
@@ -96,7 +101,7 @@ const moistureSeries = computed(() =>
 const farmInfo = computed<DescriptionItem[]>(() => [
     { label: 'Location', value: props.farm.location },
     { label: 'Size', value: props.farm.size !== null ? `${props.farm.size} m²` : null, mono: true },
-    { label: 'Sensors', value: props.sensorDbStats?.totalSensors ?? props.sensors.length, mono: true },
+    { label: 'Sensors', value: sensorsTotal.value, mono: true },
     { label: 'Updated', value: new Date(props.farm.updated_at).toLocaleDateString(), mono: true },
     { label: 'Description', value: props.farm.description || 'No description yet.', stacked: true },
 ]);
@@ -134,8 +139,8 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                 <StatTile
                     label="Devices online"
                     :value="devicesOnline"
-                    :unit="`/ ${devices.length}`"
-                    :note="devices.length - devicesOnline === 0 ? 'All reporting' : `${devices.length - devicesOnline} need attention`"
+                    :unit="`/ ${devicesTotal}`"
+                    :note="devicesTotal - devicesOnline === 0 ? 'All reporting' : `${devicesTotal - devicesOnline} need attention`"
                     :trend="sampleTrends.devices"
                     :trend-color="signalColors.ink"
                     trend-label="Devices online trend, sample data"
@@ -160,8 +165,31 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                 </SectionCard>
             </div>
 
-            <SectionCard title="Devices">
-                <DeviceTable :devices="devices" empty-text="No devices on this farm yet." />
+            <SectionCard title="Sensors">
+                <template #actions>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <Link
+                            v-if="sensorsTotal > 0"
+                            :href="route('sensors.index', { farm: farm.id })"
+                            class="text-sm font-medium text-info hover:text-foreground"
+                            >View all {{ sensorsTotal }}</Link
+                        >
+                        <Button v-if="hasDevices" variant="outline" size="sm" as-child>
+                            <Link :href="route('farms.sensors.create', { farm: farm.id })"><Plus /> Add sensor</Link>
+                        </Button>
+                    </div>
+                </template>
+                <template v-if="hasDevices">
+                    <p v-if="sensorsTotal > sensors.length" class="m-0 font-mono text-meta text-muted-foreground">
+                        Showing {{ sensors.length }} of {{ sensorsTotal }} sensors
+                    </p>
+                    <SensorTable :sensors="sensors" :readings="liveReadings" empty-text="No sensors on this farm yet." />
+                </template>
+                <EmptyState v-else title="No devices on this farm yet" text="Sensors are added to a device. Add a device to this farm first.">
+                    <Button as-child>
+                        <Link :href="route('devices.create', { farm: farm.id })"><Plus /> Add device</Link>
+                    </Button>
+                </EmptyState>
             </SectionCard>
 
             <div class="flex flex-wrap items-stretch gap-4">
@@ -169,7 +197,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     <FarmMapbox
                         :center="farm.center ? [farm.center.lng, farm.center.lat] : [0, 0]"
                         :farm-polygon="farm.coordinates"
-                        :sensors="sensors.map((sensor) => ({ lat: Number(sensor.lat), lon: Number(sensor.lon), name: sensor.name }))"
+                        :sensors="sensorLocations.map((sensor) => ({ lat: Number(sensor.lat), lon: Number(sensor.lon), name: sensor.name }))"
                     />
                 </SectionCard>
 
@@ -178,21 +206,16 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                 </SectionCard>
             </div>
 
-            <SectionCard title="Sensors">
-                <template #actions>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <Link :href="route('sensors.index')" class="text-sm font-medium text-info hover:text-foreground">All sensors</Link>
-                        <Button v-if="hasDevices" variant="outline" size="sm" as-child>
-                            <Link :href="route('farms.sensors.create', { farm: farm.id })"><Plus /> Add sensor</Link>
-                        </Button>
-                    </div>
+            <SectionCard title="Devices">
+                <template v-if="hasDevices" #actions>
+                    <Link :href="route('devices.index', { farm: farm.id })" class="text-sm font-medium text-info hover:text-foreground"
+                        >View all {{ devicesTotal }}</Link
+                    >
                 </template>
-                <SensorTable v-if="hasDevices" :sensors="sensors" :readings="liveReadings" empty-text="No sensors on this farm yet." />
-                <EmptyState v-else title="No devices on this farm yet" text="Sensors are added to a device. Add a device to this farm first.">
-                    <Button as-child>
-                        <Link :href="route('devices.create', { farm: farm.id })"><Plus /> Add device</Link>
-                    </Button>
-                </EmptyState>
+                <p v-if="devicesTotal > devices.length" class="m-0 font-mono text-meta text-muted-foreground">
+                    Showing {{ devices.length }} of {{ devicesTotal }} devices
+                </p>
+                <DeviceTable :devices="devices" empty-text="No devices on this farm yet." />
             </SectionCard>
         </PageContainer>
     </AppLayout>

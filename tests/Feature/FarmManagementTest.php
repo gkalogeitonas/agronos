@@ -167,7 +167,7 @@ describe('Show (Viewing a Single Farm)', function () {
             'user_id' => $this->user->id,
         ]);
         $device = Device::factory()->onFarm($farm)->create();
-        $sensors = Sensor::factory()->count(2)->create([
+        $sensors = Sensor::factory()->count(2)->sequence(['name' => 'Probe A'], ['name' => 'Probe B'])->create([
             'device_id' => $device->id,
             'user_id' => $this->user->id,
             'type' => SensorType::MOISTURE->value,
