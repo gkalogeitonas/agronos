@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\SensorType;
 use App\Models\Device;
+use App\Models\Farm;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DevEnvironmentSeeder;
@@ -19,7 +21,8 @@ test('the database seeder can run more than once', function () {
     $this->seed(DatabaseSeeder::class);
     $this->seed(DatabaseSeeder::class);
 
-    expect(User::query()->where('email', 'johndoe@gmail.com')->count())->toBe(1);
+    expect(User::query()->where('email', 'johndoe@gmail.com')->count())->toBe(1)
+        ->and(Farm::allTenants()->where('name', 'Τριποδες')->count())->toBe(1);
 });
 
 test('seeded devices can log in to the device API with the dev secret', function () {
@@ -57,4 +60,23 @@ test('the seeded devices are on the farms their sensors are on', function () {
 
     expect($device->farm_id)->not->toBeNull()
         ->and($device->sensors->pluck('farm_id')->unique()->all())->toBe([$device->farm_id]);
+});
+
+test('the dev environment seeder adds a large farm of 50 devices, each with one or two sensors and a battery sensor', function () {
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $farm = Farm::allTenants()->where('name', DevEnvironmentSeeder::LARGE_FARM_NAME)->sole();
+    $devices = Device::allTenants()->with('sensors')->where('farm_id', $farm->id)->get();
+
+    expect($devices)->toHaveCount(50)
+        ->and($devices->every(fn (Device $device) => $device->user_id === $farm->user_id))->toBeTrue();
+
+    $devices->each(function (Device $device) {
+        $battery = $device->sensors->where('type', SensorType::BATTERY->value);
+        $readingSensors = $device->sensors->where('type', '!=', SensorType::BATTERY->value);
+
+        expect($battery)->toHaveCount(1)
+            ->and($readingSensors->count())->toBeBetween(1, 2);
+    });
 });
