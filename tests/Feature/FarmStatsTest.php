@@ -166,7 +166,7 @@ it('shows the sensors of the devices on the farm, without diagnostic sensors', f
     $moisture = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'type' => SensorType::MOISTURE->value]);
     Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'type' => SensorType::BATTERY->value]);
     $unassignedDevice = Device::factory()->create(['user_id' => $user->id]);
-    Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $unassignedDevice->id, 'farm_id' => $farm->id, 'type' => SensorType::MOISTURE->value]);
+    Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $unassignedDevice->id, 'type' => SensorType::MOISTURE->value]);
 
     $this->actingAs($user)
         ->get(route('farms.show', $farm))

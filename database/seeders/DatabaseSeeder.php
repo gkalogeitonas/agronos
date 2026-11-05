@@ -28,12 +28,12 @@ class DatabaseSeeder extends Seeder
         // Farm::factory(2)->create(['user_id' => $user->id])->each(function ($farm) use ($user) {
         //     $devices = \App\Models\Device::factory(1)->create([
         //         'user_id' => $user->id,
+        //         'farm_id' => $farm->id,
         //     ]);
         //     foreach ($devices as $device) {
         //         \App\Models\Sensor::factory(3)->create([
         //             'user_id' => $user->id,
         //             'device_id' => $device->id,
-        //             'farm_id' => $farm->id,
         //         ]);
         //     }
         // });

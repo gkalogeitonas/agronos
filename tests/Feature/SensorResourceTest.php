@@ -153,7 +153,7 @@ it('cannot create a sensor with a device_uuid that does not belong to the user',
     $this->assertDatabaseMissing('sensors', ['uuid' => 'wrong-owner-device']);
 });
 
-it('does not store a farm sent with a new sensor', function () {
+it('ignores a farm sent with a new sensor', function () {
     $farm = Farm::factory(['user_id' => $this->user->id])->create();
     $payload = [
         'uuid' => 'sensor-with-farm',
@@ -166,10 +166,7 @@ it('does not store a farm sent with a new sensor', function () {
     $response = post('/sensors', $payload);
     $response->assertRedirect();
     $response->assertSessionHas('success', 'Sensor added.');
-    $this->assertDatabaseHas('sensors', [
-        'uuid' => 'sensor-with-farm',
-        'farm_id' => null,
-    ]);
+    $this->assertDatabaseHas('sensors', ['uuid' => 'sensor-with-farm']);
 });
 
 it('shows the farm of the sensor\'s device', function () {
@@ -189,7 +186,6 @@ it('shows no farm for a sensor whose device is unassigned', function () {
     $sensor = Sensor::factory()->create([
         'user_id' => $this->user->id,
         'device_id' => $this->device->id,
-        'farm_id' => Farm::factory(['user_id' => $this->user->id])->create()->id,
     ]);
 
     get(route('sensors.show', $sensor))
@@ -205,7 +201,6 @@ it('lists each sensor with the farm of its device', function () {
     Sensor::factory()->create([
         'user_id' => $this->user->id,
         'device_id' => $this->device->id,
-        'farm_id' => $farm->id,
         'name' => 'B unassigned',
     ]);
 

@@ -87,7 +87,7 @@ class DeviceController extends Controller
     {
         $this->authorize('view', $device);
 
-        $sensors = $device->load('sensors.farm:id,name')->sensors;
+        $sensors = $device->load('sensors')->sensors;
 
         $ts = app(SensorTimeSeriesService::class);
 
