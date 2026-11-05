@@ -30,6 +30,30 @@ it('renders an alert line with its title, device, farm, link and opening time', 
         ]));
 });
 
+it('shows the low battery alert of an unassigned device next to its offline alert', function () {
+    $user = User::factory()->create();
+    Device::factory()->offline()->lowBattery()->create(['user_id' => $user->id, 'farm_id' => null]);
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    $response = $this->actingAs($user)->get(route('alerts.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('alerts', 2)
+        ->where('alerts', fn ($alerts) => $alerts->pluck('severity', 'title')->sortKeys()->all() === [
+            'Device offline' => 'danger',
+            'Low battery' => 'warning',
+        ]));
+});
+
+it('does not show a low battery alert to another user', function () {
+    Device::factory()->online()->lowBattery()->create();
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    $response = $this->actingAs(User::factory()->create())->get(route('alerts.index'));
+
+    $response->assertInertia(fn ($page) => $page->has('alerts', 0));
+});
+
 it('falls back to the uuid and to Unassigned for a nameless device without a farm', function () {
     $user = User::factory()->create();
     $device = Device::factory()->offline()->create(['user_id' => $user->id, 'name' => null, 'uuid' => 'c0ffee00-0000-4000-8000-000000000001']);

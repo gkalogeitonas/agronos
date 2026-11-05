@@ -113,3 +113,110 @@ it('treats the alerts of other tenants the same when it runs with a signed-in us
     expect($kept->fresh()->resolved_at)->toBeNull()
         ->and($cleared->fresh()->resolved_at)->not->toBeNull();
 });
+
+it('opens one warning alert for a device with a low battery and no duplicate on a second run', function () {
+    $device = Device::factory()->online()->lowBattery()->create();
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    $alert = Alert::sole();
+    expect($alert->rule)->toBe(AlertRule::LOW_BATTERY)
+        ->and($alert->severity)->toBe(AlertSeverity::WARNING)
+        ->and($alert->subject->is($device))->toBeTrue()
+        ->and($alert->user_id)->toBe($device->user_id)
+        ->and($alert->resolved_at)->toBeNull();
+});
+
+it('opens a low battery alert only below the threshold', function (int $batteryLevel, int $expectedAlerts) {
+    config(['agronos.low_battery_percent' => 20]);
+    Device::factory()->online()->create(['battery_level' => $batteryLevel]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::count())->toBe($expectedAlerts);
+})->with([
+    'just below' => [19, 1],
+    'at the threshold' => [20, 0],
+]);
+
+it('opens no alert for a device with no battery reading', function () {
+    Device::factory()->online()->create(['battery_level' => null]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::count())->toBe(0);
+});
+
+it('resolves the low battery alert as soon as the level is back at the threshold', function () {
+    config(['agronos.low_battery_percent' => 20]);
+    $device = Device::factory()->online()->create(['battery_level' => 19]);
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+    $this->travelTo('2026-11-05 12:05:00');
+    $device->update(['battery_level' => 20]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::sole()->resolved_at->toDateTimeString())->toBe('2026-11-05 12:05:00');
+});
+
+it('opens a new low battery alert on a later drop and keeps the resolved one', function () {
+    $device = Device::factory()->online()->lowBattery()->create();
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+    $device->update(['battery_level' => 100]);
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+    $device->update(['battery_level' => 5]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::whereNotNull('resolved_at')->count())->toBe(1)
+        ->and(Alert::whereNull('resolved_at')->count())->toBe(1);
+});
+
+it('opens a low battery alert for an unassigned device', function () {
+    $unassigned = Device::factory()->online()->lowBattery()->create(['farm_id' => null]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::sole()->subject_id)->toBe($unassigned->id);
+});
+
+it('stamps an alert on a device already low on battery with the detection time', function () {
+    $this->travelTo('2026-11-05 12:00:00');
+    Device::factory()->online()->lowBattery()->create(['last_seen_at' => '2026-10-01 08:00:00']);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::sole()->opened_at->toDateTimeString())->toBe('2026-11-05 12:00:00');
+});
+
+it('keeps an open offline alert when the battery alert resolves', function () {
+    $device = Device::factory()->offline()->lowBattery()->create();
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+    $device->update(['battery_level' => 100]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::open()->sole()->rule)->toBe(AlertRule::DEVICE_OFFLINE)
+        ->and(Alert::whereNotNull('resolved_at')->sole()->rule)->toBe(AlertRule::LOW_BATTERY);
+});
+
+it('keeps an open battery alert when the offline alert resolves', function () {
+    $device = Device::factory()->offline()->lowBattery()->create();
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+    $device->update(['status' => DeviceStatus::ONLINE]);
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::open()->sole()->rule)->toBe(AlertRule::LOW_BATTERY)
+        ->and(Alert::whereNotNull('resolved_at')->sole()->rule)->toBe(AlertRule::DEVICE_OFFLINE);
+});
+
+it('opens the low battery alert of another tenant when it runs with a signed-in user', function () {
+    $device = Device::factory()->online()->lowBattery()->create();
+    $this->actingAs(User::factory()->create());
+
+    $this->artisan('alerts:evaluate')->assertSuccessful();
+
+    expect(Alert::allTenants()->sole()->subject_id)->toBe($device->id);
+});
