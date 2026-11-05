@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Alert;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Gateway;
 use App\Models\Sensor;
+use App\Policies\AlertPolicy;
 use App\Policies\DevicePolicy;
 use App\Policies\FarmPolicy;
 use App\Policies\GatewayPolicy;
@@ -24,6 +26,7 @@ class AuthServiceProvider extends ServiceProvider
         Device::class => DevicePolicy::class,
         Sensor::class => SensorPolicy::class,
         Gateway::class => GatewayPolicy::class,
+        Alert::class => AlertPolicy::class,
     ];
 
     /**

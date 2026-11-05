@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -46,6 +47,9 @@ class Device extends Authenticatable
     protected static function booted(): void
     {
         static::deleted(function (Device $device): void {
+            // A polymorphic relation has no database cascade
+            $device->alerts()->withoutGlobalScopes()->delete();
+
             if ($device->mqtt_username) {
                 RemoveBrokerUser::dispatch($device->mqtt_username);
             }
@@ -65,6 +69,11 @@ class Device extends Authenticatable
     public function sensors(): HasMany
     {
         return $this->hasMany(Sensor::class);
+    }
+
+    public function alerts(): MorphMany
+    {
+        return $this->morphMany(Alert::class, 'subject');
     }
 
     /**

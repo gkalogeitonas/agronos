@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\DeviceStatus;
 use App\Enums\DeviceType;
 use App\Models\Device;
 use App\Models\Farm;
@@ -40,6 +41,22 @@ class DeviceFactory extends Factory
             'type' => DeviceType::LORA->value,
             'lora_aes_key' => bin2hex(random_bytes(16)),
         ]);
+    }
+
+    /**
+     * A healthy device that reported just now.
+     */
+    public function online(): static
+    {
+        return $this->state(['status' => DeviceStatus::ONLINE, 'last_seen_at' => now(), 'battery_level' => 100]);
+    }
+
+    /**
+     * A device with a full battery that stopped reporting a while ago.
+     */
+    public function offline(): static
+    {
+        return $this->state(['status' => DeviceStatus::OFFLINE, 'last_seen_at' => now()->subDay(), 'battery_level' => 100]);
     }
 
     /**

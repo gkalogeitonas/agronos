@@ -1,0 +1,50 @@
+<?php
+
+use App\Enums\AlertSeverity;
+use App\Models\Alert;
+use App\Models\Device;
+use App\Models\Farm;
+use App\Models\User;
+
+use function Pest\Laravel\actingAs;
+
+beforeEach(function () {
+    $this->user = User::factory()->create();
+    actingAs($this->user);
+});
+
+it('filters open alerts by severity and links a line to its device', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
+    $danger = Device::factory()->offline()->onFarm($farm)->create(['name' => 'Pump shed']);
+    $warning = Device::factory()->offline()->create(['user_id' => $this->user->id, 'name' => 'Gate node']);
+    Alert::factory()->forDevice($danger)->create(['opened_at' => now()->subMinutes(12)]);
+    Alert::factory()->forDevice($warning)->create(['severity' => AlertSeverity::WARNING]);
+
+    visit(route('alerts.index', absolute: false))
+        ->assertDontSee('SAMPLE DATA')
+        ->assertDontSee('Gateway not reporting')
+        ->assertSee('Alerts open automatically when a device stops reporting, and close on their own once the problem clears.')
+        ->assertSee('Pump shed · North Orchard · 12 min ago')
+        ->assertSee('Gate node · Unassigned · just now')
+        ->click('button:has-text("Warning")')
+        ->assertSee('Gate node')
+        ->assertDontSee('Pump shed')
+        ->click('button:has-text("Critical")')
+        ->assertSee('Pump shed')
+        ->assertDontSee('Gate node')
+        ->click('a:has-text("Device offline")')
+        ->assertPathIs(route('devices.show', $danger, absolute: false))
+        ->assertNoJavaScriptErrors();
+});
+
+it('still renders the sample alerts on the overview and the farm detail', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+
+    visit(route('dashboard', absolute: false))
+        ->assertSee('Gateway not reporting')
+        ->assertNoJavaScriptErrors();
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->assertSee('Zone B below threshold')
+        ->assertNoJavaScriptErrors();
+});

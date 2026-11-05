@@ -10,10 +10,10 @@ import type { AlertItem } from '@/components/agronos/AlertList.vue';
 
 /** Follow-up: alerts (rules for moisture threshold, device offline, low battery). */
 export const sampleAlerts: AlertItem[] = [
-    { id: 'gateway', title: 'Gateway not reporting', meta: 'Hilltop Greenhouse · 18 min ago', tone: 'danger' },
-    { id: 'zone-b', title: 'Zone B below threshold', meta: 'North Orchard · 12 min ago', tone: 'warning' },
-    { id: 'battery', title: 'Low battery', meta: 'Riverside Fields · 2 devices', tone: 'warning' },
-    { id: 'firmware', title: 'Firmware update available', meta: 'North Orchard · 3 devices', tone: 'info' },
+    { id: 'gateway', title: 'Gateway not reporting', meta: 'Hilltop Greenhouse · 18 min ago', severity: 'danger' },
+    { id: 'zone-b', title: 'Zone B below threshold', meta: 'North Orchard · 12 min ago', severity: 'warning' },
+    { id: 'battery', title: 'Low battery', meta: 'Riverside Fields · 2 devices', severity: 'warning' },
+    { id: 'firmware', title: 'Firmware update available', meta: 'North Orchard · 3 devices', severity: 'info' },
 ];
 
 /** Follow-up: activity feed (organisation and per device). */

@@ -28,3 +28,4 @@ Artisan::command('test:broadcast {sensorId=1}', function (int $sensorId) {
 })->purpose('Test broadcasting to Reverb');
 
 Schedule::command('devices:mark-offline')->everyFiveMinutes();
+Schedule::command('alerts:evaluate')->everyFiveMinutes();
