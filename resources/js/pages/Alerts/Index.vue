@@ -5,25 +5,28 @@ import SectionCard from '@/components/agronos/SectionCard.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sampleAlerts } from '@/lib/sampleData';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
-type ToneFilter = 'all' | AlertItem['tone'];
+type SeverityFilter = 'all' | AlertItem['severity'];
+
+const props = defineProps<{
+    alerts: AlertItem[];
+}>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Alerts', href: route('alerts.index') }];
 
-const tone = ref<ToneFilter>('all');
+const severity = ref<SeverityFilter>('all');
 
-const toneOptions = computed<FilterChipOption<ToneFilter>[]>(() => [
-    { value: 'all', label: 'All', count: sampleAlerts.length },
-    { value: 'danger', label: 'Critical', count: sampleAlerts.filter((alert) => alert.tone === 'danger').length },
-    { value: 'warning', label: 'Warning', count: sampleAlerts.filter((alert) => alert.tone === 'warning').length },
-    { value: 'info', label: 'Info', count: sampleAlerts.filter((alert) => alert.tone === 'info').length },
+const severityOptions = computed<FilterChipOption<SeverityFilter>[]>(() => [
+    { value: 'all', label: 'All', count: props.alerts.length },
+    { value: 'danger', label: 'Critical', count: props.alerts.filter((alert) => alert.severity === 'danger').length },
+    { value: 'warning', label: 'Warning', count: props.alerts.filter((alert) => alert.severity === 'warning').length },
+    { value: 'info', label: 'Info', count: props.alerts.filter((alert) => alert.severity === 'info').length },
 ]);
 
-const alerts = computed(() => sampleAlerts.filter((alert) => tone.value === 'all' || alert.tone === tone.value));
+const visibleAlerts = computed(() => props.alerts.filter((alert) => severity.value === 'all' || alert.severity === severity.value));
 </script>
 
 <template>
@@ -31,17 +34,16 @@ const alerts = computed(() => sampleAlerts.filter((alert) => tone.value === 'all
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <PageContainer>
-            <PageHeader eyebrow="Monitor" title="Alerts" sample-data />
+            <PageHeader eyebrow="Monitor" title="Alerts" />
 
             <p class="m-0 max-w-3xl text-body text-muted-foreground">
-                Alerts will be raised automatically when soil moisture crosses a threshold, a device stops reporting or a battery runs low. The alerts
-                below are examples of what this page will show.
+                Alerts open automatically when a device stops reporting, and close on their own once the problem clears.
             </p>
 
-            <FilterChips v-model="tone" :options="toneOptions" label="Filter by severity" />
+            <FilterChips v-model="severity" :options="severityOptions" label="Filter by severity" />
 
             <SectionCard title="Open alerts">
-                <AlertList :alerts="alerts" />
+                <AlertList :alerts="visibleAlerts" />
             </SectionCard>
         </PageContainer>
     </AppLayout>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlertController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
@@ -29,9 +30,11 @@ Route::get('/', function () {
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('/alerts', AlertController::class)
+    ->middleware(['auth', 'verified'])->name('alerts.index');
+
 // Placeholder pages for features from the redesign that have no backend yet (sample data only)
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('/alerts', 'Alerts/Index')->name('alerts.index');
     Route::inertia('/actuators', 'Actuators/Index')->name('actuators.index');
 });
 
