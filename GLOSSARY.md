@@ -31,7 +31,7 @@ The state of a device that is registered but not placed on any farm. It appears 
 _Avoid_: Unplaced, orphaned
 
 **Offline**:
-The state of a device that has reported before but has sent nothing for longer than the offline threshold. It goes back online with its next reading.
+The state of a device that has been in contact before but has sent nothing for longer than the offline threshold. It goes back online with its next contact, whether a login or a reading.
 _Avoid_: Disconnected, down
 
 **Device Secret**:
@@ -63,7 +63,7 @@ _Avoid_: Measurement, data point, sample
 ### Monitoring
 
 **Alert**:
-A record that a condition needing attention started on a subject (a farm, device or sensor). It is open from when the condition starts until it clears, then resolved. The platform resolves it; a user cannot dismiss it. Each occurrence is its own alert, and resolved alerts stay as history.
+A record that a condition needing attention started on a subject (a farm, device or sensor). It is open from when the condition starts until it clears, then resolved. The platform resolves it; a user cannot dismiss it. Each occurrence is its own alert, and resolved alerts stay as history until the subject is deleted.
 _Avoid_: Notification, warning, incident
 
 **Alert Rule**:
