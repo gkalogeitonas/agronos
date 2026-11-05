@@ -104,14 +104,6 @@ it('does not show the alerts of another user', function () {
     $response->assertInertia(fn ($page) => $page->has('alerts', 0));
 });
 
-it('does not show the low battery alert of another user', function () {
-    Alert::factory()->lowBattery()->create();
-
-    $response = $this->actingAs(User::factory()->create())->get(route('alerts.index'));
-
-    $response->assertInertia(fn ($page) => $page->has('alerts', 0));
-});
-
 it('ignores an alert whose subject is gone', function () {
     $user = User::factory()->create();
     $device = Device::factory()->offline()->create(['user_id' => $user->id]);
