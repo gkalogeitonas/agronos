@@ -37,6 +37,11 @@ class AlertFactory extends Factory
         return $this->state(['subject_id' => $device->id, 'user_id' => $device->user_id]);
     }
 
+    public function lowBattery(): static
+    {
+        return $this->state(['rule' => AlertRule::LOW_BATTERY, 'severity' => AlertRule::LOW_BATTERY->severity()]);
+    }
+
     public function resolved(): static
     {
         return $this->state(['resolved_at' => now(), 'open_marker' => null]);

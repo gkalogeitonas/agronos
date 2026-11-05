@@ -30,6 +30,28 @@ it('renders an alert line with its title, device, farm, link and opening time', 
         ]));
 });
 
+it('renders a low battery alert on an unassigned device next to its offline alert', function () {
+    $user = User::factory()->create();
+    $device = Device::factory()->offline()->lowBattery()->create(['user_id' => $user->id, 'name' => 'Pump shed', 'farm_id' => null]);
+    Alert::factory()->forDevice($device)->create(['opened_at' => '2026-11-05 12:00:00']);
+    $alert = Alert::factory()->forDevice($device)->lowBattery()->create(['opened_at' => '2026-11-05 12:30:00']);
+
+    $response = $this->actingAs($user)->get(route('alerts.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('alerts', 2)
+        ->where('alerts.0', [
+            'id' => $alert->id,
+            'title' => 'Low battery',
+            'severity' => 'warning',
+            'device' => 'Pump shed',
+            'farm' => 'Unassigned',
+            'href' => route('devices.show', $device),
+            'opened_at' => '2026-11-05T12:30:00.000000Z',
+        ])
+        ->where('alerts.1.title', 'Device offline'));
+});
+
 it('falls back to the uuid and to Unassigned for a nameless device without a farm', function () {
     $user = User::factory()->create();
     $device = Device::factory()->offline()->create(['user_id' => $user->id, 'name' => null, 'uuid' => 'c0ffee00-0000-4000-8000-000000000001']);
@@ -76,6 +98,14 @@ it('lists open alerts newest first with the id as tiebreak and skips resolved on
 
 it('does not show the alerts of another user', function () {
     Alert::factory()->create();
+
+    $response = $this->actingAs(User::factory()->create())->get(route('alerts.index'));
+
+    $response->assertInertia(fn ($page) => $page->has('alerts', 0));
+});
+
+it('does not show the low battery alert of another user', function () {
+    Alert::factory()->lowBattery()->create();
 
     $response = $this->actingAs(User::factory()->create())->get(route('alerts.index'));
 
