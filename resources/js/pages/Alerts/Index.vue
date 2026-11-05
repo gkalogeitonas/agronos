@@ -37,7 +37,7 @@ const visibleAlerts = computed(() => props.alerts.filter((alert) => severity.val
             <PageHeader eyebrow="Monitor" title="Alerts" />
 
             <p class="m-0 max-w-3xl text-body text-muted-foreground">
-                Alerts open automatically when a device stops reporting, and close on their own once the problem clears.
+                Alerts open automatically when a device stops reporting or its battery runs low, and close on their own once the problem clears.
             </p>
 
             <FilterChips v-model="severity" :options="severityOptions" label="Filter by severity" />

@@ -60,6 +60,14 @@ class DeviceFactory extends Factory
     }
 
     /**
+     * A device whose latest battery reading is below the low-battery threshold.
+     */
+    public function lowBattery(): static
+    {
+        return $this->state(['battery_level' => 5]);
+    }
+
+    /**
      * Place the device on the given farm, or on a new farm of the device's tenant.
      */
     public function onFarm(?Farm $farm = null): static

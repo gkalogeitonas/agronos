@@ -20,6 +20,7 @@ class EvaluateAlerts extends Command
         $this->clearAlertsWithoutSubject();
 
         $this->evaluate(AlertRule::DEVICE_OFFLINE, Device::allTenants()->where('status', DeviceStatus::OFFLINE));
+        $this->evaluate(AlertRule::LOW_BATTERY, Device::allTenants()->lowBattery());
 
         return self::SUCCESS;
     }
