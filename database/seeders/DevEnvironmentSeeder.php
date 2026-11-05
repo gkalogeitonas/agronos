@@ -173,7 +173,6 @@ class DevEnvironmentSeeder extends Seeder
 
                 $sensorData = $sentry['sensor'] ?? [];
                 $sensorData['user_id'] = $user->id;
-                $sensorData['farm_id'] = $farm->id;
                 if ($device) {
                     $sensorData['device_id'] = $device->id;
                 }
@@ -251,7 +250,6 @@ class DevEnvironmentSeeder extends Seeder
                     [
                         'user_id' => $user->id,
                         'device_id' => $device->id,
-                        'farm_id' => $farm->id,
                         'name' => "{$uuid}-{$sensor['suffix']}",
                         'type' => $sensor['type'],
                         'lat' => $lat,

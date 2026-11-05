@@ -19,7 +19,6 @@ class Sensor extends Model
     protected $fillable = [
         'user_id',
         'device_id',
-        'farm_id',
         'crop_id',
         'name',
         'uuid',
@@ -31,11 +30,6 @@ class Sensor extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
-    }
-
-    public function farm(): BelongsTo
-    {
-        return $this->belongsTo(Farm::class);
     }
 
     public function user(): BelongsTo

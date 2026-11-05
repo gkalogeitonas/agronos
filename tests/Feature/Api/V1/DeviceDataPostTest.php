@@ -3,7 +3,6 @@
 use App\Enums\DeviceStatus;
 use App\Enums\SensorType;
 use App\Models\Device;
-use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
 use App\Services\InfluxDBFake;
@@ -112,13 +111,11 @@ it('rejects a device posting data with invalid payload', function () {
 it('skips writing data for sensors that are not registered and returns missing_uuids', function () {
     $user = User::factory()->create();
     $device = Device::factory()->create(['user_id' => $user->id, 'id' => 99]);
-    $farm = Farm::factory()->create(['user_id' => $user->id]);
 
     $registeredSensor = Sensor::factory()->create([
         'uuid' => 'sensor-uuid-registered',
         'user_id' => $user->id,
         'device_id' => $device->id,
-        'farm_id' => $farm->id,
         'type' => 'temperature',
     ]);
 
@@ -153,14 +150,12 @@ it('does not write data for sensors not belonging to the device', function () {
     $user = User::factory()->create();
     $device = Device::factory()->create(['user_id' => $user->id]);
     $otherDevice = Device::factory()->create(['user_id' => $user->id]);
-    $farm = Farm::factory()->create(['user_id' => $user->id]);
 
     // Sensor belongs to otherDevice, not to $device
     $sensor = Sensor::factory()->create([
         'uuid' => 'sensor-uuid-other',
         'user_id' => $user->id,
         'device_id' => $otherDevice->id,
-        'farm_id' => $farm->id,
         'type' => 'temperature',
     ]);
 
@@ -189,14 +184,12 @@ it('does not write data for sensors not belonging to the user who owns the devic
     $otherUser = User::factory()->create();
     $device = Device::factory()->create(['user_id' => $user->id]);
     $otherDevice = Device::factory()->create(['user_id' => $otherUser->id]);
-    $farm = Farm::factory()->create(['user_id' => $otherUser->id]);
 
     // Sensor belongs to otherUser and otherDevice
     $sensor = Sensor::factory()->create([
         'uuid' => 'sensor-uuid-other-user',
         'user_id' => $otherUser->id,
         'device_id' => $otherDevice->id,
-        'farm_id' => $farm->id,
         'type' => 'humidity',
     ]);
 

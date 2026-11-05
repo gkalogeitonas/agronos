@@ -10,8 +10,8 @@ use function Pest\Laravel\actingAs;
 it('loads the redesigned pages without JavaScript errors', function () {
     $user = User::factory()->create();
     $farm = Farm::factory()->create(['user_id' => $user->id]);
-    $device = Device::factory()->create(['user_id' => $user->id]);
-    $sensor = Sensor::factory()->create(['user_id' => $user->id, 'farm_id' => $farm->id, 'device_id' => $device->id, 'type' => 'moisture']);
+    $device = Device::factory()->onFarm($farm)->create();
+    $sensor = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'type' => 'moisture']);
 
     actingAs($user);
 

@@ -40,12 +40,12 @@ describe('Farm model', function () {
         $farm = Farm::factory()->create();
         $device = Device::factory()->onFarm($farm)->create();
         $sensors = Sensor::factory()->count(3)->create(['user_id' => $farm->user_id, 'device_id' => $device->id]);
-        $sensorWithOnlyItsOwnFarm = Sensor::factory()->create(['farm_id' => $farm->id]);
+        $sensorOfUnassignedDevice = Sensor::factory()->create(['user_id' => $farm->user_id]);
         $farmSensors = $farm->sensors;
         expect($farmSensors)->toHaveCount(3);
         foreach ($sensors as $sensor) {
             expect($farmSensors->pluck('id'))->toContain($sensor->id);
         }
-        expect($farmSensors->pluck('id'))->not->toContain($sensorWithOnlyItsOwnFarm->id);
+        expect($farmSensors->pluck('id'))->not->toContain($sensorOfUnassignedDevice->id);
     });
 });

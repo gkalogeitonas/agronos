@@ -31,19 +31,19 @@ it('puts a new sensor on its device\'s farm whatever farm is sent', function (Fa
         'farm_id' => $sentFarm->id,
     ])->assertRedirect(route('sensors.index'));
 
-    $this->assertDatabaseHas('sensors', ['uuid' => 'sensor-sent-farm', 'farm_id' => null]);
+    $this->assertDatabaseHas('sensors', ['uuid' => 'sensor-sent-farm']);
     get(route('farms.show', $this->deviceFarm))->assertInertia(fn (AssertableInertia $page) => $page
         ->has('sensors', 1)
         ->where('sensors.0.uuid', 'sensor-sent-farm'));
 })->with('sent farms');
 
 it('leaves the sensor on its device\'s farm when an edit sends a farm', function (Farm $sentFarm) {
-    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'farm_id' => null, 'type' => 'moisture']);
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'type' => 'moisture']);
 
     putJson(route('sensors.update', $sensor), ['name' => 'Renamed', 'farm_id' => $sentFarm->id])
         ->assertRedirect(route('sensors.show', $sensor));
 
-    $this->assertDatabaseHas('sensors', ['id' => $sensor->id, 'name' => 'Renamed', 'farm_id' => null]);
+    $this->assertDatabaseHas('sensors', ['id' => $sensor->id, 'name' => 'Renamed']);
     get(route('farms.show', $this->deviceFarm))->assertInertia(fn (AssertableInertia $page) => $page
         ->has('sensors', 1)
         ->where('sensors.0.name', 'Renamed'));
@@ -57,14 +57,14 @@ it('puts a scanned new sensor on its device\'s farm whatever farm is sent', func
         'farm_id' => $sentFarm->id,
     ])->assertRedirect(route('sensors.index'));
 
-    $this->assertDatabaseHas('sensors', ['uuid' => 'sensor-scan-sent-farm', 'farm_id' => null]);
+    $this->assertDatabaseHas('sensors', ['uuid' => 'sensor-scan-sent-farm']);
     get(route('farms.show', $this->deviceFarm))->assertInertia(fn (AssertableInertia $page) => $page
         ->has('sensors', 1)
         ->where('sensors.0.uuid', 'sensor-scan-sent-farm'));
 })->with('sent farms');
 
 it('changes no farm when an existing sensor is scanned again with a farm', function (Farm $sentFarm) {
-    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'farm_id' => null]);
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id]);
 
     postJson(route('sensors.scan'), [
         'device_uuid' => $this->device->uuid,
@@ -72,7 +72,6 @@ it('changes no farm when an existing sensor is scanned again with a farm', funct
         'farm_id' => $sentFarm->id,
     ])->assertRedirect(route('sensors.index'));
 
-    $this->assertDatabaseHas('sensors', ['id' => $sensor->id, 'farm_id' => null]);
     $this->assertDatabaseHas('devices', ['id' => $this->device->id, 'farm_id' => $this->deviceFarm->id]);
 })->with('sent farms');
 

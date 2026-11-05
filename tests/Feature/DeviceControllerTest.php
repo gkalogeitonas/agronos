@@ -128,12 +128,10 @@ describe('DeviceController@index', function () {
 
 describe('DeviceController@show', function () {
 
-    it('shows the device farm, not the farms of its sensors', function () {
+    it('shows the device farm', function () {
         $user = User::factory()->create();
         $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
         $device = Device::factory()->onFarm($farm)->create();
-        $otherFarm = Farm::factory()->create(['user_id' => $user->id]);
-        Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'farm_id' => $otherFarm->id]);
 
         $this->actingAs($user)
             ->get(route('devices.show', $device))

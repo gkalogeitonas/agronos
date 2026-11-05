@@ -374,10 +374,10 @@ describe('Update (Modifying Farms)', function () {
 });
 
 describe('Delete (Removing Farms)', function () {
-    test('deleting a farm keeps its devices, unassigned, and deletes its sensors', function () {
+    test('deleting a farm keeps its devices, unassigned, and their sensors', function () {
         $farm = Farm::factory()->create(['user_id' => $this->user->id]);
         $device = Device::factory()->onFarm($farm)->create();
-        $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $device->id, 'farm_id' => $farm->id]);
+        $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $device->id]);
 
         actingAs($this->user);
 
@@ -385,7 +385,7 @@ describe('Delete (Removing Farms)', function () {
 
         expect($device->fresh())->not->toBeNull()
             ->and($device->fresh()->farm_id)->toBeNull();
-        assertDatabaseMissing('sensors', ['id' => $sensor->id]);
+        assertDatabaseHas('sensors', ['id' => $sensor->id, 'device_id' => $device->id]);
     });
 
     test('user can delete their own farm', function () {

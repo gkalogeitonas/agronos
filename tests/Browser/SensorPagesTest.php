@@ -15,7 +15,6 @@ beforeEach(function () {
     $this->device = Device::factory()->create(['user_id' => $this->user->id]);
     $this->sensor = Sensor::factory()->create([
         'user_id' => $this->user->id,
-        'farm_id' => $this->farm->id,
         'device_id' => $this->device->id,
         'name' => 'Zone A probe',
         'type' => 'moisture',
@@ -200,7 +199,7 @@ it('saves the sensor despite the notice, on the device\'s farm', function () {
         ->assertPathIs(route('sensors.index', absolute: false))
         ->assertNoJavaScriptErrors();
 
-    $this->assertDatabaseHas('sensors', ['uuid' => 'noticed-uuid', 'device_id' => $otherDevice->id, 'farm_id' => null]);
+    $this->assertDatabaseHas('sensors', ['uuid' => 'noticed-uuid', 'device_id' => $otherDevice->id]);
 });
 
 it('adds a sensor without a position', function () {

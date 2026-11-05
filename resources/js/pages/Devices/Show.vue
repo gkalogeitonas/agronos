@@ -25,7 +25,7 @@ import { computed, ref } from 'vue';
 
 const props = defineProps<{
     device: DeviceDetail;
-    sensors: (Sensor & { farm?: { id: number; name: string } | null })[];
+    sensors: Sensor[];
     batteryTimeSeries?: { time: string; value: number }[];
 }>();
 
