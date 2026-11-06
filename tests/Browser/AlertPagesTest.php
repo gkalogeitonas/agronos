@@ -37,7 +37,7 @@ it('filters open alerts by severity and links a line to its device', function ()
         ->assertNoJavaScriptErrors();
 });
 
-it('shows the real open alerts on the overview, which keeps its pill for other sample data', function () {
+it('shows the real open alerts on the overview', function () {
     $device = Device::factory()->offline()->create(['user_id' => $this->user->id, 'name' => 'Pump shed']);
     Alert::factory()->forDevice($device)->create(['opened_at' => now()->subMinutes(12)]);
 

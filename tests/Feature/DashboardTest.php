@@ -107,13 +107,12 @@ test('dashboard lists five alerts, danger first then newest, and still counts th
         ->get('/dashboard')
         ->assertInertia(fn ($page) => $page
             ->where('fleet.openAlerts', 6)
-            ->where('alerts', fn ($alerts) => $alerts->pluck('id')->all() === [
-                $tiedDangerSecond->id,
-                $tiedDangerFirst->id,
-                $olderDanger->id,
-                $newerWarning->id,
-                $olderWarning->id,
-            ])
+            ->has('alerts', 5)
+            ->where('alerts.0.id', $tiedDangerSecond->id)
+            ->where('alerts.1.id', $tiedDangerFirst->id)
+            ->where('alerts.2.id', $olderDanger->id)
+            ->where('alerts.3.id', $newerWarning->id)
+            ->where('alerts.4.id', $olderWarning->id)
         );
 });
 
@@ -130,12 +129,15 @@ test('dashboard neither lists nor counts resolved alerts', function () {
 });
 
 test('dashboard neither lists nor counts the alerts of another user', function () {
+    $user = User::factory()->create();
+    $ownAlert = Alert::factory()->forDevice(Device::factory()->offline()->create(['user_id' => $user->id]))->create();
     Alert::factory()->create();
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs($user)
         ->get('/dashboard')
         ->assertInertia(fn ($page) => $page
-            ->where('fleet.openAlerts', 0)
-            ->has('alerts', 0)
+            ->where('fleet.openAlerts', 1)
+            ->has('alerts', 1)
+            ->where('alerts.0.id', $ownAlert->id)
         );
 });
