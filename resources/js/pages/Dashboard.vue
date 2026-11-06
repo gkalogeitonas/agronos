@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ActivityFeed from '@/components/agronos/ActivityFeed.vue';
-import AlertList from '@/components/agronos/AlertList.vue';
+import AlertList, { type AlertItem } from '@/components/agronos/AlertList.vue';
 import EmptyState from '@/components/agronos/EmptyState.vue';
 import FarmCard from '@/components/agronos/FarmCard.vue';
 import FarmsOverviewMap from '@/components/agronos/FarmsOverviewMap.vue';
@@ -10,7 +10,7 @@ import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sampleActivity, sampleAlerts, sampleZoneCount } from '@/lib/sampleData';
+import { sampleActivity, sampleZoneCount } from '@/lib/sampleData';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -20,10 +20,12 @@ interface Fleet {
     devicesTotal: number;
     devicesOnline: number;
     lowBattery: number;
+    openAlerts: number;
 }
 
 const props = defineProps<{
     fleet: Fleet;
+    alerts: AlertItem[];
     farms: FarmSummary[];
 }>();
 
@@ -60,7 +62,7 @@ const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.h
                     :unit="`/ ${fleet.devicesTotal}`"
                     :note="`${fleet.devicesTotal - fleet.devicesOnline} not online`"
                 />
-                <StatTile label="Open alerts" :value="sampleAlerts.length" note="Sample data" />
+                <StatTile label="Open alerts" :value="fleet.openAlerts" />
                 <StatTile label="Low battery" :value="fleet.lowBattery" unit="devices" note="Below 20%" />
             </section>
 
@@ -73,7 +75,7 @@ const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.h
                     <template #actions>
                         <Link :href="route('alerts.index')" class="text-sm font-medium text-info hover:text-foreground">View all</Link>
                     </template>
-                    <AlertList :alerts="sampleAlerts" />
+                    <AlertList :alerts="alerts" />
                 </SectionCard>
             </div>
 

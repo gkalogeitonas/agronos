@@ -37,12 +37,21 @@ it('filters open alerts by severity and links a line to its device', function ()
         ->assertNoJavaScriptErrors();
 });
 
-it('still renders the sample alerts on the overview and the farm detail', function () {
-    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+it('shows the real open alerts on the overview, which keeps its pill for other sample data', function () {
+    $device = Device::factory()->offline()->create(['user_id' => $this->user->id, 'name' => 'Pump shed']);
+    Alert::factory()->forDevice($device)->create(['opened_at' => now()->subMinutes(12)]);
 
-    visit(route('dashboard', absolute: false))
-        ->assertSee('Gateway not reporting')
+    $page = visit(route('dashboard', absolute: false))
+        ->assertSee('Pump shed · Unassigned · 12 min ago')
+        ->assertDontSee('Gateway not reporting')
+        ->assertSee('SAMPLE DATA')
         ->assertNoJavaScriptErrors();
+
+    expect($page->text('section[aria-label="Fleet health"]'))->not->toContain('Sample data');
+});
+
+it('still renders the sample alerts on the farm detail', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
 
     visit(route('farms.show', $farm, absolute: false))
         ->assertSee('Zone B below threshold')

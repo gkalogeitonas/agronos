@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\AlertSeverity;
 use App\Enums\DeviceStatus;
+use App\Models\Alert;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
@@ -65,5 +67,75 @@ test('dashboard does not include other users farms or devices', function () {
             ->where('fleet.farms', 0)
             ->where('fleet.devicesTotal', 0)
             ->has('farms', 0)
+        );
+});
+
+test('dashboard lists the open alerts and counts them on the tile', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Orchard']);
+    $device = Device::factory()->offline()->onFarm($farm)->create(['name' => 'Pump shed']);
+    $alert = Alert::factory()->forDevice($device)->create(['opened_at' => '2026-11-05 12:00:00']);
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertInertia(fn ($page) => $page
+            ->where('fleet.openAlerts', 1)
+            ->has('alerts', 1)
+            ->where('alerts.0', [
+                'id' => $alert->id,
+                'title' => 'Device offline',
+                'severity' => 'danger',
+                'device' => 'Pump shed',
+                'farm' => 'North Orchard',
+                'href' => route('devices.show', $device),
+                'opened_at' => '2026-11-05T12:00:00.000000Z',
+            ])
+        );
+});
+
+test('dashboard lists five alerts, danger first then newest, and still counts them all', function () {
+    $user = User::factory()->create();
+    $devices = Device::factory()->offline()->count(6)->create(['user_id' => $user->id]);
+    $olderDanger = Alert::factory()->forDevice($devices[0])->create(['opened_at' => '2026-11-01 08:00:00']);
+    $tiedDangerFirst = Alert::factory()->forDevice($devices[1])->create(['opened_at' => '2026-11-02 08:00:00']);
+    $tiedDangerSecond = Alert::factory()->forDevice($devices[2])->create(['opened_at' => '2026-11-02 08:00:00']);
+    $olderWarning = Alert::factory()->forDevice($devices[3])->create(['severity' => AlertSeverity::WARNING, 'opened_at' => '2026-11-03 08:00:00']);
+    $newerWarning = Alert::factory()->forDevice($devices[4])->create(['severity' => AlertSeverity::WARNING, 'opened_at' => '2026-11-04 08:00:00']);
+    Alert::factory()->forDevice($devices[5])->create(['severity' => AlertSeverity::INFO, 'opened_at' => '2026-11-05 08:00:00']);
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertInertia(fn ($page) => $page
+            ->where('fleet.openAlerts', 6)
+            ->where('alerts', fn ($alerts) => $alerts->pluck('id')->all() === [
+                $tiedDangerSecond->id,
+                $tiedDangerFirst->id,
+                $olderDanger->id,
+                $newerWarning->id,
+                $olderWarning->id,
+            ])
+        );
+});
+
+test('dashboard neither lists nor counts resolved alerts', function () {
+    $user = User::factory()->create();
+    Alert::factory()->forDevice(Device::factory()->offline()->create(['user_id' => $user->id]))->resolved()->create();
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertInertia(fn ($page) => $page
+            ->where('fleet.openAlerts', 0)
+            ->has('alerts', 0)
+        );
+});
+
+test('dashboard neither lists nor counts the alerts of another user', function () {
+    Alert::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->get('/dashboard')
+        ->assertInertia(fn ($page) => $page
+            ->where('fleet.openAlerts', 0)
+            ->has('alerts', 0)
         );
 });
