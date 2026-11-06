@@ -4,19 +4,23 @@
 # fresh Claude Code session per issue, each reachable through Remote Control
 # (claude.ai/code or the Claude app) under the name ralph-issue-<number>.
 #
-#   scripts/ralph.sh [--ask] [--max N] [--timeout MINUTES] [--dry-run]
+#   scripts/ralph.sh [--ask] [--merge] [--max N] [--timeout MINUTES] [--dry-run]
 #
 #   --ask              Sessions ask you about decisions and wait for your reply
 #                      through Remote Control, instead of deciding themselves.
 #                      Waiting counts towards --timeout.
+#   --merge            Squash-merge each PR into main once its CI passes, then
+#                      update this checkout, so the next issue builds on it and
+#                      blocked issues unlock in the same run. Stops if CI fails.
 #   --max N            Issues to work before stopping (default 5)
 #   --timeout MINUTES  Time allowed per issue (default 120)
 #   --dry-run          List the issues that are ready now, then exit
 #
 # An issue is ready when it is open, labelled `ready-for-agent`, unassigned and
 # has no open blocker. Claiming assigns it, so it is never picked twice; unassign
-# it to retry. Each issue gets a branch and a PR against main, and nothing is
-# merged, so an issue blocked by another one waits for you to merge that PR.
+# it to retry. Each issue gets a branch and a PR against main. Without --merge
+# nothing is merged, so an issue blocked by another one waits for you to merge
+# that PR.
 #
 # Remote Control needs an interactive session, so `claude -p` can't be used and
 # each session runs in tmux. An interactive session never exits by itself, so
@@ -41,6 +45,7 @@ max_issues=5
 timeout_minutes=120
 dry_run=false
 ask_maintainer=false
+merge_prs=false
 
 log() {
     printf '[ralph %s] %s\n' "$(date +%H:%M:%S)" "$*"
@@ -131,6 +136,30 @@ wait_for_outcome() {
     echo timeout
 }
 
+# Waits for CI, merges the PR and closes the issue. Closing it here, rather than
+# leaving it to "Closes #n", means its dependents are unblocked straight away.
+merge_pr() {
+    local number=$1 branch=$2
+
+    log "#$number: waiting for CI"
+    if ! timeout "$((timeout_minutes * 60))" gh pr checks "$branch" --watch --fail-fast >/dev/null; then
+        die "#$number: CI did not pass, PR left open and not merged"
+    fi
+
+    gh pr merge "$branch" --squash --delete-branch >/dev/null
+    gh issue close "$number" >/dev/null
+    log "#$number: PR merged"
+}
+
+# Brings this checkout up to the merged main.
+sync_checkout() {
+    git switch --quiet main
+    git pull --quiet --ff-only origin main
+    ddev composer install --no-interaction --quiet
+    ddev npm ci --silent
+    ddev artisan migrate --no-interaction
+}
+
 work_issue() {
     local number=$1 branch="feat/issue-$1" session="ralph-issue-$1" outcome
 
@@ -153,6 +182,11 @@ work_issue() {
     if [[ -n "$(git status --porcelain)" ]]; then
         die "#$number: PR is open but the working tree is dirty, stopping"
     fi
+
+    if [[ "$merge_prs" == true ]]; then
+        merge_pr "$number" "$branch"
+        sync_checkout
+    fi
 }
 
 main() {
@@ -162,6 +196,7 @@ main() {
             --timeout) timeout_minutes=$2; shift 2 ;;
             --dry-run) dry_run=true; shift ;;
             --ask) ask_maintainer=true; shift ;;
+            --merge) merge_prs=true; shift ;;
             *) die "Unknown option: $1" ;;
         esac
     done
