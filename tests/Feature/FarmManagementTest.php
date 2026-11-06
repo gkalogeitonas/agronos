@@ -539,14 +539,27 @@ describe('Open alerts', function () {
         get(route('farms.show', $farm))->assertInertia(fn ($page) => $page->has('alerts', 0));
     });
 
-    test('farm responses leave out the farms and alerts of another user', function () {
-        $otherFarm = Farm::factory()->create(['user_id' => $this->otherUser->id]);
-        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($otherFarm)->create())->create();
+    test('farms list does not count the alerts of another user', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($farm)->create())->create();
+        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($farm)->create())->create(['user_id' => $this->otherUser->id]);
 
         actingAs($this->user);
 
-        get(route('farms.index'))->assertInertia(fn ($page) => $page->has('farms', 0));
-        get(route('farms.show', $otherFarm))->assertNotFound();
+        get(route('farms.index'))->assertInertia(fn ($page) => $page->where('farms.0.openAlerts', 1));
+    });
+
+    test('farm detail does not list the alerts of another user', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $ownAlert = Alert::factory()->forDevice(Device::factory()->offline()->onFarm($farm)->create())->create();
+        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($farm)->create())->create(['user_id' => $this->otherUser->id]);
+
+        actingAs($this->user);
+
+        get(route('farms.show', $farm))->assertInertia(fn ($page) => $page
+            ->has('alerts', 1)
+            ->where('alerts.0.id', $ownAlert->id)
+        );
     });
 
     test('deleting a farm keeps the alerts of its devices, on no farm and on the Alerts page', function () {

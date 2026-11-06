@@ -25,7 +25,7 @@ class FarmOverviewService
     {
         $farms->loadCount([
             'sensors' => fn (Builder $query) => $query->farmRelevant(),
-            'alerts' => fn (Builder $query) => $query->open(),
+            'alerts as open_alerts_count' => fn (Builder $query) => $query->open(),
         ]);
         $farms->loadAggregate([
             'sensors as moisture_avg' => fn (Builder $query) => $query->where('sensors.type', SensorType::MOISTURE->value),
@@ -50,7 +50,7 @@ class FarmOverviewService
                 'sensors' => $farm->sensors_count,
                 'devicesOnline' => $devicesOnline,
                 'devicesTotal' => $devicesTotal,
-                'openAlerts' => $farm->alerts_count,
+                'openAlerts' => $farm->open_alerts_count,
                 'moisture' => $this->roundReading($farm->moisture_avg),
                 'temperature' => $this->roundReading($farm->temperature_avg),
             ];

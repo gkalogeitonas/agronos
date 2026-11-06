@@ -33,6 +33,7 @@ class FarmController extends Controller
     public function index(FarmOverviewService $farmOverview): Response
     {
         $this->authorize('viewAny', Farm::class);
+        $this->authorize('viewAny', Alert::class);
         $farms = Farm::orderBy('name')->get();
 
         return Inertia::render('Farms/Index', [
