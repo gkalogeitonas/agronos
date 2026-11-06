@@ -88,4 +88,15 @@ class Farm extends Model
     {
         return $this->hasManyThrough(Sensor::class, Device::class);
     }
+
+    /**
+     * The alerts of the devices on this farm. A device alert has no farm of its own, so it follows its device (ADR-0008).
+     *
+     * @return HasManyThrough<Alert, Device, $this>
+     */
+    public function alerts(): HasManyThrough
+    {
+        return $this->hasManyThrough(Alert::class, Device::class, secondKey: 'subject_id')
+            ->where('alerts.subject_type', (new Device)->getMorphClass());
+    }
 }

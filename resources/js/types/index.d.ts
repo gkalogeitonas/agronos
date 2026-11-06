@@ -70,6 +70,7 @@ export interface FarmSummary {
     sensors: number;
     devicesOnline: number;
     devicesTotal: number;
+    openAlerts: number;
     moisture: number | null;
     temperature: number | null;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AlertList from '@/components/agronos/AlertList.vue';
+import AlertList, { type AlertItem } from '@/components/agronos/AlertList.vue';
 import ConfirmDeleteButton from '@/components/agronos/ConfirmDeleteButton.vue';
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import DeviceTable from '@/components/agronos/DeviceTable.vue';
@@ -16,7 +16,7 @@ import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { formatReading } from '@/lib/format';
-import { sampleAlerts, sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
+import { sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
 import { sensorColors, signalColors } from '@/lib/theme';
 import { type BreadcrumbItem, type Device } from '@/types';
 import type { Sensor } from '@/types/sensor';
@@ -51,6 +51,8 @@ const props = defineProps<{
     devices: Device[];
     devicesTotal: number;
     devicesOnline: number;
+    /** The most urgent open alerts of the farm. */
+    alerts: AlertItem[];
     sensorDbStats?: {
         totalSensors: number;
         sensorTypeStats: Record<string, number>;
@@ -161,7 +163,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     <template #actions>
                         <Link :href="route('alerts.index')" class="text-sm font-medium text-info hover:text-foreground">View all</Link>
                     </template>
-                    <AlertList :alerts="sampleAlerts.slice(1, 4)" />
+                    <AlertList :alerts="alerts" />
                 </SectionCard>
             </div>
 

@@ -1,5 +1,4 @@
 import type { ActivityItem } from '@/components/agronos/ActivityFeed.vue';
-import type { AlertItem } from '@/components/agronos/AlertList.vue';
 
 /**
  * Placeholder data for parts of the redesign the backend does not provide yet.
@@ -7,14 +6,6 @@ import type { AlertItem } from '@/components/agronos/AlertList.vue';
  * Every export here maps to a follow-up task (label `redesign-followup`). Pages that
  * render any of it show the SAMPLE DATA pill. Remove each export once its real data lands.
  */
-
-/** Follow-up: alerts (rules for moisture threshold, device offline, low battery). */
-export const sampleAlerts: AlertItem[] = [
-    { id: 'gateway', title: 'Gateway not reporting', meta: 'Hilltop Greenhouse · 18 min ago', severity: 'danger' },
-    { id: 'zone-b', title: 'Zone B below threshold', meta: 'North Orchard · 12 min ago', severity: 'warning' },
-    { id: 'battery', title: 'Low battery', meta: 'Riverside Fields · 2 devices', severity: 'warning' },
-    { id: 'firmware', title: 'Firmware update available', meta: 'North Orchard · 3 devices', severity: 'info' },
-];
 
 /** Follow-up: activity feed (organisation and per device). */
 export const sampleActivity: ActivityItem[] = [
@@ -26,9 +17,6 @@ export const sampleActivity: ActivityItem[] = [
 
 /** Follow-up: farm zones. */
 export const sampleZoneCount = 4;
-
-/** Follow-up: alerts. Stable fake open-alert count per farm until alerts exist. */
-export const sampleOpenAlertsForFarm = (farmId: number): number => farmId % 3;
 
 /** Follow-up: sparkline trends from InfluxDB. Shape of a 24 h trend per sensor type. */
 export const sampleTrends: Record<string, number[]> = {
