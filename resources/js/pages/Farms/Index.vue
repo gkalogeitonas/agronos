@@ -9,7 +9,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sampleOpenAlertsForFarm, sampleZoneCount } from '@/lib/sampleData';
+import { sampleZoneCount } from '@/lib/sampleData';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -43,7 +43,7 @@ const rows = computed(() => {
             ...farm,
             zones: sampleZoneCount,
             devices: `${farm.devicesOnline} / ${farm.devicesTotal}`,
-            alerts: sampleOpenAlertsForFarm(farm.id),
+            alerts: farm.openAlerts,
             actions: null,
         }));
 });

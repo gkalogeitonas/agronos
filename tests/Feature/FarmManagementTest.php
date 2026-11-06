@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\AlertSeverity;
 use App\Enums\FarmHealth;
 use App\Enums\SensorType;
+use App\Models\Alert;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
@@ -434,5 +436,138 @@ describe('Delete (Removing Farms)', function () {
         assertDatabaseMissing('farms', ['id' => $farm->id]);
 
         // TODO: Verify associated resources are handled according to project requirements
+    });
+});
+
+describe('Open alerts', function () {
+    test('farms list counts the open alerts of the devices on each farm', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'A farm']);
+        $quietFarm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'B farm']);
+        $device = Device::factory()->offline()->onFarm($farm)->create();
+        Alert::factory()->forDevice($device)->create();
+        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($farm)->create())->create();
+        Alert::factory()->forDevice($device)->resolved()->create();
+
+        actingAs($this->user);
+
+        get(route('farms.index'))->assertInertia(fn ($page) => $page
+            ->where('farms.0.id', $farm->id)
+            ->where('farms.0.openAlerts', 2)
+            ->where('farms.1.id', $quietFarm->id)
+            ->where('farms.1.openAlerts', 0)
+        );
+    });
+
+    test('farm detail lists only the open alerts of that farm', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
+        $otherFarm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $device = Device::factory()->offline()->onFarm($farm)->create(['name' => 'Pump shed']);
+        $alert = Alert::factory()->forDevice($device)->create(['opened_at' => '2026-11-05 12:00:00']);
+        Alert::factory()->forDevice($device)->resolved()->create();
+        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($otherFarm)->create())->create();
+        Alert::factory()->forDevice(Device::factory()->offline()->create(['user_id' => $this->user->id]))->create();
+
+        actingAs($this->user);
+
+        get(route('farms.show', $farm))->assertInertia(fn ($page) => $page
+            ->has('alerts', 1)
+            ->where('alerts.0', [
+                'id' => $alert->id,
+                'title' => 'Device offline',
+                'severity' => 'danger',
+                'device' => 'Pump shed',
+                'farm' => 'North Orchard',
+                'href' => route('devices.show', $device),
+                'opened_at' => '2026-11-05T12:00:00.000000Z',
+            ])
+        );
+    });
+
+    test('farm detail lists five alerts, danger first then newest, with the id as tiebreak', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $devices = Device::factory()->offline()->onFarm($farm)->count(6)->create();
+        $olderDanger = Alert::factory()->forDevice($devices[0])->create(['opened_at' => '2026-11-01 08:00:00']);
+        $tiedDangerFirst = Alert::factory()->forDevice($devices[1])->create(['opened_at' => '2026-11-02 08:00:00']);
+        $tiedDangerSecond = Alert::factory()->forDevice($devices[2])->create(['opened_at' => '2026-11-02 08:00:00']);
+        $olderWarning = Alert::factory()->forDevice($devices[3])->create(['severity' => AlertSeverity::WARNING, 'opened_at' => '2026-11-03 08:00:00']);
+        $newerWarning = Alert::factory()->forDevice($devices[4])->create(['severity' => AlertSeverity::WARNING, 'opened_at' => '2026-11-04 08:00:00']);
+        Alert::factory()->forDevice($devices[5])->create(['severity' => AlertSeverity::INFO, 'opened_at' => '2026-11-05 08:00:00']);
+
+        actingAs($this->user);
+
+        get(route('farms.show', $farm))->assertInertia(fn ($page) => $page
+            ->has('alerts', 5)
+            ->where('alerts.0.id', $tiedDangerSecond->id)
+            ->where('alerts.1.id', $tiedDangerFirst->id)
+            ->where('alerts.2.id', $olderDanger->id)
+            ->where('alerts.3.id', $newerWarning->id)
+            ->where('alerts.4.id', $olderWarning->id)
+        );
+    });
+
+    test('moving a device to another farm moves its open alerts and counts with it', function () {
+        $from = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'A farm']);
+        $to = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'B farm']);
+        $device = Device::factory()->offline()->onFarm($from)->create();
+        $alert = Alert::factory()->forDevice($device)->create();
+
+        $device->update(['farm_id' => $to->id]);
+
+        actingAs($this->user);
+
+        get(route('farms.index'))->assertInertia(fn ($page) => $page
+            ->where('farms.0.openAlerts', 0)
+            ->where('farms.1.openAlerts', 1)
+        );
+        get(route('farms.show', $from))->assertInertia(fn ($page) => $page->has('alerts', 0));
+        get(route('farms.show', $to))->assertInertia(fn ($page) => $page
+            ->has('alerts', 1)
+            ->where('alerts.0.id', $alert->id)
+        );
+    });
+
+    test('an unassigned device has its alerts counted on no farm', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $device = Device::factory()->offline()->onFarm($farm)->create();
+        Alert::factory()->forDevice($device)->create();
+
+        $device->update(['farm_id' => null]);
+
+        actingAs($this->user);
+
+        get(route('farms.index'))->assertInertia(fn ($page) => $page->where('farms.0.openAlerts', 0));
+        get(route('farms.show', $farm))->assertInertia(fn ($page) => $page->has('alerts', 0));
+    });
+
+    test('farm responses leave out the farms and alerts of another user', function () {
+        $otherFarm = Farm::factory()->create(['user_id' => $this->otherUser->id]);
+        Alert::factory()->forDevice(Device::factory()->offline()->onFarm($otherFarm)->create())->create();
+
+        actingAs($this->user);
+
+        get(route('farms.index'))->assertInertia(fn ($page) => $page->has('farms', 0));
+        get(route('farms.show', $otherFarm))->assertNotFound();
+    });
+
+    test('deleting a farm keeps the alerts of its devices, on no farm and on the Alerts page', function () {
+        $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $remainingFarm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $device = Device::factory()->offline()->onFarm($farm)->create();
+        $alert = Alert::factory()->forDevice($device)->create();
+
+        actingAs($this->user);
+
+        delete(route('farms.destroy', $farm))->assertRedirect(route('farms.index'));
+
+        assertDatabaseHas('alerts', ['id' => $alert->id, 'open_marker' => true]);
+        get(route('farms.index'))->assertInertia(fn ($page) => $page
+            ->where('farms.0.id', $remainingFarm->id)
+            ->where('farms.0.openAlerts', 0)
+        );
+        get(route('alerts.index'))->assertInertia(fn ($page) => $page
+            ->has('alerts', 1)
+            ->where('alerts.0.id', $alert->id)
+            ->where('alerts.0.farm', 'Unassigned')
+        );
     });
 });

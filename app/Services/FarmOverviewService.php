@@ -19,11 +19,14 @@ class FarmOverviewService
      * Counts and averages are aggregated in SQL, so the cost does not grow with the number of sensors.
      *
      * @param  EloquentCollection<int, Farm>  $farms
-     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, health: string, healthLabel: string, sensors: int, devicesOnline: int, devicesTotal: int, moisture: float|null, temperature: float|null}>
+     * @return Collection<int, array{id: int, name: string, location: string|null, size: float|null, center: array{lng: float, lat: float}|null, health: string, healthLabel: string, sensors: int, devicesOnline: int, devicesTotal: int, openAlerts: int, moisture: float|null, temperature: float|null}>
      */
     public function summarize(EloquentCollection $farms): Collection
     {
-        $farms->loadCount(['sensors' => fn (Builder $query) => $query->farmRelevant()]);
+        $farms->loadCount([
+            'sensors' => fn (Builder $query) => $query->farmRelevant(),
+            'alerts' => fn (Builder $query) => $query->open(),
+        ]);
         $farms->loadAggregate([
             'sensors as moisture_avg' => fn (Builder $query) => $query->where('sensors.type', SensorType::MOISTURE->value),
             'sensors as temperature_avg' => fn (Builder $query) => $query->where('sensors.type', SensorType::TEMPERATURE->value),
@@ -47,6 +50,7 @@ class FarmOverviewService
                 'sensors' => $farm->sensors_count,
                 'devicesOnline' => $devicesOnline,
                 'devicesTotal' => $devicesTotal,
+                'openAlerts' => $farm->alerts_count,
                 'moisture' => $this->roundReading($farm->moisture_avg),
                 'temperature' => $this->roundReading($farm->temperature_avg),
             ];

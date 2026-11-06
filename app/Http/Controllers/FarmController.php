@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\DeviceStatus;
 use App\Enums\FarmHealth;
 use App\Http\Requests\FarmRequest;
+use App\Http\Resources\AlertResource;
 use App\Http\Resources\DeviceResource;
+use App\Models\Alert;
 use App\Models\Farm;
 use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
@@ -67,6 +69,7 @@ class FarmController extends Controller
     public function show(Farm $farm)
     {
         $this->authorize('view', $farm);
+        $this->authorize('viewAny', Alert::class);
         $sensors = $farm->sensors()->farmRelevant()->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
         $sensorLocations = $farm->sensors()->farmRelevant()->get(['sensors.id', 'sensors.name', 'sensors.lat', 'sensors.lon']);
 
@@ -114,6 +117,9 @@ class FarmController extends Controller
             'devices' => DeviceResource::collection($devices)->resolve(),
             'devicesTotal' => $farm->devices()->count(),
             'devicesOnline' => $farm->devices()->where('status', DeviceStatus::ONLINE)->count(),
+            'alerts' => AlertResource::collection(
+                $farm->alerts()->open()->withLineDetails()->mostUrgentFirst()->limit(Alert::CARD_LIMIT)->get()
+            )->resolve(),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),

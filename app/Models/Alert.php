@@ -65,7 +65,7 @@ class Alert extends Model
      */
     public function scopeNewestFirst(Builder $query): Builder
     {
-        return $query->orderByDesc('opened_at')->orderByDesc('id');
+        return $query->orderByDesc('opened_at')->orderByDesc($query->qualifyColumn('id'));
     }
 
     /**

@@ -50,10 +50,20 @@ it('shows the real open alerts on the overview', function () {
     expect($page->text('section[aria-label="Fleet health"]'))->not->toContain('Sample data');
 });
 
-it('still renders the sample alerts on the farm detail', function () {
-    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+it('shows the real open alerts of a farm on the farms list and the farm detail', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id, 'name' => 'North Orchard']);
+    $device = Device::factory()->offline()->onFarm($farm)->create(['name' => 'Pump shed']);
+    Alert::factory()->forDevice($device)->create(['opened_at' => now()->subMinutes(12)]);
+
+    $list = visit(route('farms.index', absolute: false))
+        ->assertSee('SAMPLE DATA')
+        ->assertNoJavaScriptErrors();
+
+    expect($list->text('[role="row"]:nth-child(2) [role="cell"]:nth-child(5)'))->toBe('1');
 
     visit(route('farms.show', $farm, absolute: false))
-        ->assertSee('Zone B below threshold')
+        ->assertSee('Pump shed · North Orchard · 12 min ago')
+        ->assertDontSee('Zone B below threshold')
+        ->assertSee('SAMPLE DATA')
         ->assertNoJavaScriptErrors();
 });
