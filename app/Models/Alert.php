@@ -16,6 +16,11 @@ class Alert extends Model
     /** @use HasFactory<AlertFactory> */
     use BelongsToTenant, HasFactory;
 
+    /**
+     * How many alerts a summary card lists; its tile still shows the full count.
+     */
+    public const CARD_LIMIT = 5;
+
     protected $fillable = [
         'user_id',
         'rule',
@@ -45,5 +50,31 @@ class Alert extends Model
     public function scopeOpen(Builder $query): Builder
     {
         return $query->whereNotNull('open_marker')->whereHasMorph('subject', '*', fn (Builder $subject) => $subject->withoutGlobalScopes());
+    }
+
+    /**
+     * Scope to load what `AlertResource` needs to build an alert line.
+     */
+    public function scopeWithLineDetails(Builder $query): Builder
+    {
+        return $query->with(['subject' => fn (MorphTo $subject) => $subject->morphWith([Device::class => ['farm:id,name']])]);
+    }
+
+    /**
+     * Scope to newest first, with the id as tiebreak since alerts of one run share a time.
+     */
+    public function scopeNewestFirst(Builder $query): Builder
+    {
+        return $query->orderByDesc('opened_at')->orderByDesc('id');
+    }
+
+    /**
+     * Scope to danger first, then warning, then info, and newest first within a severity.
+     */
+    public function scopeMostUrgentFirst(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw('CASE severity WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [AlertSeverity::DANGER->value, AlertSeverity::WARNING->value])
+            ->newestFirst();
     }
 }

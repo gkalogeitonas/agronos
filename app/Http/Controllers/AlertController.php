@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\AlertResource;
 use App\Models\Alert;
-use App\Models\Device;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,9 +21,8 @@ class AlertController extends Controller
 
         $alerts = Alert::query()
             ->open()
-            ->with(['subject' => fn (MorphTo $subject) => $subject->morphWith([Device::class => ['farm:id,name']])])
-            ->orderByDesc('opened_at')
-            ->orderByDesc('id')
+            ->withLineDetails()
+            ->newestFirst()
             ->get();
 
         return Inertia::render('Alerts/Index', [
