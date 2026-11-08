@@ -5,8 +5,12 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Models\Zone;
 use App\Services\InfluxDBService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
+use Carbon\Carbon;
+use InfluxDB2\FluxRecord;
+use InfluxDB2\FluxTable;
 
 it('provides farm statistics data on show page', function () {
     $user = User::factory()->create();
@@ -229,12 +233,143 @@ it('filters the farm time-series stats on the farm tag and the farm-relevant sen
             ->loadDeferredProps(fn ($reload) => $reload->has('timeSeriesStats.readingStatsByType'))
         );
 
-    expect($queries)->not->toBeEmpty();
-    foreach ($queries as $query) {
+    $statsQueries = array_filter($queries, fn (string $query) => ! str_contains($query, 'aggregateWindow'));
+    expect($statsQueries)->not->toBeEmpty();
+    foreach ($statsQueries as $query) {
         expect($query)
             ->toContain("r.farm_id == \"{$farm->id}\"")
             ->toContain('contains(value: r.sensor_type, set: ["moisture", "temperature", "humidity", "light", "other"])')
             ->not->toContain('sensor_id')
             ->not->toContain('"battery"');
     }
+});
+
+/**
+ * Fakes InfluxDB so each pipeline gets the records of the first rule whose needle it contains.
+ *
+ * @param  array<string, list<array<string, mixed>>>  $recordsByNeedle
+ * @param  list<string>  $queries
+ */
+function fakeInfluxRecords(array $recordsByNeedle, array &$queries = []): void
+{
+    $influx = Mockery::mock(InfluxDBService::class);
+    $influx->shouldReceive('queryPipeline')->andReturnUsing(function (string $pipeline) use ($recordsByNeedle, &$queries) {
+        $queries[] = $pipeline;
+        foreach ($recordsByNeedle as $needle => $rows) {
+            if (str_contains($pipeline, $needle)) {
+                $table = new FluxTable;
+                $table->records = array_map(fn (array $row) => new FluxRecord(0, $row), $rows);
+
+                return [$table];
+            }
+        }
+
+        return [];
+    });
+    app()->instance(InfluxDBService::class, $influx);
+}
+
+it('gives the farm tiles an hourly 24 h trend per sensor type, oldest first, from the farm tag', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $queries = [];
+    fakeInfluxRecords([
+        'aggregateWindow(every: 1h' => [
+            ['_time' => '2026-11-08T10:00:00Z', '_value' => 41.256, 'sensor_type' => 'moisture'],
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 43.0, 'sensor_type' => 'moisture'],
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 18.5, 'sensor_type' => 'temperature'],
+        ],
+    ], $queries);
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->missing('readingTrends')
+            ->loadDeferredProps(fn ($reload) => $reload->where('readingTrends', [
+                'moisture' => [43, 41.26],
+                'temperature' => [18.5],
+            ]))
+        );
+
+    $trendQuery = collect($queries)->first(fn (string $query) => str_contains($query, 'group(columns: ["sensor_type"])') && str_contains($query, 'aggregateWindow'));
+    expect($trendQuery)
+        ->toContain("r.farm_id == \"{$farm->id}\"")
+        ->toContain('range(start: -24h)')
+        ->not->toContain('"battery"');
+});
+
+it('draws one moisture line per zone in name order, then No zone, and drops readings of deleted zones', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $beta = Zone::factory()->for($farm)->create(['name' => 'Beta', 'user_id' => $user->id]);
+    $alpha = Zone::factory()->for($farm)->create(['name' => 'Alpha', 'user_id' => $user->id]);
+    $deletedZoneId = $beta->id + 100;
+    $queries = [];
+    fakeInfluxRecords([
+        'r.sensor_type == "moisture"' => [
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 30.0, 'zone_id' => (string) $beta->id],
+            ['_time' => '2026-11-08T10:00:00Z', '_value' => 35.0, 'zone_id' => (string) $alpha->id],
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 36.0, 'zone_id' => (string) $alpha->id],
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 50.0, 'zone_id' => (string) $deletedZoneId],
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 40.0],
+        ],
+    ], $queries);
+
+    $at = fn (string $time) => Carbon::parse($time)->getTimestampMs();
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->loadDeferredProps(fn ($reload) => $reload->where('moistureSeries', [
+                ['zoneId' => $alpha->id, 'name' => 'Alpha', 'data' => [['x' => $at('2026-11-08T09:00:00Z'), 'y' => 36], ['x' => $at('2026-11-08T10:00:00Z'), 'y' => 35]]],
+                ['zoneId' => $beta->id, 'name' => 'Beta', 'data' => [['x' => $at('2026-11-08T09:00:00Z'), 'y' => 30]]],
+                ['zoneId' => null, 'name' => 'No zone', 'data' => [['x' => $at('2026-11-08T09:00:00Z'), 'y' => 40]]],
+            ]))
+        );
+
+    $moistureQuery = collect($queries)->first(fn (string $query) => str_contains($query, 'r.sensor_type == "moisture"'));
+    expect($moistureQuery)
+        ->toContain("r.farm_id == \"{$farm->id}\"")
+        ->toContain('group(columns: ["zone_id"])');
+});
+
+it('draws a single farm average moisture line when the farm has no zones', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $queries = [];
+    fakeInfluxRecords([
+        'r.sensor_type == "moisture"' => [
+            ['_time' => '2026-11-08T09:00:00Z', '_value' => 38.0],
+        ],
+    ], $queries);
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->loadDeferredProps(fn ($reload) => $reload->where('moistureSeries', [
+                ['zoneId' => null, 'name' => 'Farm average', 'data' => [['x' => Carbon::parse('2026-11-08T09:00:00Z')->getTimestampMs(), 'y' => 38]]],
+            ]))
+        );
+
+    $moistureQuery = collect($queries)->first(fn (string $query) => str_contains($query, 'r.sensor_type == "moisture"'));
+    expect($moistureQuery)->toContain('group(columns: [])');
+});
+
+it('still renders the farm with empty trends and no moisture lines when InfluxDB is down', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    Zone::factory()->for($farm)->create(['user_id' => $user->id]);
+    $influx = Mockery::mock(InfluxDBService::class);
+    $influx->shouldReceive('queryPipeline')->andThrow(new RuntimeException('InfluxDB unreachable'));
+    $this->app->instance(InfluxDBService::class, $influx);
+
+    $this->actingAs($user)
+        ->get(route('farms.show', $farm))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->component('Farms/Show')
+            ->loadDeferredProps(fn ($reload) => $reload
+                ->where('readingTrends', [])
+                ->where('moistureSeries', [])
+            )
+        );
 });

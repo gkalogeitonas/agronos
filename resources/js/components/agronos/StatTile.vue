@@ -9,6 +9,8 @@ interface Props {
     trend?: number[];
     trendColor?: string;
     trendLabel?: string;
+    /** Shows a placeholder where the sparkline goes while the trend loads. */
+    trendLoading?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -17,6 +19,7 @@ withDefaults(defineProps<Props>(), {
     trend: undefined,
     trendColor: undefined,
     trendLabel: undefined,
+    trendLoading: false,
 });
 </script>
 
@@ -27,7 +30,8 @@ withDefaults(defineProps<Props>(), {
             <span class="text-stat leading-none font-medium">{{ value }}</span>
             <span v-if="unit && value !== '–'" class="text-base text-muted-foreground">{{ unit }}</span>
         </div>
-        <Sparkline v-if="trend && trend.length > 1" :values="trend" :color="trendColor" :label="trendLabel ?? `${label} trend`" />
+        <div v-if="trendLoading" class="h-8 animate-pulse rounded-md bg-muted" aria-hidden="true"></div>
+        <Sparkline v-else-if="trend && trend.length > 1" :values="trend" :color="trendColor" :label="trendLabel ?? `${label} trend`" />
         <div v-if="note" class="text-meta text-muted-foreground">{{ note }}</div>
     </div>
 </template>
