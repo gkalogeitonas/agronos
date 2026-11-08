@@ -16,6 +16,10 @@ _Avoid_: Account, organisation (until one exists)
 A piece of land a tenant manages, optionally bounded by a drawn polygon.
 _Avoid_: Field, plot, garden
 
+**Zone**:
+A named part of a farm that groups some of its sensors; a sensor is in at most one zone. A zone has no drawn boundary and never moves to another farm. Left unnamed, it is called `Zone N`, with the lowest number not already used on that farm.
+_Avoid_: Area, section, block
+
 **Farm Health**:
 The status of a farm derived from how many of its devices are online: OK, Warning, Offline, or Unknown when it has no devices.
 _Avoid_: Farm status
@@ -57,7 +61,7 @@ _Avoid_: Technical sensor, internal sensor
 ### Data
 
 **Reading**:
-A single value a sensor reported at a point in time. It belongs to the farm its device was on when it was taken, even after the device moves.
+A single value a sensor reported at a point in time. It belongs to the farm its device was on when it was taken, even after the device moves, and keeps the zone its sensor was in when it was taken.
 _Avoid_: Measurement, data point, sample
 
 ### Monitoring

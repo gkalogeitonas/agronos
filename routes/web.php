@@ -6,6 +6,7 @@ use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
 use App\Http\Controllers\GatewayController;
 use App\Http\Controllers\SensorController;
+use App\Http\Controllers\ZoneController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -41,6 +42,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Farm resource routes
 Route::resource('farms', FarmController::class)
     ->middleware(['auth', 'verified']);
+
+// Zones are managed in dialogs on Farm detail, so they have no pages of their own
+Route::middleware(['auth', 'verified'])->scopeBindings()->group(function () {
+    Route::resource('farms.zones', ZoneController::class)
+        ->only(['store', 'update', 'destroy']);
+});
 
 // Device registration and management routes
 Route::middleware(['auth', 'verified'])->group(function () {

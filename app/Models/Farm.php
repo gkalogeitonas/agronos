@@ -74,6 +74,31 @@ class Farm extends Model
         ];
     }
 
+    /**
+     * The named parts of this farm that group some of its sensors (ADR-0009).
+     *
+     * @return HasMany<Zone, $this>
+     */
+    public function zones(): HasMany
+    {
+        return $this->hasMany(Zone::class);
+    }
+
+    /**
+     * The name a zone gets on this farm when it is given none: `Zone N`, with the lowest N not already used here.
+     */
+    public function nextZoneName(): string
+    {
+        $usedNames = $this->zones()->pluck('name')->flip();
+
+        $number = 1;
+        while ($usedNames->has(Zone::AUTOMATIC_NAME_PREFIX.$number)) {
+            $number++;
+        }
+
+        return Zone::AUTOMATIC_NAME_PREFIX.$number;
+    }
+
     public function devices(): HasMany
     {
         return $this->hasMany(Device::class);
