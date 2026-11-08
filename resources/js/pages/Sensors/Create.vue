@@ -2,7 +2,7 @@
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import QrScanCard, { type QrPayload } from '@/components/agronos/QrScanCard.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
-import SensorZoneField, { type ZoneOption } from '@/components/agronos/SensorZoneField.vue';
+import SensorZoneField, { UNASSIGNED_DEVICE_ZONE_HINT, type ZoneOption } from '@/components/agronos/SensorZoneField.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -96,7 +96,7 @@ const zoneUnavailableHint = computed(() => {
         return 'Enter a device UUID to choose a zone.';
     }
 
-    return device.value.farm ? null : 'This device is unassigned. Put it on a farm to choose a zone.';
+    return device.value.farm ? null : UNASSIGNED_DEVICE_ZONE_HINT;
 });
 
 watch([zones, showZone], () => {

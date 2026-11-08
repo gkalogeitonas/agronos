@@ -171,3 +171,16 @@ it('shows the sensor\'s zone on the sensor page', function () {
     get(route('sensors.show', $sensor))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('sensor.zone', ['id' => $this->zone->id, 'name' => 'Greenhouse']));
 });
+
+it('takes a sensor out of its zone when an update makes it diagnostic', function () {
+    $sensor = Sensor::factory()->create([
+        'user_id' => $this->user->id,
+        'device_id' => $this->device->id,
+        'type' => 'moisture',
+        'zone_id' => $this->zone->id,
+    ]);
+
+    putJson(route('sensors.update', $sensor), ['type' => 'battery'])->assertRedirect(route('sensors.show', $sensor));
+
+    expect($sensor->fresh())->type->toBe('battery')->zone_id->toBeNull();
+});

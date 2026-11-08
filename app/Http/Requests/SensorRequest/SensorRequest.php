@@ -38,12 +38,18 @@ abstract class SensorRequest extends FormRequest
     /**
      * The device the sensor is or will be on, if the user has it.
      */
-    abstract protected function sensorDevice(): ?Device;
+    protected function sensorDevice(): ?Device
+    {
+        return Device::where('uuid', (string) $this->input('device_uuid'))->first();
+    }
 
     /**
      * The sensor's type once the request is applied.
      */
-    abstract protected function sensorType(): ?string;
+    protected function sensorType(): ?string
+    {
+        return $this->input('type');
+    }
 
     /**
      * A sensor's zone must be one of the user's zones on its device's farm, and diagnostic

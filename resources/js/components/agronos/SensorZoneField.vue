@@ -1,11 +1,16 @@
-<script setup lang="ts">
-import NativeSelect from '@/components/agronos/NativeSelect.vue';
-import FormField from '@/components/FormField.vue';
-
+<script lang="ts">
 export interface ZoneOption {
     id: number;
     name: string;
 }
+
+/** Hint for a sensor whose device is on no farm, so it has no zones to offer. */
+export const UNASSIGNED_DEVICE_ZONE_HINT = 'This device is unassigned. Put it on a farm to choose a zone.';
+</script>
+
+<script setup lang="ts">
+import NativeSelect from '@/components/agronos/NativeSelect.vue';
+import FormField from '@/components/FormField.vue';
 
 defineProps<{
     /** The zones of the farm the sensor's device is on. */

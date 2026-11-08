@@ -136,9 +136,14 @@ class SensorController extends Controller
     public function update(UpdateSensorRequest $request, Sensor $sensor)
     {
         $this->authorize('update', $sensor);
-        $validated = $request->validated();
+        $sensor->fill($request->validated());
 
-        $sensor->update($validated);
+        // A sensor that becomes diagnostic leaves its zone (ADR-0009).
+        if (SensorType::tryFrom((string) $sensor->type)?->isFarmRelevant() === false) {
+            $sensor->zone_id = null;
+        }
+
+        $sensor->save();
 
         return redirect()->route('sensors.show', $sensor->id)->with('success', 'Sensor updated.');
     }

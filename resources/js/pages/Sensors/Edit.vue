@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
-import SensorZoneField, { type ZoneOption } from '@/components/agronos/SensorZoneField.vue';
+import SensorZoneField, { UNASSIGNED_DEVICE_ZONE_HINT, type ZoneOption } from '@/components/agronos/SensorZoneField.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -53,10 +53,10 @@ const form = useForm({
 /** Diagnostic sensors, such as battery, are in no zone. */
 const showZone = !isDiagnosticSensorType(sensor.type);
 
-const zoneUnavailableHint = sensor.device?.farm ? null : 'This device is unassigned. Put it on a farm to choose a zone.';
+const zoneUnavailableHint = sensor.device?.farm ? null : UNASSIGNED_DEVICE_ZONE_HINT;
 
 function submit() {
-    form.transform((data) => (showZone ? data : { name: data.name, lat: data.lat, lon: data.lon })).put(route('sensors.update', sensor.id));
+    form.transform(({ zone_id, ...rest }) => (showZone ? { ...rest, zone_id } : rest)).put(route('sensors.update', sensor.id));
 }
 
 const farmPolygon = sensor.device?.farm?.coordinates ?? null;
