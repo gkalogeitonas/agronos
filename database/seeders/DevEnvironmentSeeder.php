@@ -37,17 +37,17 @@ class DevEnvironmentSeeder extends Seeder
     private const LARGE_FARM_BOUNDS = [25.4300, 37.0700, 25.4400, 37.0760];
 
     /**
-     * The large farm's zones. The first ones hold the reading sensors of the device grid rows with the same index,
-     * the rest stay empty. Devices in the rows past them keep their sensors out of any zone.
+     * The large farm's zones that hold the reading sensors of a device grid row, first row first.
+     * Devices in the rows past them keep their sensors out of any zone.
      *
      * @var list<string>
      */
-    private const LARGE_FARM_ZONES = ['Σειρά 1', 'Σειρά 2', 'Σειρά 3', 'Νέα φύτευση'];
+    private const LARGE_FARM_ROW_ZONES = ['Σειρά 1', 'Σειρά 2', 'Σειρά 3'];
 
     /**
-     * How many device grid rows of the large farm have their reading sensors in a zone.
+     * A zone of the large farm that holds no sensors.
      */
-    private const LARGE_FARM_ZONED_ROWS = 3;
+    private const LARGE_FARM_EMPTY_ZONE = 'Νέα φύτευση';
 
     /**
      * Seed the application's database with current dev environment data.
@@ -185,7 +185,7 @@ class DevEnvironmentSeeder extends Seeder
                 if ($deviceData) {
                     $deviceData['user_id'] = $user->id;
                     $deviceData['farm_id'] = $farm->id;
-                    $device = Device::updateOrCreate(
+                    $device = Device::allTenants()->updateOrCreate(
                         ['uuid' => $deviceData['uuid']],
                         $deviceData
                     );
@@ -198,7 +198,7 @@ class DevEnvironmentSeeder extends Seeder
                     $sensorData['device_id'] = $device->id;
                 }
 
-                Sensor::updateOrCreate(
+                Sensor::allTenants()->updateOrCreate(
                     ['uuid' => $sensorData['uuid']],
                     $sensorData
                 );
@@ -255,7 +255,7 @@ class DevEnvironmentSeeder extends Seeder
             ]
         );
 
-        $zones = array_values($this->seedZones($farm, self::LARGE_FARM_ZONES));
+        $rowZones = array_values($this->seedZones($farm, [...self::LARGE_FARM_ROW_ZONES, self::LARGE_FARM_EMPTY_ZONE]));
 
         $columns = 10;
         $rows = (int) ceil(self::LARGE_FARM_DEVICE_COUNT / $columns);
@@ -267,7 +267,7 @@ class DevEnvironmentSeeder extends Seeder
             $lon = round($west + ($east - $west) * (($index % $columns) + 0.5) / $columns, 7);
             $lat = round($south + ($north - $south) * ($row + 0.5) / $rows, 7);
             $batteryLevel = 100 - ($index * 7) % 95;
-            $zoneId = $row < self::LARGE_FARM_ZONED_ROWS ? $zones[$row]->id : null;
+            $zoneId = $row < count(self::LARGE_FARM_ROW_ZONES) ? $rowZones[$row]->id : null;
 
             $device = Device::allTenants()->updateOrCreate(
                 ['uuid' => $uuid],
