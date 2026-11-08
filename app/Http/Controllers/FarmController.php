@@ -121,6 +121,9 @@ class FarmController extends Controller
             'alerts' => AlertResource::collection(
                 $farm->alerts()->open()->withLineDetails()->mostUrgentFirst()->limit(Alert::CARD_LIMIT)->get()
             )->resolve(),
+            'zones' => $farm->zones()->withCount('sensors')->orderBy('id')->get(['id', 'name'])
+                ->map->only(['id', 'name', 'sensors_count'])->values(),
+            'nextZoneName' => $farm->nextZoneName(),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),

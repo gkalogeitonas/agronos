@@ -9,6 +9,7 @@ import SectionCard from '@/components/agronos/SectionCard.vue';
 import SensorTable from '@/components/agronos/SensorTable.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import FarmMapbox from '@/components/FarmMapbox.vue';
+import FarmZones, { type FarmZone } from '@/components/farms/FarmZones.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,10 @@ const props = defineProps<{
     devicesOnline: number;
     /** The most urgent open alerts of the farm. */
     alerts: AlertItem[];
+    /** The farm's zones, each with how many sensors it holds. */
+    zones: FarmZone[];
+    /** The name a new zone gets when it is given none. */
+    nextZoneName: string;
     sensorDbStats?: {
         totalSensors: number;
         sensorTypeStats: Record<string, number>;
@@ -193,6 +198,8 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     </Button>
                 </EmptyState>
             </SectionCard>
+
+            <FarmZones :farm-id="farm.id" :zones="zones" :next-zone-name="nextZoneName" />
 
             <div class="flex flex-wrap items-stretch gap-4">
                 <SectionCard title="Map" class="flex-[2_1_480px]">

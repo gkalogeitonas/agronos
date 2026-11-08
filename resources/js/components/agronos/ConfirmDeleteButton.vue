@@ -20,10 +20,13 @@ interface Props {
     /** Name of the thing being deleted, shown in the dialog title. */
     itemName: string;
     description?: string;
+    /** Keep the scroll position, for a delete that returns to the same page. */
+    preserveScroll?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     description: 'This cannot be undone.',
+    preserveScroll: false,
 });
 
 const open = ref(false);
@@ -31,6 +34,7 @@ const processing = ref(false);
 
 function destroy(): void {
     router.delete(props.url, {
+        preserveScroll: props.preserveScroll,
         onStart: () => (processing.value = true),
         onSuccess: () => (open.value = false),
         onFinish: () => (processing.value = false),
@@ -41,7 +45,9 @@ function destroy(): void {
 <template>
     <Dialog v-model:open="open">
         <DialogTrigger as-child>
-            <Button variant="outline" class="text-destructive hover:text-destructive"><Trash2 /> Delete</Button>
+            <slot name="trigger">
+                <Button variant="outline" class="text-destructive hover:text-destructive"><Trash2 /> Delete</Button>
+            </slot>
         </DialogTrigger>
         <DialogContent>
             <DialogHeader class="space-y-3">

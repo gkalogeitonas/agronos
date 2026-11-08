@@ -32,6 +32,16 @@ class Sensor extends Model
         return $this->belongsTo(Device::class);
     }
 
+    /**
+     * The zone of its farm the sensor is in, if any (ADR-0009).
+     *
+     * @return BelongsTo<Zone, $this>
+     */
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
