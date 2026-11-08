@@ -16,6 +16,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -128,11 +129,20 @@ class DeviceController extends Controller
     }
 
     /**
-     * Update the device's name and farm. Its sensors keep their positions.
+     * Update the device's name and farm. Its sensors keep their positions, but leave
+     * their zones when the device changes farm, because a zone belongs to one farm.
      */
     public function update(UpdateDeviceRequest $request, Device $device): RedirectResponse
     {
-        $device->update($request->validated());
+        DB::transaction(function () use ($request, $device) {
+            $device->fill($request->validated());
+
+            if ($device->isDirty('farm_id')) {
+                $device->sensors()->update(['zone_id' => null]);
+            }
+
+            $device->save();
+        });
 
         return redirect()->route('devices.show', $device)->with('success', 'Device updated.');
     }

@@ -8,8 +8,10 @@ use App\Models\Zone;
 use Inertia\Testing\AssertableInertia;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
 use function Pest\Laravel\postJson;
+use function Pest\Laravel\put;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
@@ -183,4 +185,41 @@ it('takes a sensor out of its zone when an update makes it diagnostic', function
     putJson(route('sensors.update', $sensor), ['type' => 'battery'])->assertRedirect(route('sensors.show', $sensor));
 
     expect($sensor->fresh())->type->toBe('battery')->zone_id->toBeNull();
+});
+
+it('clears the zones of a device\'s sensors when the device moves to another farm', function () {
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'zone_id' => $this->zone->id]);
+    $otherFarm = Farm::factory()->create(['user_id' => $this->user->id]);
+
+    put(route('devices.update', $this->device), ['name' => 'Node', 'farm_id' => $otherFarm->id])
+        ->assertSessionHasNoErrors();
+
+    expect($sensor->fresh()->zone_id)->toBeNull();
+});
+
+it('clears the zones of a device\'s sensors when the device is unassigned', function () {
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'zone_id' => $this->zone->id]);
+
+    put(route('devices.update', $this->device), ['name' => 'Node', 'farm_id' => ''])
+        ->assertSessionHasNoErrors();
+
+    expect($sensor->fresh()->zone_id)->toBeNull();
+});
+
+it('keeps the zones of a device\'s sensors when the device stays on its farm', function () {
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'zone_id' => $this->zone->id]);
+
+    put(route('devices.update', $this->device), ['name' => 'Renamed', 'farm_id' => $this->farm->id])
+        ->assertSessionHasNoErrors();
+
+    expect($sensor->fresh()->zone_id)->toBe($this->zone->id);
+});
+
+it('leaves the sensors of a deleted farm\'s devices with no zone', function () {
+    $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'zone_id' => $this->zone->id]);
+
+    delete(route('farms.destroy', $this->farm))->assertRedirect(route('farms.index'));
+
+    expect($this->device->fresh()->farm_id)->toBeNull()
+        ->and($sensor->fresh()->zone_id)->toBeNull();
 });
