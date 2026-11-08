@@ -4,6 +4,7 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Models\Zone;
 
 use function Pest\Laravel\actingAs;
 
@@ -291,3 +292,43 @@ function waitForNoBoundary(mixed $page): void
         }
         JS);
 }
+
+it('adds a sensor into a zone of its device\'s farm', function () {
+    Zone::factory()->for($this->farm)->create(['name' => 'Greenhouse']);
+    Zone::factory()->for(Farm::factory()->create(['user_id' => $this->user->id]))->create(['name' => 'Elsewhere']);
+    $placedDevice = Device::factory()->onFarm($this->farm)->create();
+
+    visit(route('farms.sensors.create', $this->farm, absolute: false))
+        ->click('#allow-edit-switch')
+        ->select('#type', 'moisture')
+        ->fill('#uuid', 'zoned-uuid')
+        ->fill('#device_uuid', $this->device->uuid)
+        ->assertSee('This device is unassigned. Put it on a farm to choose a zone.')
+        ->assertAttribute('#zone_id', 'disabled', '')
+        ->fill('#device_uuid', $placedDevice->uuid)
+        ->assertDontSee('Put it on a farm to choose a zone.')
+        ->assertCount('#zone_id option', 2)
+        ->assertPresent('#zone_id option:has-text("Greenhouse")')
+        ->select('#zone_id', 'Greenhouse')
+        ->select('#type', 'battery')
+        ->assertNotPresent('#zone_id')
+        ->select('#type', 'moisture')
+        ->select('#zone_id', 'Greenhouse')
+        ->press('button[type="submit"]')
+        ->assertPathIs(route('sensors.index', absolute: false))
+        ->assertNoJavaScriptErrors();
+
+    $this->assertDatabaseHas('sensors', ['uuid' => 'zoned-uuid', 'zone_id' => Zone::where('name', 'Greenhouse')->value('id')]);
+});
+
+it('moves a sensor to a zone on the edit page and shows it on the sensor page', function () {
+    $this->device->update(['farm_id' => $this->farm->id]);
+    Zone::factory()->for($this->farm)->create(['name' => 'Greenhouse']);
+
+    visit(route('sensors.edit', $this->sensor, absolute: false))
+        ->select('#zone_id', 'Greenhouse')
+        ->press('Save changes')
+        ->assertPathIs(route('sensors.show', $this->sensor, absolute: false))
+        ->assertSee('Greenhouse')
+        ->assertNoJavaScriptErrors();
+});

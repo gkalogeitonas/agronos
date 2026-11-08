@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import SensorZoneField, { UNASSIGNED_DEVICE_ZONE_HINT, type ZoneOption } from '@/components/agronos/SensorZoneField.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -8,7 +9,7 @@ import SensorLocationPicker from '@/components/SensorLocationPicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sensorTypeLabel } from '@/lib/enums';
+import { isDiagnosticSensorType, sensorTypeLabel } from '@/lib/enums';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
@@ -21,8 +22,11 @@ const props = defineProps<{
         type: string;
         lat: number | string;
         lon: number | string;
+        zone_id: number | null;
         device?: { uuid: string; farm: { coordinates: Polygon | null } | null } | null;
     };
+    /** The zones of the farm the sensor's device is on. */
+    zones: ZoneOption[];
 }>();
 
 const sensor = props.sensor;
@@ -43,10 +47,16 @@ const form = useForm({
     name: sensor.name || '',
     lat: String(sensor.lat ?? ''),
     lon: String(sensor.lon ?? ''),
+    zone_id: (sensor.zone_id ?? '') as number | '',
 });
 
+/** Diagnostic sensors, such as battery, are in no zone. */
+const showZone = !isDiagnosticSensorType(sensor.type);
+
+const zoneUnavailableHint = sensor.device?.farm ? null : UNASSIGNED_DEVICE_ZONE_HINT;
+
 function submit() {
-    form.put(route('sensors.update', sensor.id));
+    form.transform(({ zone_id, ...rest }) => (showZone ? { ...rest, zone_id } : rest)).put(route('sensors.update', sensor.id));
 }
 
 const farmPolygon = sensor.device?.farm?.coordinates ?? null;
@@ -63,6 +73,13 @@ const farmPolygon = sensor.device?.farm?.coordinates ?? null;
                     <SectionCard title="Details" class="flex-[1_1_320px]">
                         <DescriptionList :items="details" />
                         <FormField id="name" label="Name" :error="form.errors.name"><Input id="name" v-model="form.name" /></FormField>
+                        <SensorZoneField
+                            v-if="showZone"
+                            v-model="form.zone_id"
+                            :zones="zones"
+                            :unavailable-hint="zoneUnavailableHint"
+                            :error="form.errors.zone_id"
+                        />
                     </SectionCard>
 
                     <SectionCard title="Location" class="flex-[2_1_480px]">

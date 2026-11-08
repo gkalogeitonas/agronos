@@ -11,14 +11,18 @@ class SensorMeasurementPayloadFactory
      *
      * The farm is the one the sensor's device was on when the reading was taken (ADR-0008).
      * A reading from an unassigned device gets no farm tag.
+     * The zone is likewise the sensor's zone when the reading was taken, and a sensor with none gets no zone tag.
      *
      * @param  float|int  $value
      */
-    public static function make(Sensor $sensorModel, $value, ?int $farmId): array
+    public static function make(Sensor $sensorModel, $value, ?int $farmId, ?int $zoneId): array
     {
         $tags = ['user_id' => $sensorModel->user_id];
         if ($farmId !== null) {
             $tags['farm_id'] = $farmId;
+        }
+        if ($zoneId !== null) {
+            $tags['zone_id'] = $zoneId;
         }
         $tags['sensor_id'] = $sensorModel->id;
         $tags['sensor_type'] = $sensorModel->type;

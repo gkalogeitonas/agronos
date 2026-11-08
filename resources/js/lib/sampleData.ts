@@ -15,9 +15,6 @@ export const sampleActivity: ActivityItem[] = [
     { id: 4, when: '5 h', subject: 'North Orchard', text: 'Firmware update available for 3 devices' },
 ];
 
-/** Follow-up: farm zones. */
-export const sampleZoneCount = 4;
-
 /** Follow-up: sparkline trends from InfluxDB. Shape of a 24 h trend per sensor type. */
 export const sampleTrends: Record<string, number[]> = {
     moisture: [46, 45, 45.5, 43, 43.5, 41, 41.5, 40, 39.5],

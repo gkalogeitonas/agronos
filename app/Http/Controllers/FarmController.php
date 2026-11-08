@@ -71,7 +71,7 @@ class FarmController extends Controller
     {
         $this->authorize('view', $farm);
         $this->authorize('viewAny', Alert::class);
-        $sensors = $farm->sensors()->farmRelevant()->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
+        $sensors = $farm->sensors()->farmRelevant()->with('zone:id,name')->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
         $sensorLocations = $farm->sensors()->farmRelevant()->get(['sensors.id', 'sensors.name', 'sensors.lat', 'sensors.lon']);
 
         // Calculate sensor statistics from database (exclude internal-only types)
@@ -121,6 +121,9 @@ class FarmController extends Controller
             'alerts' => AlertResource::collection(
                 $farm->alerts()->open()->withLineDetails()->mostUrgentFirst()->limit(Alert::CARD_LIMIT)->get()
             )->resolve(),
+            'zones' => $farm->zones()->withCount('sensors')->orderBy('id')->get(['id', 'name'])
+                ->map->only(['id', 'name', 'sensors_count'])->values(),
+            'nextZoneName' => $farm->nextZoneName(),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),

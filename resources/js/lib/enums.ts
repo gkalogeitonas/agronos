@@ -8,7 +8,7 @@ import { usePage } from '@inertiajs/vue3';
  */
 const enums = () => usePage<AppPageProps>().props.enums;
 
-const sensorTypeOption = (type: string | null | undefined): (EnumOption & { unit: string }) | undefined =>
+const sensorTypeOption = (type: string | null | undefined): (EnumOption & { unit: string; diagnostic: boolean }) | undefined =>
     enums().sensorTypes.find((option) => option.value === type);
 
 /** Device statuses in display order, for filters. */
@@ -18,3 +18,6 @@ export const sensorTypeLabel = (type: string | null | undefined): string => sens
 
 /** Unit for a sensor type's readings, empty when the type has none or is unknown. */
 export const sensorUnit = (type: string | null | undefined): string => sensorTypeOption(type)?.unit ?? '';
+
+/** Diagnostic types, such as battery, describe the device rather than the farm, so their sensors are in no zone. */
+export const isDiagnosticSensorType = (type: string | null | undefined): boolean => sensorTypeOption(type)?.diagnostic ?? false;

@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Enums\SensorType;
 use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Models\Zone;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -33,6 +35,19 @@ class DevEnvironmentSeeder extends Seeder
      * @var array{float, float, float, float}
      */
     private const LARGE_FARM_BOUNDS = [25.4300, 37.0700, 25.4400, 37.0760];
+
+    /**
+     * The large farm's zones that hold the reading sensors of a device grid row, first row first.
+     * Devices in the rows past them keep their sensors out of any zone.
+     *
+     * @var list<string>
+     */
+    private const LARGE_FARM_ROW_ZONES = ['Σειρά 1', 'Σειρά 2', 'Σειρά 3'];
+
+    /**
+     * A zone of the large farm that holds no sensors.
+     */
+    private const LARGE_FARM_EMPTY_ZONE = 'Νέα φύτευση';
 
     /**
      * Seed the application's database with current dev environment data.
@@ -67,12 +82,14 @@ class DevEnvironmentSeeder extends Seeder
                     ],
                     'description' => 'Alias necessitatibus cupiditate quia recusandae hic consequatur. Omnis pariatur in cum autem sunt. Cupiditate eveniet numquam qui corrupti corrupti consequatur aut.',
                 ],
+                'zones' => ['Βόρειος αμπελώνας', 'Νότιος αμπελώνας'],
                 'user' => [
                     'name' => 'john Doe',
                     'email' => 'johndoe@gmail.com',
                 ],
                 'sensors' => [
                     [
+                        'zone' => 'Βόρειος αμπελώνας',
                         'sensor' => [
                             'name' => 'Test-Device-1-sensor-1',
                             'uuid' => 'Test-Device-1-sensor-1',
@@ -95,6 +112,7 @@ class DevEnvironmentSeeder extends Seeder
                         ],
                     ],
                     [
+                        'zone' => 'Βόρειος αμπελώνας',
                         'sensor' => [
                             'name' => 'Test-Device-1-sensor-2',
                             'uuid' => 'Test-Device-1-sensor-2',
@@ -159,13 +177,15 @@ class DevEnvironmentSeeder extends Seeder
                 $farmData
             );
 
+            $zones = $this->seedZones($farm, $entry['zones'] ?? []);
+
             foreach ($entry['sensors'] as $sentry) {
                 $deviceData = $sentry['device'] ?? null;
                 $device = null;
                 if ($deviceData) {
                     $deviceData['user_id'] = $user->id;
                     $deviceData['farm_id'] = $farm->id;
-                    $device = Device::updateOrCreate(
+                    $device = Device::allTenants()->updateOrCreate(
                         ['uuid' => $deviceData['uuid']],
                         $deviceData
                     );
@@ -173,11 +193,12 @@ class DevEnvironmentSeeder extends Seeder
 
                 $sensorData = $sentry['sensor'] ?? [];
                 $sensorData['user_id'] = $user->id;
+                $sensorData['zone_id'] = isset($sentry['zone']) ? $zones[$sentry['zone']]->id : null;
                 if ($device) {
                     $sensorData['device_id'] = $device->id;
                 }
 
-                Sensor::updateOrCreate(
+                Sensor::allTenants()->updateOrCreate(
                     ['uuid' => $sensorData['uuid']],
                     $sensorData
                 );
@@ -188,8 +209,29 @@ class DevEnvironmentSeeder extends Seeder
     }
 
     /**
+     * Create the farm's zones, keyed by farm and name so re-seeding updates them in place.
+     *
+     * @param  list<string>  $names
+     * @return array<string, Zone>
+     */
+    private function seedZones(Farm $farm, array $names): array
+    {
+        $zones = [];
+
+        foreach ($names as $name) {
+            $zones[$name] = Zone::allTenants()->updateOrCreate(
+                ['farm_id' => $farm->id, 'name' => $name],
+                ['user_id' => $farm->user_id]
+            );
+        }
+
+        return $zones;
+    }
+
+    /**
      * A farm with many devices. Each device has one or two reading sensors and a battery sensor.
-     * Devices and sensors are keyed by UUID and the farm by name, so re-seeding updates them in place.
+     * The reading sensors of the first grid rows are in a zone per row; battery sensors are never in a zone.
+     * Devices and sensors are keyed by UUID and the farm and zones by name, so re-seeding updates them in place.
      */
     private function seedLargeFarm(string $deviceSecret): void
     {
@@ -213,15 +255,19 @@ class DevEnvironmentSeeder extends Seeder
             ]
         );
 
+        $rowZones = array_values($this->seedZones($farm, [...self::LARGE_FARM_ROW_ZONES, self::LARGE_FARM_EMPTY_ZONE]));
+
         $columns = 10;
         $rows = (int) ceil(self::LARGE_FARM_DEVICE_COUNT / $columns);
 
         for ($index = 0; $index < self::LARGE_FARM_DEVICE_COUNT; $index++) {
             $number = sprintf('%02d', $index + 1);
             $uuid = "Drymalia-Device-{$number}";
+            $row = intdiv($index, $columns);
             $lon = round($west + ($east - $west) * (($index % $columns) + 0.5) / $columns, 7);
-            $lat = round($south + ($north - $south) * (intdiv($index, $columns) + 0.5) / $rows, 7);
+            $lat = round($south + ($north - $south) * ($row + 0.5) / $rows, 7);
             $batteryLevel = 100 - ($index * 7) % 95;
+            $zoneId = $row < count(self::LARGE_FARM_ROW_ZONES) ? $rowZones[$row]->id : null;
 
             $device = Device::allTenants()->updateOrCreate(
                 ['uuid' => $uuid],
@@ -252,6 +298,7 @@ class DevEnvironmentSeeder extends Seeder
                         'device_id' => $device->id,
                         'name' => "{$uuid}-{$sensor['suffix']}",
                         'type' => $sensor['type'],
+                        'zone_id' => $sensor['type'] === SensorType::BATTERY->value ? null : $zoneId,
                         'lat' => $lat,
                         'lon' => $lon,
                         'last_reading' => $sensor['last_reading'],

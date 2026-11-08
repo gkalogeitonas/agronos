@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Models\Zone;
 use App\Services\FarmOverviewService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 
@@ -71,4 +72,15 @@ it('averages the latest readings per sensor type, ignoring sensors without a rea
 
     expect($summary['moisture'])->toBe(32.8)
         ->and($summary['temperature'])->toBeNull();
+});
+
+it('counts each farm\'s zones, giving 0 to a farm without zones', function () {
+    $zoned = Farm::factory()->create();
+    $bare = Farm::factory()->create();
+    Zone::factory()->count(3)->for($zoned)->create();
+
+    $summaries = app(FarmOverviewService::class)->summarize(new EloquentCollection([$zoned, $bare]))->keyBy('id');
+
+    expect($summaries[$zoned->id]['zones'])->toBe(3)
+        ->and($summaries[$bare->id]['zones'])->toBe(0);
 });

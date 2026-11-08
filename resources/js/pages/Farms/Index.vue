@@ -9,7 +9,6 @@ import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sampleZoneCount } from '@/lib/sampleData';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -41,7 +40,6 @@ const rows = computed(() => {
         .filter((farm) => query === '' || `${farm.name} ${farm.location ?? ''}`.toLowerCase().includes(query))
         .map((farm) => ({
             ...farm,
-            zones: sampleZoneCount,
             devices: `${farm.devicesOnline} / ${farm.devicesTotal}`,
             alerts: farm.openAlerts,
             actions: null,
@@ -54,7 +52,7 @@ const rows = computed(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <PageContainer>
-            <PageHeader eyebrow="Manage" title="Farms" sample-data>
+            <PageHeader eyebrow="Manage" title="Farms">
                 <template #actions>
                     <Button as-child>
                         <Link :href="route('farms.create')">Add farm</Link>

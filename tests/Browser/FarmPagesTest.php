@@ -162,3 +162,16 @@ it('deletes the farm once the confirmation is accepted', function () {
 
     $this->assertDatabaseMissing('farms', ['id' => $farm->id]);
 });
+
+it('adds a zone without a name as Zone 1 from the farm page', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->click('section[aria-label="Zones"] >> text=Add zone')
+        ->assertAttribute('#zone-name', 'placeholder', 'Zone 1')
+        ->press('[role="dialog"] button[type="submit"]')
+        ->assertSeeIn('section[aria-label="Zones"] ul', 'Zone 1')
+        ->assertNoJavaScriptErrors();
+
+    assertDatabaseHas('zones', ['farm_id' => $farm->id, 'name' => 'Zone 1']);
+});

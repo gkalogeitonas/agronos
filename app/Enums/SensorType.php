@@ -41,9 +41,9 @@ enum SensorType: string
     }
 
     /**
-     * Types with their label and unit, for frontend display.
+     * Types with their label, unit and whether they are diagnostic (not farm-relevant), for frontend display.
      *
-     * @return list<array{value: string, label: string, unit: string}>
+     * @return list<array{value: string, label: string, unit: string, diagnostic: bool}>
      */
     public static function options(): array
     {
@@ -53,6 +53,7 @@ enum SensorType: string
             'value' => $type->value,
             'label' => $labels[$type->value],
             'unit' => $type->unit(),
+            'diagnostic' => ! $type->isFarmRelevant(),
         ], self::cases());
     }
 
