@@ -75,8 +75,8 @@ it('averages the latest readings per sensor type, ignoring sensors without a rea
 });
 
 it('counts each farm\'s zones, giving 0 to a farm without zones', function () {
-    $zoned = farmWithDevices([]);
-    $bare = farmWithDevices([]);
+    $zoned = Farm::factory()->create();
+    $bare = Farm::factory()->create();
     Zone::factory()->count(3)->for($zoned)->create();
 
     $summaries = app(FarmOverviewService::class)->summarize(new EloquentCollection([$zoned, $bare]))->keyBy('id');
