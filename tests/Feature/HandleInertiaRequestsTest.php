@@ -42,7 +42,8 @@ it('shares device statuses and sensor types from the backend enums', function ()
         ->has('enums.deviceStatuses', count(DeviceStatus::cases()))
         ->where('enums.deviceStatuses.0', ['value' => 'registered', 'label' => 'Registered'])
         ->has('enums.sensorTypes', count(SensorType::cases()))
-        ->where('enums.sensorTypes.1', ['value' => 'temperature', 'label' => 'Temperature', 'unit' => '°C'])
-        ->where('enums.sensorTypes.5', ['value' => 'other', 'label' => 'Other', 'unit' => ''])
+        ->where('enums.sensorTypes.1', ['value' => 'temperature', 'label' => 'Temperature', 'unit' => '°C', 'diagnostic' => false])
+        ->where('enums.sensorTypes.5', ['value' => 'other', 'label' => 'Other', 'unit' => '', 'diagnostic' => false])
+        ->where('enums.sensorTypes.4.diagnostic', true)
     );
 });

@@ -3,6 +3,9 @@
 namespace App\Http\Requests\SensorRequest;
 
 use App\Enums\SensorType;
+use App\Models\Device;
+use App\Models\Zone;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,7 +31,46 @@ abstract class SensorRequest extends FormRequest
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lon' => ['nullable', 'numeric', 'between:-180,180'],
             'type' => ['nullable', Rule::in(SensorType::values())],
+            'zone_id' => ['nullable', 'integer', $this->zoneOnDeviceFarm(...)],
         ];
+    }
+
+    /**
+     * The device the sensor is or will be on, if the user has it.
+     */
+    abstract protected function sensorDevice(): ?Device;
+
+    /**
+     * The sensor's type once the request is applied.
+     */
+    abstract protected function sensorType(): ?string;
+
+    /**
+     * A sensor's zone must be one of the user's zones on its device's farm, and diagnostic
+     * sensors are in no zone (ADR-0009). The tenant scope hides other users' zones.
+     *
+     * @param  Closure(string): void  $fail
+     */
+    protected function zoneOnDeviceFarm(string $attribute, mixed $value, Closure $fail): void
+    {
+        $type = SensorType::tryFrom((string) $this->sensorType());
+        if ($type !== null && ! $type->isFarmRelevant()) {
+            $fail('Diagnostic sensors cannot be in a zone.');
+
+            return;
+        }
+
+        $device = $this->sensorDevice();
+        if ($device !== null && $device->farm_id === null) {
+            $fail('Put the device on a farm before choosing a zone.');
+
+            return;
+        }
+
+        $zone = Zone::find($value);
+        if ($zone === null || ($device !== null && (int) $zone->farm_id !== (int) $device->farm_id)) {
+            $fail('Choose a zone of the farm the sensor\'s device is on.');
+        }
     }
 
     /**

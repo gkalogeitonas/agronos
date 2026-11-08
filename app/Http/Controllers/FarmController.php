@@ -71,7 +71,7 @@ class FarmController extends Controller
     {
         $this->authorize('view', $farm);
         $this->authorize('viewAny', Alert::class);
-        $sensors = $farm->sensors()->farmRelevant()->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
+        $sensors = $farm->sensors()->farmRelevant()->with('zone:id,name')->orderBy('sensors.name')->limit(self::SHOW_PAGE_LIST_LIMIT)->get();
         $sensorLocations = $farm->sensors()->farmRelevant()->get(['sensors.id', 'sensors.name', 'sensors.lat', 'sensors.lon']);
 
         // Calculate sensor statistics from database (exclude internal-only types)

@@ -90,7 +90,7 @@ it('gives the sensor create page the tenant\'s devices with their farm and bound
                 'id' => $this->device->id,
                 'name' => 'A placed',
                 'uuid' => $this->device->uuid,
-                'farm' => ['id' => $this->deviceFarm->id, 'name' => 'North Orchard', 'coordinates' => orchardBoundary()],
+                'farm' => ['id' => $this->deviceFarm->id, 'name' => 'North Orchard', 'coordinates' => orchardBoundary(), 'zones' => []],
             ],
             ['id' => $unassignedDevice->id, 'name' => 'Z unassigned', 'uuid' => $unassignedDevice->uuid, 'farm' => null],
         ]));

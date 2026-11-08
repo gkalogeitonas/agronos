@@ -22,7 +22,7 @@ import type { Polygon } from 'geojson';
 import { Pencil } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
-/** Shape of App\Http\Resources\SensorResource with `device.farm` loaded; `farm` is the device's farm, null while it is unassigned. */
+/** Shape of App\Http\Resources\SensorResource with `device.farm` and `zone` loaded; `farm` is the device's farm, null while it is unassigned. */
 interface SensorDetail {
     id: number;
     name: string | null;
@@ -30,6 +30,7 @@ interface SensorDetail {
     type: string;
     device: { id: number; uuid: string } | null;
     farm: { id: number; name: string; coordinates: Polygon | null } | null;
+    zone: { id: number; name: string } | null;
     lat: number | string | null;
     lon: number | string | null;
     last_reading: number | string | null;
@@ -101,6 +102,7 @@ const sensorInfo = computed<DescriptionItem[]>(() => [
     { key: 'device', label: 'Device', value: props.sensor.device?.uuid, mono: true },
     { label: 'Type', value: sensorTypeLabel(props.sensor.type) },
     { key: 'farm', label: 'Farm', value: props.sensor.farm?.name },
+    { label: 'Zone', value: props.sensor.zone?.name ?? 'No zone' },
     { label: 'Coordinates', value: `${props.sensor.lat ?? '–'}, ${props.sensor.lon ?? '–'}`, mono: true },
 ]);
 

@@ -47,14 +47,17 @@ class SensorController extends Controller
         $this->authorize('create', Sensor::class);
 
         $devices = $request->user()->devices()
-            ->with('farm:id,name,coordinates')
+            ->with(['farm:id,name,coordinates', 'farm.zones' => fn ($zones) => $zones->orderBy('name')->select(['id', 'farm_id', 'name'])])
             ->orderBy('name')
             ->get(['id', 'name', 'uuid', 'farm_id']);
 
         return Inertia::render('Sensors/Create', [
             'devices' => $devices->map(fn (Device $device): array => [
                 ...$device->only(['id', 'name', 'uuid']),
-                'farm' => $device->farm?->only(['id', 'name', 'coordinates']),
+                'farm' => $device->farm === null ? null : [
+                    ...$device->farm->only(['id', 'name', 'coordinates']),
+                    'zones' => $device->farm->zones->map->only(['id', 'name'])->values(),
+                ],
             ]),
             'selectedFarm' => $farm?->only(['id', 'name', 'coordinates']),
             'prefillDeviceUuid' => $devices->firstWhere('id', $request->integer('device'))?->uuid,
@@ -93,7 +96,7 @@ class SensorController extends Controller
     public function show(Sensor $sensor)
     {
         $this->authorize('view', $sensor);
-        $sensor->load('device.farm');
+        $sensor->load('device.farm', 'zone:id,name');
 
         // Prepare time-series service; defer heavy/time-series work so initial page is fast
         $ts = app(SensorTimeSeriesService::class);
@@ -123,6 +126,7 @@ class SensorController extends Controller
 
         return Inertia::render('Sensors/Edit', [
             'sensor' => $sensor,
+            'zones' => $sensor->device?->farm?->zones()->orderBy('name')->get(['id', 'name'])->map->only(['id', 'name'])->values() ?? [],
         ]);
     }
 
@@ -153,7 +157,7 @@ class SensorController extends Controller
     /**
      * Scan or add a sensor by QR code (uuid). If the sensor exists, update it; otherwise, create it.
      *
-     * A repeated QR scan updates the existing sensor directly. A UUID typed by hand
+     * A repeated QR scan updates the existing sensor directly, but never its zone (ADR-0009). A UUID typed by hand
      * (`manual_entry`) that matches an existing sensor is rejected until the user
      * confirms the update (`confirm_update`), so a typo cannot overwrite a sensor.
      *
@@ -178,7 +182,7 @@ class SensorController extends Controller
             }
 
             // Update sensor, but never update device_id or user_id from scan
-            $sensor->update($sensorAttributes->except(['device_uuid', 'uuid'])->toArray());
+            $sensor->update($sensorAttributes->except(['device_uuid', 'uuid', 'zone_id'])->toArray());
 
             return redirect()->route('sensors.index')->with('success', 'Sensor updated.');
         }

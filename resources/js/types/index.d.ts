@@ -37,7 +37,8 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     /** Backend enum cases with labels (`HandleInertiaRequests`). */
     enums: {
         deviceStatuses: EnumOption[];
-        sensorTypes: (EnumOption & { unit: string })[];
+        /** `diagnostic` types, such as battery, describe the device rather than the farm. */
+        sensorTypes: (EnumOption & { unit: string; diagnostic: boolean })[];
     };
 };
 

@@ -2,6 +2,7 @@
 import NativeSelect from '@/components/agronos/NativeSelect.vue';
 import QrScanCard, { type QrPayload } from '@/components/agronos/QrScanCard.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
+import SensorZoneField, { type ZoneOption } from '@/components/agronos/SensorZoneField.vue';
 import FormField from '@/components/FormField.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Switch from '@/components/ui/switch/Switch.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sensorTypeLabel } from '@/lib/enums';
+import { isDiagnosticSensorType, sensorTypeLabel } from '@/lib/enums';
 import { type BreadcrumbItem, type FarmOption } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
@@ -22,11 +23,15 @@ interface Farm extends FarmOption {
     coordinates: Polygon | null;
 }
 
+interface DeviceFarm extends Farm {
+    zones: ZoneOption[];
+}
+
 interface DeviceOption {
     id: number;
     name: string;
     uuid: string;
-    farm: Farm | null;
+    farm: DeviceFarm | null;
 }
 
 const props = defineProps<{
@@ -52,6 +57,7 @@ const form = useForm({
     device_uuid: props.prefillDeviceUuid ?? '',
     lat: '',
     lon: '',
+    zone_id: '' as number | '',
     manual_entry: false,
     confirm_update: false,
 });
@@ -78,6 +84,25 @@ const farmNotice = computed(() => {
     return device.value.farm
         ? `This device is on ${device.value.farm.name}, so the sensor will appear there.`
         : `This device is unassigned, so the sensor will not appear on ${props.selectedFarm.name}.`;
+});
+
+/** Diagnostic sensors, such as battery, are in no zone. */
+const showZone = computed(() => !isDiagnosticSensorType(form.type));
+
+const zones = computed(() => device.value?.farm?.zones ?? []);
+
+const zoneUnavailableHint = computed(() => {
+    if (!device.value) {
+        return 'Enter a device UUID to choose a zone.';
+    }
+
+    return device.value.farm ? null : 'This device is unassigned. Put it on a farm to choose a zone.';
+});
+
+watch([zones, showZone], () => {
+    if (!showZone.value || !zones.value.some((zone) => zone.id === form.zone_id)) {
+        form.zone_id = '';
+    }
 });
 
 function submit(): void {
@@ -171,6 +196,13 @@ onMounted(getLocation);
                         <Button v-if="form.errors.device_uuid === props.unregisteredDeviceMessage" variant="outline" as-child class="self-start">
                             <a :href="route('devices.create', { uuid: form.device_uuid })" target="_blank" rel="noopener">Add device in a new tab</a>
                         </Button>
+                        <SensorZoneField
+                            v-if="showZone"
+                            v-model="form.zone_id"
+                            :zones="zones"
+                            :unavailable-hint="zoneUnavailableHint"
+                            :error="form.errors.zone_id"
+                        />
                         <div
                             v-if="device && farmNotice"
                             role="status"
