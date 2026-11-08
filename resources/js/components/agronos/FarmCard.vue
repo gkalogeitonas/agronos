@@ -7,7 +7,6 @@ import { computed } from 'vue';
 
 const props = defineProps<{
     farm: FarmSummary;
-    zoneCount: number;
 }>();
 
 const metrics = computed(() => [
@@ -22,7 +21,7 @@ const metrics = computed(() => [
         <div class="flex items-start justify-between gap-3">
             <div class="flex min-w-0 flex-col gap-0.5">
                 <h3 class="m-0 truncate text-xl font-bold">{{ farm.name }}</h3>
-                <div class="font-mono text-xs text-muted-foreground">{{ farm.location ?? 'No location' }} · {{ zoneCount }} zones</div>
+                <div class="font-mono text-xs text-muted-foreground">{{ farm.location ?? 'No location' }} · {{ farm.zones }} {{ farm.zones === 1 ? 'zone' : 'zones' }}</div>
             </div>
             <StatusBadge :status="farm.healthLabel" />
         </div>
