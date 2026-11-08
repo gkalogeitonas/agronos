@@ -14,27 +14,32 @@ interface Props {
     readings: Record<number, LiveReading>;
     minWidth?: string;
     emptyText?: string;
+    /** Add a Zone column; the sensors need their `zone` loaded. */
+    showZone?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     minWidth: undefined,
     emptyText: 'No sensors yet.',
+    showZone: false,
 });
 
 const { formatAge } = useTimestamp();
 
-const columns: DataTableColumn[] = [
+const columns = computed<DataTableColumn[]>(() => [
     { key: 'name', label: 'Sensor', width: '1.8fr' },
     { key: 'type', label: 'Type', width: '1.2fr' },
+    ...(props.showZone ? [{ key: 'zone', label: 'Zone', width: '1.2fr' }] : []),
     { key: 'latest', label: 'Latest', mono: true },
     { key: 'seen', label: 'Last seen', mono: true },
-];
+]);
 
 const rows = computed(() =>
     props.sensors.map((sensor) => ({
         id: sensor.id,
         name: sensor.name,
         type: sensorTypeLabel(sensor.type),
+        zone: sensor.zone?.name ?? '—',
         latest: formatReading(props.readings[sensor.id]?.value, sensorUnit(sensor.type)),
         seen: formatAge(props.readings[sensor.id]?.time),
     })),

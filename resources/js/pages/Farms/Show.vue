@@ -190,7 +190,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     <p v-if="sensorsTotal > sensors.length" class="m-0 font-mono text-meta text-muted-foreground">
                         Showing {{ sensors.length }} of {{ sensorsTotal }} sensors
                     </p>
-                    <SensorTable :sensors="sensors" :readings="liveReadings" empty-text="No sensors on this farm yet." />
+                    <SensorTable :sensors="sensors" :readings="liveReadings" show-zone empty-text="No sensors on this farm yet." />
                 </template>
                 <EmptyState v-else title="No devices on this farm yet" text="Sensors are added to a device. Add a device to this farm first.">
                     <Button as-child>

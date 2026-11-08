@@ -32,6 +32,7 @@ class SensorResource extends JsonResource
                 $this->relationLoaded('device') && $this->device?->relationLoaded('farm'),
                 fn () => $this->device?->farm?->only(['id', 'name', 'coordinates']),
             ),
+            'zone' => $this->whenLoaded('zone', fn () => $this->zone?->only(['id', 'name'])),
             'lat' => $this->lat,
             'lon' => $this->lon,
             'last_reading' => $this->last_reading,
