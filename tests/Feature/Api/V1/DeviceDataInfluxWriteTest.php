@@ -5,6 +5,7 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Models\Zone;
 use App\Services\InfluxDBFake;
 use App\Services\InfluxDBService;
 use Illuminate\Support\Facades\Queue;
@@ -92,4 +93,50 @@ test('a reading keeps its farm when the device moves before the queued write run
     $job->handle(app(InfluxDBService::class));
 
     expect(influxFake()->writes()[0]['tags']['farm_id'])->toBe($originalFarm->id);
+});
+
+test('a reading from a sensor in a zone is written with that zone as its tag', function () {
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $zone = Zone::factory()->for($farm)->create();
+    $device = Device::factory()->onFarm($farm)->create();
+    $sensor = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'zone_id' => $zone->id, 'type' => 'temperature']);
+
+    postReading($device, $sensor);
+
+    $writes = influxFake()->writes();
+    expect($writes)->toHaveCount(1);
+    expect($writes[0]['tags'])->toMatchArray(['farm_id' => $farm->id, 'zone_id' => $zone->id, 'sensor_id' => $sensor->id]);
+});
+
+test('a reading from a sensor with no zone is written without a zone tag', function () {
+    $device = Device::factory()->onFarm()->create();
+    $sensor = Sensor::factory()->create(['user_id' => $device->user_id, 'device_id' => $device->id, 'type' => 'temperature']);
+
+    postReading($device, $sensor);
+
+    $writes = influxFake()->writes();
+    expect($writes)->toHaveCount(1);
+    expect($writes[0]['tags'])->not->toHaveKey('zone_id');
+});
+
+test('a reading keeps its zone when the sensor is reassigned before the queued write runs', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $farm = Farm::factory()->create(['user_id' => $user->id]);
+    $originalZone = Zone::factory()->for($farm)->create();
+    $otherZone = Zone::factory()->for($farm)->create();
+    $device = Device::factory()->onFarm($farm)->create();
+    $sensor = Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $device->id, 'zone_id' => $originalZone->id, 'type' => 'temperature']);
+
+    postReading($device, $sensor);
+    $sensor->update(['zone_id' => $otherZone->id]);
+
+    $job = Queue::pushed(ProcessSensorInfluxData::class)->sole();
+    // Round-trip through the queue payload so the sensor is reloaded as a real worker would.
+    $job = unserialize(serialize($job));
+    $job->handle(app(InfluxDBService::class));
+
+    expect(influxFake()->writes()[0]['tags']['zone_id'])->toBe($originalZone->id);
 });

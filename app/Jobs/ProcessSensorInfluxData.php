@@ -32,6 +32,12 @@ class ProcessSensorInfluxData implements ShouldQueue
     public ?int $farmId = null;
 
     /**
+     * The zone the sensor was in when the reading arrived, null if it had none.
+     * A plain property with a default so jobs queued before it existed still unserialize.
+     */
+    public ?int $zoneId = null;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -39,8 +45,10 @@ class ProcessSensorInfluxData implements ShouldQueue
         public float $value,
         public int $timestamp,
         ?int $farmId,
+        ?int $zoneId,
     ) {
         $this->farmId = $farmId;
+        $this->zoneId = $zoneId;
         // Set queue name for time-series data processing
         $this->onQueue('sensor-data');
     }
@@ -51,7 +59,7 @@ class ProcessSensorInfluxData implements ShouldQueue
     public function handle(InfluxDBService $influx): void
     {
         try {
-            $payload = SensorMeasurementPayloadFactory::make($this->sensor, $this->value, $this->farmId);
+            $payload = SensorMeasurementPayloadFactory::make($this->sensor, $this->value, $this->farmId, $this->zoneId);
 
             // Override timestamp if provided (for historical data)
             if ($this->timestamp) {
