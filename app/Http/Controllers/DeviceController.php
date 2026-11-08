@@ -134,7 +134,7 @@ class DeviceController extends Controller
      */
     public function update(UpdateDeviceRequest $request, Device $device): RedirectResponse
     {
-        DB::transaction(function () use ($request, $device) {
+        DB::transaction(function () use ($request, $device): void {
             $device->fill($request->validated());
 
             if ($device->isDirty('farm_id')) {

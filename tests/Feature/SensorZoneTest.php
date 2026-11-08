@@ -189,12 +189,18 @@ it('takes a sensor out of its zone when an update makes it diagnostic', function
 
 it('clears the zones of a device\'s sensors when the device moves to another farm', function () {
     $sensor = Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'zone_id' => $this->zone->id]);
+    $neighbour = Sensor::factory()->create([
+        'user_id' => $this->user->id,
+        'device_id' => Device::factory()->onFarm($this->farm)->create()->id,
+        'zone_id' => $this->zone->id,
+    ]);
     $otherFarm = Farm::factory()->create(['user_id' => $this->user->id]);
 
     put(route('devices.update', $this->device), ['name' => 'Node', 'farm_id' => $otherFarm->id])
         ->assertSessionHasNoErrors();
 
-    expect($sensor->fresh()->zone_id)->toBeNull();
+    expect($sensor->fresh()->zone_id)->toBeNull()
+        ->and($neighbour->fresh()->zone_id)->toBe($this->zone->id);
 });
 
 it('clears the zones of a device\'s sensors when the device is unassigned', function () {
