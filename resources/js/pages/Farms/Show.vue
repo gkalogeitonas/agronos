@@ -4,7 +4,7 @@ import ConfirmDeleteButton from '@/components/agronos/ConfirmDeleteButton.vue';
 import DescriptionList, { type DescriptionItem } from '@/components/agronos/DescriptionList.vue';
 import DeviceTable from '@/components/agronos/DeviceTable.vue';
 import EmptyState from '@/components/agronos/EmptyState.vue';
-import LineChart from '@/components/agronos/LineChart.vue';
+import LineChart, { type LineChartSeries } from '@/components/agronos/LineChart.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import SensorTable from '@/components/agronos/SensorTable.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
@@ -17,14 +17,19 @@ import { useLiveSensorReadings } from '@/composables/useLiveSensorReadings';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { formatReading } from '@/lib/format';
-import { sampleIrrigationThreshold, sampleMoistureSeries, sampleTrends } from '@/lib/sampleData';
-import { sensorColors, signalColors } from '@/lib/theme';
+import { sensorColors, signalColors, zoneColors } from '@/lib/theme';
 import { type BreadcrumbItem, type Device } from '@/types';
 import type { Sensor } from '@/types/sensor';
 import { Head, Link } from '@inertiajs/vue3';
 import type { Polygon } from 'geojson';
 import { Pencil, Plus } from 'lucide-vue-next';
 import { computed } from 'vue';
+
+interface MoistureSeries {
+    zoneId: number | null;
+    name: string;
+    data: { x: number; y: number }[];
+}
 
 interface ReadingStats {
     avgReading: number | null;
@@ -66,6 +71,10 @@ const props = defineProps<{
     timeSeriesStats?: {
         readingStatsByType?: Record<string, ReadingStats>;
     };
+    /** Hourly mean per sensor type over the last 24 h, oldest first. Deferred. */
+    readingTrends?: Record<string, number[]>;
+    /** Hourly soil moisture over the last 24 h, one series per zone (or one farm average). Deferred. */
+    moistureSeries?: MoistureSeries[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -101,8 +110,29 @@ const readingTiles = computed(() => {
         });
 });
 
-const moistureSeries = computed(() =>
-    sampleMoistureSeries().map((series, index) => ({ ...series, color: index === 0 ? signalColors.leaf : signalColors.water, dashed: index === 1 })),
+/** Each zone keeps its colour by its place in the farm's zones by name, whichever zones have readings. */
+const zoneColorIndex = computed(
+    () => new Map([...props.zones].sort((a, b) => a.name.localeCompare(b.name)).map((zone, index) => [zone.id, index] as [number, number])),
+);
+
+const moistureChartSeries = computed<LineChartSeries[]>(() =>
+    (props.moistureSeries ?? []).map((series) => {
+        if (series.zoneId === null) {
+            const isFarmAverage = props.zones.length === 0;
+            return {
+                name: series.name,
+                data: series.data,
+                color: isFarmAverage ? sensorColors.moisture : signalColors.muted,
+                dashed: !isFarmAverage,
+            };
+        }
+        const index = zoneColorIndex.value.get(series.zoneId) ?? 0;
+        return { name: series.name, data: series.data, color: zoneColors[index % zoneColors.length], dashed: index >= zoneColors.length };
+    }),
+);
+
+const moistureChartLabel = computed(
+    () => `Line chart of soil moisture over the last 24 hours: ${moistureChartSeries.value.map((series) => series.name).join(', ')}`,
 );
 
 const farmInfo = computed<DescriptionItem[]>(() => [
@@ -119,7 +149,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <PageContainer>
-            <PageHeader eyebrow="Farm detail" :title="farm.name" sample-data>
+            <PageHeader eyebrow="Farm detail" :title="farm.name">
                 <template #actions>
                     <Button variant="outline" as-child>
                         <Link :href="route('farms.edit', farm.id)"><Pencil /> Edit</Link>
@@ -139,29 +169,26 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     :value="tile.value"
                     :unit="tile.unit"
                     :note="tile.note"
-                    :trend="sampleTrends[tile.type]"
+                    :trend="readingTrends?.[tile.type]"
+                    :trend-loading="readingTrends === undefined"
                     :trend-color="sensorColors[tile.type]"
-                    :trend-label="`${tile.label} trend, sample data`"
+                    :trend-label="`${tile.label}, hourly average over the last 24 hours`"
                 />
                 <StatTile
                     label="Devices online"
                     :value="devicesOnline"
                     :unit="`/ ${devicesTotal}`"
                     :note="devicesTotal - devicesOnline === 0 ? 'All reporting' : `${devicesTotal - devicesOnline} need attention`"
-                    :trend="sampleTrends.devices"
-                    :trend-color="signalColors.ink"
-                    trend-label="Devices online trend, sample data"
                 />
             </section>
 
             <div class="flex flex-wrap items-stretch gap-4">
                 <SectionCard title="Soil moisture, last 24 h" class="flex-[2_1_480px]">
-                    <LineChart
-                        :series="moistureSeries"
-                        unit="%"
-                        :threshold="{ value: sampleIrrigationThreshold, label: 'Irrigation threshold' }"
-                        label="Line chart of soil moisture for Zone A and Zone B over the last 24 hours, sample data"
-                    />
+                    <div v-if="moistureSeries === undefined" class="h-[240px] animate-pulse rounded-md bg-muted" aria-label="Loading chart"></div>
+                    <LineChart v-else-if="moistureChartSeries.length > 0" :series="moistureChartSeries" unit="%" :label="moistureChartLabel" />
+                    <p v-else class="m-0 flex h-[240px] items-center justify-center text-sm text-muted-foreground">
+                        No moisture readings in the last 24 h
+                    </p>
                 </SectionCard>
 
                 <SectionCard title="Needs attention" class="flex-[1_1_280px]">

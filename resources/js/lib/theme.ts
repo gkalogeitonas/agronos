@@ -47,6 +47,12 @@ export const toneColors: Record<StatusTone, string> = {
     neutral: signalColors.muted,
 };
 
+/**
+ * Line colours for the zones of a farm, in fixed order (checked for colour-blind separation of
+ * neighbours and 3:1 contrast on the card surface). Zones beyond the last colour reuse it dashed.
+ */
+export const zoneColors = ['#1f6fa8', '#d95926', '#6250d6', '#1f7a4d', '#c2477a', '#8a6d00'] as const;
+
 /** Trend line colour per sensor type, one colour per signal. */
 export const sensorColors: Record<string, string> = {
     moisture: signalColors.water,

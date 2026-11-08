@@ -127,6 +127,8 @@ class FarmController extends Controller
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),
+            'readingTrends' => Inertia::defer(fn () => $ts->readingTrends($farm)),
+            'moistureSeries' => Inertia::defer(fn () => $ts->moistureSeriesByZone($farm)),
         ]);
     }
 
