@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Sensor;
 use App\Models\User;
+use App\Models\Zone;
 
 test('guests are redirected to the login page', function () {
     $response = $this->get('/dashboard');
@@ -28,6 +29,7 @@ test('dashboard summarises the fleet and each farm', function () {
     $offline = Device::factory()->onFarm($farm)->create(['status' => DeviceStatus::OFFLINE, 'battery_level' => 10]);
     Device::factory()->onFarm($farm)->create(['status' => DeviceStatus::ONLINE, 'battery_level' => 90]);
     Device::factory()->create(['user_id' => $user->id, 'status' => DeviceStatus::OFFLINE, 'battery_level' => 90]);
+    Zone::factory()->count(2)->for($farm)->create();
 
     Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $online->id, 'type' => 'moisture', 'last_reading' => 40]);
     Sensor::factory()->create(['user_id' => $user->id, 'device_id' => $offline->id, 'type' => 'moisture', 'last_reading' => 30]);
@@ -45,6 +47,7 @@ test('dashboard summarises the fleet and each farm', function () {
             ->where('farms.0.devicesOnline', 2)
             ->where('farms.0.devicesTotal', 3)
             ->where('farms.0.moisture', 35)
+            ->where('farms.0.zones', 2)
         );
 });
 

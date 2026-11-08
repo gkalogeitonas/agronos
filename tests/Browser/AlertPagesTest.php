@@ -56,7 +56,7 @@ it('shows the real open alerts of a farm on the farms list and the farm detail',
     Alert::factory()->forDevice($device)->create(['opened_at' => now()->subMinutes(12)]);
 
     $list = visit(route('farms.index', absolute: false))
-        ->assertSee('SAMPLE DATA')
+        ->assertDontSee('SAMPLE DATA')
         ->assertNoJavaScriptErrors();
 
     expect($list->text('[role="row"]:nth-child(2) [role="cell"]:nth-child(5)'))->toBe('1');

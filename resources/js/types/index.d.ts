@@ -67,6 +67,7 @@ export interface FarmSummary {
     /** Mirrors App\\Enums\\FarmHealth. */
     health: 'ok' | 'warning' | 'offline' | 'unknown';
     healthLabel: string;
+    zones: number;
     sensors: number;
     devicesOnline: number;
     devicesTotal: number;

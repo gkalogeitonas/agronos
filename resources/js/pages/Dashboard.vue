@@ -10,7 +10,7 @@ import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { sampleActivity, sampleZoneCount } from '@/lib/sampleData';
+import { sampleActivity } from '@/lib/sampleData';
 import { type BreadcrumbItem, type FarmSummary } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -82,7 +82,7 @@ const farmsNeedingAttention = computed(() => props.farms.filter((farm) => farm.h
             <section aria-label="Farms" class="flex flex-col gap-3.5">
                 <h2 class="m-0 text-lg font-semibold">Your farms</h2>
                 <div v-if="farms.length > 0" class="flex flex-wrap gap-4">
-                    <FarmCard v-for="farm in farms" :key="farm.id" :farm="farm" :zone-count="sampleZoneCount" />
+                    <FarmCard v-for="farm in farms" :key="farm.id" :farm="farm" />
                 </div>
                 <EmptyState v-else text="You have no farms yet."
                     ><Button as-child>

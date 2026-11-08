@@ -101,6 +101,7 @@ describe('Index (Viewing Farms List)', function () {
             ->where('farms.0.id', $farm->id)
             ->where('farms.0.name', 'Test Farm')
             ->where('farms.0.location', 'Athens, Greece')
+            ->where('farms.0.zones', 0)
         );
     });
 });
