@@ -90,6 +90,7 @@ it('filters the device list on the server and keeps the filters in the url', fun
         ->assertDontSee('Pump node')
         ->type('input[type="search"]', 'pump')
         ->assertQueryStringHas('search', 'pump')
-        ->assertSee('Showing 0 devices')
+        ->assertSee('No devices match these filters.')
+        ->assertDontSee('Gate node')
         ->assertNoJavaScriptErrors();
 });

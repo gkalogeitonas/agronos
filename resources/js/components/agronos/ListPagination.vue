@@ -13,8 +13,7 @@ defineProps<{
 <template>
     <nav aria-label="Pagination" class="flex flex-wrap items-center justify-between gap-3">
         <span class="font-mono text-meta text-muted-foreground" aria-live="polite">
-            <template v-if="pagination.total > 0">Showing {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }} {{ noun }}</template>
-            <template v-else>Showing 0 {{ noun }}</template>
+            Showing {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }} {{ noun }}
         </span>
         <div v-if="pagination.last_page > 1" class="flex items-center gap-2">
             <Button v-if="pagination.prev_url" variant="outline" size="sm" as-child>

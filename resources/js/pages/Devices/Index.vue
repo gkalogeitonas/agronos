@@ -102,8 +102,9 @@ watchDebounced(search, applyFilters, { debounce: 300 });
                     </div>
                 </section>
 
+                <ListPagination v-if="pagination.total > 0" :pagination="pagination" noun="devices" />
+
                 <SectionCard>
-                    <ListPagination :pagination="pagination" noun="devices" />
                     <DeviceTable :devices="devices" show-farm min-width="860px" empty-text="No devices match these filters." />
                 </SectionCard>
             </template>
