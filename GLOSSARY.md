@@ -24,6 +24,16 @@ _Avoid_: Area, section, block
 The status of a farm derived from how many of its devices are online: OK, Warning, Offline, or Unknown when it has no devices.
 _Avoid_: Farm status
 
+### Crops
+
+**Crop**:
+A kind of plant grown, such as Olive, Wine grape or Tomato, chosen from a shared catalogue or added by a tenant for their own use. Fallow, land deliberately left unplanted, is also a crop. Variety is not part of the crop.
+_Avoid_: Plant, species, cultivation
+
+**Planting**:
+One crop on one piece of land, either a whole farm or one zone, for a period, with an optional variety. A piece of land has one planting at a time; two crops side by side are two zones. It ends when the crop leaves the land, not when it is harvested, so a perennial such as an olive grove is one planting that may never end. A zone's current planting overrides its farm's, and a zone with no current planting shows its farm's.
+_Avoid_: Crop (for the crop on the land), season, cultivation
+
 ### Hardware
 
 **Device**:
