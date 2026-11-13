@@ -64,6 +64,6 @@ it('shows the real open alerts of a farm on the farms list and the farm detail',
     visit(route('farms.show', $farm, absolute: false))
         ->assertSee('Pump shed · North Orchard · 12 min ago')
         ->assertDontSee('Zone B below threshold')
-        ->assertSee('SAMPLE DATA')
+        ->assertDontSee('SAMPLE DATA')
         ->assertNoJavaScriptErrors();
 });
