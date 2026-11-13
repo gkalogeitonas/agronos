@@ -121,6 +121,66 @@ describe('DeviceController@index', function () {
                 ->missing('devices.0.secret'));
     });
 
+    it('returns one page of devices at a time', function () {
+        $user = User::factory()->create();
+        Device::factory()->count(26)->sequence(fn ($sequence) => ['name' => sprintf('Node %02d', $sequence->index + 1)])
+            ->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->get(route('devices.index', ['page' => 2]))
+            ->assertInertia(fn ($page) => $page
+                ->has('devices', 1)
+                ->where('devices.0.name', 'Node 26')
+                ->where('pagination.current_page', 2)
+                ->where('pagination.last_page', 2)
+                ->where('pagination.total', 26));
+    });
+
+    it('filters the devices on the server', function (array $query, array $expectedNames) {
+        $user = User::factory()->create();
+        $farm = Farm::factory()->create(['user_id' => $user->id]);
+        Device::factory()->onFarm($farm)->create(['name' => 'Alpha', 'uuid' => 'uuid-alpha', 'status' => 'online', 'type' => 'wifi']);
+        Device::factory()->create(['user_id' => $user->id, 'name' => 'Bravo', 'uuid' => 'uuid-bravo', 'status' => 'offline', 'type' => 'lora']);
+        $foreignDevice = Device::factory()->onFarm()->create(['name' => 'Alpha foreign', 'status' => 'online', 'type' => 'wifi']);
+
+        $query = array_map(fn ($value) => match ($value) {
+            'FARM' => $farm->id,
+            'FOREIGN' => $foreignDevice->farm_id,
+            default => $value,
+        }, $query);
+
+        $this->actingAs($user)
+            ->get(route('devices.index', $query))
+            ->assertInertia(fn ($page) => $page
+                ->where('devices', fn ($devices) => collect($devices)->pluck('name')->all() === $expectedNames)
+                ->where('filters.farm', isset($query['farm']) ? (string) $query['farm'] : 'all'));
+    })->with([
+        'status' => [['status' => 'offline'], ['Bravo']],
+        'farm' => [['farm' => 'FARM'], ['Alpha']],
+        'unassigned farm' => [['farm' => 'unassigned'], ['Bravo']],
+        'link type' => [['link' => 'lora'], ['Bravo']],
+        'search by name' => [['search' => 'alp'], ['Alpha']],
+        'search by uuid' => [['search' => 'uuid-bra'], ['Bravo']],
+        'another tenant\'s farm' => [['farm' => 'FOREIGN'], []],
+    ]);
+
+    it('counts and offers filters across all the tenant devices, not the current page', function () {
+        $user = User::factory()->create();
+        $farm = Farm::factory()->create(['user_id' => $user->id, 'name' => 'North Field']);
+        Device::factory()->count(26)->onFarm($farm)->create(['status' => 'online', 'type' => 'wifi']);
+        Device::factory()->create(['user_id' => $user->id, 'status' => 'offline', 'type' => 'lora']);
+        Device::factory()->count(3)->create(['status' => 'error', 'type' => 'other']);
+
+        $this->actingAs($user)
+            ->get(route('devices.index', ['status' => 'online']))
+            ->assertInertia(fn ($page) => $page
+                ->has('devices', 25)
+                ->where('statusCounts', ['all' => 27, 'online' => 26, 'offline' => 1])
+                ->where('farms', [['id' => $farm->id, 'name' => 'North Field']])
+                ->where('hasUnassigned', true)
+                ->where('linkTypes', ['lora', 'wifi']));
+    });
+
     it('requires authentication', function () {
         $this->get(route('devices.index'))->assertRedirect(route('login'));
     });

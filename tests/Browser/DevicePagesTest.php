@@ -76,3 +76,20 @@ it('shows the validation error under the field when the device uuid is already t
         ->assertSee('The uuid has already been taken.')
         ->assertDontSee('All Inertia requests must receive a valid Inertia response');
 });
+
+it('filters the device list on the server and keeps the filters in the url', function () {
+    Device::factory()->create(['user_id' => $this->user->id, 'name' => 'Pump node', 'status' => 'online', 'type' => 'wifi']);
+    Device::factory()->create(['user_id' => $this->user->id, 'name' => 'Gate node', 'status' => 'offline', 'type' => 'lora']);
+
+    visit(route('devices.index', absolute: false))
+        ->assertSee('Pump node')
+        ->assertSee('Gate node')
+        ->click('[aria-label="Filter by status"] >> text=Offline')
+        ->assertQueryStringHas('status', 'offline')
+        ->assertSee('Gate node')
+        ->assertDontSee('Pump node')
+        ->type('input[type="search"]', 'pump')
+        ->assertQueryStringHas('search', 'pump')
+        ->assertSee('Showing 0 devices')
+        ->assertNoJavaScriptErrors();
+});

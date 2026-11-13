@@ -14,6 +14,8 @@ use App\Models\Farm;
 use App\Models\Sensor;
 use App\Scopes\TenantScope;
 use App\Services\TimeSeries\SensorTimeSeriesService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -24,18 +26,54 @@ class SensorController extends Controller
 {
     use AuthorizesRequests;
 
+    private const SENSORS_PER_PAGE = 50;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Sensor::class);
-        $sensors = request()->user()->sensors()->with('device:id,name,status,farm_id')->orderBy('name')->get();
-        $farms = request()->user()->farms()->orderBy('name')->get(['id', 'name']);
+
+        $filters = [
+            'type' => $request->string('type', 'all')->value(),
+            'farm' => $request->string('farm', 'all')->value(),
+            'status' => $request->string('status', 'all')->value(),
+            'group' => $request->string('group')->value() === 'type' ? 'type' : 'farm',
+        ];
+
+        $filtered = Sensor::query()
+            ->when($filters['type'] !== 'all', fn ($query) => $query->where('sensors.type', $filters['type']))
+            ->when($filters['farm'] !== 'all', fn ($query) => $query->whereHas('device', fn ($device) => $device->onFarmFilter($filters['farm'])))
+            ->when($filters['status'] !== 'all', fn ($query) => $query->whereHas('device', fn ($device) => $device->where('status', $filters['status'])));
+
+        $sensors = $filters['group'] === 'farm'
+            ? $filtered->clone()
+                ->select('sensors.*')
+                ->join('devices', 'devices.id', '=', 'sensors.device_id')
+                ->leftJoin('farms', 'farms.id', '=', 'devices.farm_id')
+                ->orderByRaw('farms.name is null')
+                ->orderBy('farms.name')
+                ->orderBy('farms.id')
+            : $filtered->clone()->orderBy('sensors.type');
+
+        $sensors = $sensors
+            ->with('device:id,name,status,farm_id')
+            ->orderBy('sensors.name')
+            ->orderBy('sensors.id')
+            ->paginate(self::SENSORS_PER_PAGE)
+            ->withQueryString();
+
+        $farms = Farm::query()->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Sensors/Index', [
-            'sensors' => $sensors,
-            'farms' => $farms,
+            'sensors' => $sensors->items(),
+            'pagination' => $this->paginationMeta($sensors),
+            'filters' => $filters,
+            'groupCounts' => $this->sensorGroupCounts($filtered, $filters['group'], $farms),
+            'typeCounts' => $this->sensorTypeCounts(),
+            'farms' => $farms->map->only(['id', 'name']),
+            'hasUnassigned' => Sensor::query()->whereHas('device', fn ($device) => $device->whereNull('farm_id'))->exists(),
         ]);
     }
 
@@ -224,5 +262,62 @@ class SensorController extends Controller
             ?? throw ValidationException::withMessages([
                 'device_uuid' => SensorRequest::UNREGISTERED_DEVICE_MESSAGE,
             ]);
+    }
+
+    /**
+     * How many of the filtered sensors fall in each group, keyed by farm id (`unassigned` for
+     * sensors whose device is on no farm) or by sensor type, in the order the list shows the groups.
+     *
+     * @param  Builder<Sensor>  $filtered
+     * @param  Collection<int, Farm>  $farms
+     * @return array<string, int>
+     */
+    private function sensorGroupCounts(Builder $filtered, string $group, Collection $farms): array
+    {
+        if ($group === 'type') {
+            return $this->countsByType($filtered);
+        }
+
+        $totals = $filtered->clone()->toBase()
+            ->join('devices', 'devices.id', '=', 'sensors.device_id')
+            ->selectRaw('devices.farm_id, count(*) as total')
+            ->groupBy('devices.farm_id')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [(string) ($row->farm_id ?? Device::UNASSIGNED_FARM_FILTER) => (int) $row->total]);
+
+        return $farms->map(fn (Farm $farm): string => (string) $farm->id)
+            ->push(Device::UNASSIGNED_FARM_FILTER)
+            ->filter(fn (string $key): bool => $totals->has($key))
+            ->mapWithKeys(fn (string $key): array => [$key => $totals[$key]])
+            ->all();
+    }
+
+    /**
+     * Sensor counts per type across all the tenant's sensors, with `all` for the total.
+     *
+     * @return array<string, int>
+     */
+    private function sensorTypeCounts(): array
+    {
+        $counts = $this->countsByType(Sensor::query());
+
+        return ['all' => array_sum($counts), ...$counts];
+    }
+
+    /**
+     * How many of the given sensors there are of each type, ordered by type.
+     *
+     * @param  Builder<Sensor>  $sensors
+     * @return array<string, int>
+     */
+    private function countsByType(Builder $sensors): array
+    {
+        return $sensors->clone()->toBase()
+            ->selectRaw('type, count(*) as total')
+            ->groupBy('type')
+            ->orderBy('type')
+            ->pluck('total', 'type')
+            ->map(fn ($total): int => (int) $total)
+            ->all();
     }
 }

@@ -150,9 +150,11 @@ it('groups and filters the sensor list by the device\'s farm', function () {
         ->assertSee('North probe')
         ->assertSee('Zone A probe')
         ->select('#farm-filter', 'unassigned')
+        ->assertQueryStringHas('farm', 'unassigned')
         ->assertSee('Zone A probe')
         ->assertDontSee('North probe')
         ->select('#farm-filter', (string) $farm->id)
+        ->assertQueryStringHas('farm', (string) $farm->id)
         ->assertSee('North probe')
         ->assertDontSee('Zone A probe')
         ->assertNoJavaScriptErrors();

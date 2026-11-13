@@ -77,6 +77,18 @@ export interface FarmSummary {
     temperature: number | null;
 }
 
+/** Page position and links of a server-paginated list, shaped by `Controller::paginationMeta()`. */
+export interface Pagination {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    prev_url: string | null;
+    next_url: string | null;
+}
+
 /** A farm a device can be placed on, as App\Http\Controllers\DeviceController offers it. */
 export interface FarmOption {
     id: number;

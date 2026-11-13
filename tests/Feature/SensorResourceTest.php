@@ -211,3 +211,65 @@ it('lists each sensor with the farm of its device', function () {
             ->where('sensors.1.device.farm_id', null)
             ->where('farms.0.id', $farm->id));
 });
+
+it('filters the sensors on the server', function (array $query, array $expectedNames) {
+    $farm = Farm::factory(['user_id' => $this->user->id])->create();
+    $placedDevice = Device::factory()->onFarm($farm)->create(['status' => 'online']);
+    $this->device->update(['status' => 'offline']);
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $placedDevice->id, 'name' => 'Placed probe', 'type' => 'moisture']);
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'name' => 'Loose probe', 'type' => 'light']);
+    $foreignDevice = Device::factory()->onFarm()->create(['status' => 'online']);
+    Sensor::factory()->create(['user_id' => $foreignDevice->user_id, 'device_id' => $foreignDevice->id, 'name' => 'Foreign probe', 'type' => 'moisture']);
+
+    $query = array_map(fn ($value) => match ($value) {
+        'FARM' => $farm->id,
+        'FOREIGN' => $foreignDevice->farm_id,
+        default => $value,
+    }, $query);
+
+    get(route('sensors.index', $query))
+        ->assertInertia(fn ($page) => $page
+            ->where('sensors', fn ($sensors) => collect($sensors)->pluck('name')->all() === $expectedNames)
+            ->where('filters.farm', isset($query['farm']) ? (string) $query['farm'] : 'all'));
+})->with([
+    'type' => [['type' => 'light'], ['Loose probe']],
+    'farm' => [['farm' => 'FARM'], ['Placed probe']],
+    'unassigned farm' => [['farm' => 'unassigned'], ['Loose probe']],
+    'device status' => [['status' => 'online'], ['Placed probe']],
+    'another tenant\'s farm' => [['farm' => 'FOREIGN'], []],
+]);
+
+it('orders the sensors by their group, with unassigned last, and counts each whole group', function () {
+    $southFarm = Farm::factory(['user_id' => $this->user->id])->create(['name' => 'South']);
+    $northFarm = Farm::factory(['user_id' => $this->user->id])->create(['name' => 'North']);
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'name' => 'A loose', 'type' => 'humidity']);
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => Device::factory()->onFarm($southFarm), 'name' => 'B south', 'type' => 'temperature']);
+    Sensor::factory()->count(50)->sequence(fn ($sequence) => ['name' => sprintf('C north %02d', $sequence->index)])
+        ->create(['user_id' => $this->user->id, 'device_id' => Device::factory()->onFarm($northFarm), 'type' => 'moisture']);
+
+    get(route('sensors.index', ['page' => 2]))
+        ->assertInertia(fn ($page) => $page
+            ->where('sensors', fn ($sensors) => collect($sensors)->pluck('name')->all() === ['B south', 'A loose'])
+            ->where('groupCounts', [(string) $northFarm->id => 50, (string) $southFarm->id => 1, 'unassigned' => 1]));
+
+    get(route('sensors.index', ['group' => 'type']))
+        ->assertInertia(fn ($page) => $page
+            ->where('sensors.0.name', 'A loose')
+            ->where('sensors.1.name', 'C north 00')
+            ->where('groupCounts', ['humidity' => 1, 'moisture' => 50, 'temperature' => 1]));
+});
+
+it('counts and offers sensor filters across all the tenant sensors, not the current page', function () {
+    $farm = Farm::factory(['user_id' => $this->user->id])->create(['name' => 'North Field']);
+    Sensor::factory()->count(51)->create(['user_id' => $this->user->id, 'device_id' => Device::factory()->onFarm($farm), 'type' => 'moisture']);
+    Sensor::factory()->create(['user_id' => $this->user->id, 'device_id' => $this->device->id, 'type' => 'light']);
+    Sensor::factory()->count(2)->create(['type' => 'humidity']);
+
+    get(route('sensors.index', ['type' => 'moisture']))
+        ->assertInertia(fn ($page) => $page
+            ->has('sensors', 50)
+            ->where('pagination.total', 51)
+            ->where('typeCounts', ['all' => 52, 'light' => 1, 'moisture' => 51])
+            ->where('farms', [['id' => $farm->id, 'name' => 'North Field']])
+            ->where('hasUnassigned', true));
+});

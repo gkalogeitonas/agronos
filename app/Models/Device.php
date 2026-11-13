@@ -18,6 +18,9 @@ class Device extends Authenticatable
 {
     use BelongsToTenant, HasApiTokens, HasFactory;
 
+    /** Farm filter value for devices on no farm, as in `?farm=unassigned`. */
+    public const UNASSIGNED_FARM_FILTER = 'unassigned';
+
     protected $fillable = [
         'user_id',
         'farm_id',
@@ -95,6 +98,16 @@ class Device extends Authenticatable
     public function scopeLowBattery(Builder $query): Builder
     {
         return $query->where('battery_level', '<', self::lowBatteryPercent());
+    }
+
+    /**
+     * Scope to devices on the farm a list filter names: a farm id, or `unassigned` for devices on no farm.
+     */
+    public function scopeOnFarmFilter(Builder $query, string $farm): Builder
+    {
+        return $farm === self::UNASSIGNED_FARM_FILTER
+            ? $query->whereNull($this->qualifyColumn('farm_id'))
+            : $query->where($this->qualifyColumn('farm_id'), (int) $farm);
     }
 
     public function isLoRa(): bool

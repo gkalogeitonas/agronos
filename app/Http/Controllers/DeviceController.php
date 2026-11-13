@@ -25,20 +25,38 @@ class DeviceController extends Controller
 {
     use AuthorizesRequests;
 
+    private const DEVICES_PER_PAGE = 25;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Device::class);
 
+        $filters = [
+            'status' => $request->string('status', 'all')->value(),
+            'farm' => $request->string('farm', 'all')->value(),
+            'link' => $request->string('link', 'all')->value(),
+            'search' => $request->string('search')->trim()->value(),
+        ];
+
         $devices = Device::query()
             ->with('farm:id,name')
+            ->when($filters['status'] !== 'all', fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['farm'] !== 'all', fn ($query) => $query->onFarmFilter($filters['farm']))
+            ->when($filters['link'] !== 'all', fn ($query) => $query->where('type', $filters['link']))
+            ->when($filters['search'] !== '', fn ($query) => $query->whereAny(['name', 'uuid'], 'like', '%'.$filters['search'].'%'))
             ->orderBy('name')
-            ->get();
+            ->orderBy('id')
+            ->paginate(self::DEVICES_PER_PAGE)
+            ->withQueryString();
 
         return Inertia::render('Devices/Index', [
-            'devices' => DeviceResource::collection($devices)->resolve(),
+            'devices' => DeviceResource::collection($devices->items())->resolve(),
+            'pagination' => $this->paginationMeta($devices),
+            'filters' => $filters,
+            ...$this->deviceFilterOptions(),
         ]);
     }
 
@@ -156,6 +174,27 @@ class DeviceController extends Controller
         $device->delete();
 
         return redirect()->route('devices.index')->with('success', 'Device deleted.');
+    }
+
+    /**
+     * Filter choices and status counts across all the tenant's devices, whatever page or filter is shown.
+     *
+     * @return array{statusCounts: array<string, int>, farms: Collection<int, array{id: int, name: string}>, hasUnassigned: bool, linkTypes: list<string>}
+     */
+    private function deviceFilterOptions(): array
+    {
+        $statusCounts = Device::query()->toBase()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->map(fn ($total): int => (int) $total);
+
+        return [
+            'statusCounts' => ['all' => $statusCounts->sum(), ...$statusCounts->all()],
+            'farms' => $this->farmOptions(),
+            'hasUnassigned' => Device::query()->whereNull('farm_id')->exists(),
+            'linkTypes' => Device::query()->toBase()->distinct()->orderBy('type')->pluck('type')->all(),
+        ];
     }
 
     /**

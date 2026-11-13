@@ -3,6 +3,7 @@ import DeviceTable from '@/components/agronos/DeviceTable.vue';
 import EmptyState from '@/components/agronos/EmptyState.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
 import FilterSelect from '@/components/agronos/FilterSelect.vue';
+import ListPagination from '@/components/agronos/ListPagination.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -11,50 +12,58 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { deviceStatusOptions } from '@/lib/enums';
 import { deviceTypeLabel } from '@/lib/format';
-import { type BreadcrumbItem, type Device } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { type BreadcrumbItem, type Device, type FarmOption, type Pagination } from '@/types';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { watchDebounced } from '@vueuse/core';
+import { computed, ref, watch } from 'vue';
 
 type StatusFilter = 'all' | Device['status'];
 
+/** Filters applied on the server; `farm` is a farm id, `unassigned` or `all`, as in `?farm=<id>` from the farm page. */
+interface DeviceFilters {
+    status: string;
+    farm: string;
+    link: string;
+    search: string;
+}
+
 const props = defineProps<{
     devices: Device[];
+    pagination: Pagination;
+    filters: DeviceFilters;
+    /** Devices per status across the tenant, with `all` for the total. */
+    statusCounts: Record<string, number>;
+    farms: FarmOption[];
+    hasUnassigned: boolean;
+    linkTypes: string[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Devices', href: route('devices.index') }];
 
-const status = ref<StatusFilter>('all');
-const search = ref('');
-/** Preselected by `?farm=<id>`, as the farm page's "View all" link does. */
-const farm = ref(new URL(window.location.href).searchParams.get('farm') ?? 'all');
-const link = ref('all');
+const status = ref(props.filters.status as StatusFilter);
+const search = ref(props.filters.search);
+const farm = ref(props.filters.farm);
+const link = ref(props.filters.link);
 
 const statusOptions = computed<FilterChipOption<StatusFilter>[]>(() => [
-    { value: 'all', label: 'All', count: props.devices.length },
+    { value: 'all', label: 'All', count: props.statusCounts.all ?? 0 },
     ...deviceStatusOptions().map(({ value, label }) => ({
         value: value as Device['status'],
         label,
-        count: props.devices.filter((device) => device.status === value).length,
+        count: props.statusCounts[value] ?? 0,
     })),
 ]);
 
-const farmOptions = computed(() =>
-    [...new Map(props.devices.flatMap((device) => (device.farm ? [[device.farm.id, device.farm]] : []))).values()].sort((a, b) =>
-        a.name.localeCompare(b.name),
-    ),
-);
-const hasUnassigned = computed(() => props.devices.some((device) => !device.farm));
-const linkOptions = computed(() => [...new Set(props.devices.map((device) => device.type))].sort());
+/** Reloads the list from the server with the current filters, back on its first page. */
+const applyFilters = () => {
+    const query = { status: status.value, farm: farm.value, link: link.value, search: search.value.trim() };
+    const params = Object.fromEntries(Object.entries(query).filter(([, value]) => value !== 'all' && value !== ''));
 
-const filteredDevices = computed(() => {
-    const query = search.value.trim().toLowerCase();
+    router.get(route('devices.index'), params, { preserveState: true, preserveScroll: true, replace: true });
+};
 
-    return props.devices
-        .filter((device) => status.value === 'all' || device.status === status.value)
-        .filter((device) => farm.value === 'all' || (farm.value === 'unassigned' ? !device.farm : String(device.farm?.id) === farm.value))
-        .filter((device) => link.value === 'all' || device.type === link.value)
-        .filter((device) => query === '' || `${device.name} ${device.uuid}`.toLowerCase().includes(query));
-});
+watch([status, farm, link], applyFilters);
+watchDebounced(search, applyFilters, { debounce: 300 });
 </script>
 
 <template>
@@ -70,7 +79,7 @@ const filteredDevices = computed(() => {
                 </template>
             </PageHeader>
 
-            <template v-if="devices.length > 0">
+            <template v-if="(statusCounts.all ?? 0) > 0">
                 <section aria-label="Filters" class="flex flex-col gap-4">
                     <FilterChips v-model="status" :options="statusOptions" label="Filter by status" />
                     <div class="flex flex-wrap items-center gap-3">
@@ -83,21 +92,19 @@ const filteredDevices = computed(() => {
                         />
                         <FilterSelect v-model="farm" label="Farm">
                             <option value="all">All farms</option>
-                            <option v-for="option in farmOptions" :key="option.id" :value="String(option.id)">{{ option.name }}</option>
+                            <option v-for="option in farms" :key="option.id" :value="String(option.id)">{{ option.name }}</option>
                             <option v-if="hasUnassigned" value="unassigned">Unassigned</option>
                         </FilterSelect>
                         <FilterSelect v-model="link" label="Link">
                             <option value="all">All links</option>
-                            <option v-for="type in linkOptions" :key="type" :value="type">{{ deviceTypeLabel(type) }}</option>
+                            <option v-for="type in linkTypes" :key="type" :value="type">{{ deviceTypeLabel(type) }}</option>
                         </FilterSelect>
                     </div>
                 </section>
 
                 <SectionCard>
-                    <div class="font-mono text-meta text-muted-foreground" aria-live="polite">
-                        Showing {{ filteredDevices.length }} of {{ devices.length }} devices
-                    </div>
-                    <DeviceTable :devices="filteredDevices" show-farm min-width="860px" empty-text="No devices match these filters." />
+                    <ListPagination :pagination="pagination" noun="devices" />
+                    <DeviceTable :devices="devices" show-farm min-width="860px" empty-text="No devices match these filters." />
                 </SectionCard>
             </template>
 

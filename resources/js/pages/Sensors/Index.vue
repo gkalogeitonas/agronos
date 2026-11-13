@@ -3,6 +3,7 @@ import DataTable, { type DataTableColumn } from '@/components/agronos/DataTable.
 import EmptyState from '@/components/agronos/EmptyState.vue';
 import FilterChips, { type FilterChipOption } from '@/components/agronos/FilterChips.vue';
 import FilterSelect from '@/components/agronos/FilterSelect.vue';
+import ListPagination from '@/components/agronos/ListPagination.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
 import StatusBadge from '@/components/agronos/StatusBadge.vue';
 import PageContainer from '@/components/PageContainer.vue';
@@ -13,78 +14,93 @@ import { useTimestamp } from '@/composables/useTimestamp';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { deviceStatusOptions, sensorTypeLabel, sensorUnit } from '@/lib/enums';
 import { formatReading } from '@/lib/format';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type FarmOption, type Pagination } from '@/types';
 import type { Sensor } from '@/types/sensor';
-import { Head, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+
+type GroupBy = 'farm' | 'type';
+
+/** Filters applied on the server; `farm` is a farm id, `unassigned` or `all`, as in `?farm=<id>` from the farm page. */
+interface SensorFilters {
+    type: string;
+    farm: string;
+    status: string;
+    group: GroupBy;
+}
 
 const props = defineProps<{
+    /** One page of sensors, ordered by group and then name. */
     sensors: Sensor[];
-    farms: { id: number; name: string }[];
+    pagination: Pagination;
+    filters: SensorFilters;
+    /** Filtered sensors in each whole group, keyed by farm id (or `unassigned`) or by type. */
+    groupCounts: Record<string, number>;
+    /** Sensors per type across the tenant, with `all` for the total. */
+    typeCounts: Record<string, number>;
+    farms: FarmOption[];
+    hasUnassigned: boolean;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Sensors', href: route('sensors.index') }];
 
 const { formatAge } = useTimestamp();
+/** Subscribes to the sensors on this page only; each filter or page change remounts the page with its own sensors. */
 const liveReadings = useLiveSensorReadings(props.sensors);
 
-const type = ref('all');
-/** Preselected by `?farm=<id>`, as the farm page's "View all" link does. */
-const farmId = ref(new URL(window.location.href).searchParams.get('farm') ?? 'all');
-const status = ref('all');
-const groupBy = ref<'farm' | 'type'>('farm');
+const type = ref(props.filters.type);
+const farmId = ref(props.filters.farm);
+const status = ref(props.filters.status);
+const groupBy = ref<GroupBy>(props.filters.group);
 
 /** Filter value for sensors whose device is on no farm. */
 const UNASSIGNED = 'unassigned';
 
 const sensorFarmId = (sensor: Sensor): number | null => sensor.device?.farm_id ?? null;
 const farmName = (id: number | null): string => props.farms.find((farm) => farm.id === id)?.name ?? 'Unassigned';
-const hasUnassigned = computed(() => props.sensors.some((sensor) => sensorFarmId(sensor) === null));
-const matchesFarm = (sensor: Sensor): boolean => {
-    if (farmId.value === 'all') {
-        return true;
-    }
-    const id = sensorFarmId(sensor);
-    return farmId.value === UNASSIGNED ? id === null : String(id) === farmId.value;
-};
 const sensorStatus = (sensor: Sensor): string => sensor.device?.status ?? 'unknown';
 
-const typeOptions = computed<FilterChipOption[]>(() => {
-    const types = [...new Set(props.sensors.map((sensor) => sensor.type))].sort();
-    return [
-        { value: 'all', label: 'All', count: props.sensors.length },
-        ...types.map((value) => ({ value, label: sensorTypeLabel(value), count: props.sensors.filter((sensor) => sensor.type === value).length })),
-    ];
-});
+const typeOptions = computed<FilterChipOption[]>(() => [
+    { value: 'all', label: 'All', count: props.typeCounts.all ?? 0 },
+    ...Object.entries(props.typeCounts)
+        .filter(([value]) => value !== 'all')
+        .map(([value, count]) => ({ value, label: sensorTypeLabel(value), count })),
+]);
 
-const groupOptions: FilterChipOption<'farm' | 'type'>[] = [
+const groupOptions: FilterChipOption<GroupBy>[] = [
     { value: 'farm', label: 'Farm' },
     { value: 'type', label: 'Type' },
 ];
 
-const filtered = computed(() =>
-    props.sensors
-        .filter((sensor) => type.value === 'all' || sensor.type === type.value)
-        .filter(matchesFarm)
-        .filter((sensor) => status.value === 'all' || sensorStatus(sensor) === status.value),
-);
-
+/** Splits the page's rows into consecutive groups; the server orders sensors by group, so a group may continue on the next page. */
 const groups = computed(() => {
-    const keyOf = (sensor: Sensor) => (groupBy.value === 'farm' ? farmName(sensorFarmId(sensor)) : sensorTypeLabel(sensor.type));
-    const titles = [...new Set(filtered.value.map(keyOf))].sort();
+    const keyOf = (sensor: Sensor): string => (groupBy.value === 'farm' ? String(sensorFarmId(sensor) ?? UNASSIGNED) : sensor.type);
+    const titleOf = (sensor: Sensor): string => (groupBy.value === 'farm' ? farmName(sensorFarmId(sensor)) : sensorTypeLabel(sensor.type));
+    const result: { key: string; title: string; sensors: Sensor[] }[] = [];
 
-    return titles.map((title) => {
-        const rows = filtered.value
-            .filter((sensor) => keyOf(sensor) === title)
-            .map((sensor) => ({
+    props.sensors.forEach((sensor) => {
+        const key = keyOf(sensor);
+        if (result.at(-1)?.key !== key) {
+            result.push({ key, title: titleOf(sensor), sensors: [] });
+        }
+        result.at(-1)!.sensors.push(sensor);
+    });
+
+    return result.map(({ key, title, sensors }) => {
+        const total = props.groupCounts[key] ?? sensors.length;
+        return {
+            key,
+            title,
+            count: total === 1 ? '1 sensor' : `${total} sensors`,
+            rows: sensors.map((sensor) => ({
                 id: sensor.id,
                 name: sensor.name,
                 context: groupBy.value === 'farm' ? sensorTypeLabel(sensor.type) : farmName(sensorFarmId(sensor)),
                 latest: formatReading(liveReadings[sensor.id]?.value, sensorUnit(sensor.type)),
                 seen: formatAge(liveReadings[sensor.id]?.time),
                 status: sensorStatus(sensor),
-            }));
-        return { title, rows, count: rows.length === 1 ? '1 sensor' : `${rows.length} sensors` };
+            })),
+        };
     });
 });
 
@@ -95,6 +111,17 @@ const columns = computed<DataTableColumn[]>(() => [
     { key: 'seen', label: 'Last seen', mono: true },
     { key: 'status', label: 'Status' },
 ]);
+
+/** Reloads the list from the server with the current filters, back on its first page. */
+watch([type, farmId, status, groupBy], () => {
+    const query = { type: type.value, farm: farmId.value, status: status.value };
+    const params = {
+        ...Object.fromEntries(Object.entries(query).filter(([, value]) => value !== 'all')),
+        ...(groupBy.value === 'type' ? { group: 'type' } : {}),
+    };
+
+    router.get(route('sensors.index'), params, { preserveScroll: true, replace: true });
+});
 </script>
 
 <template>
@@ -110,7 +137,7 @@ const columns = computed<DataTableColumn[]>(() => [
                 </template>
             </PageHeader>
 
-            <template v-if="sensors.length > 0">
+            <template v-if="(typeCounts.all ?? 0) > 0">
                 <section aria-label="Filters" class="flex flex-col gap-4">
                     <FilterChips v-model="type" :options="typeOptions" label="Filter by sensor type" />
                     <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -130,11 +157,13 @@ const columns = computed<DataTableColumn[]>(() => [
                     </div>
                 </section>
 
-                <div v-if="groups.length === 0" class="rounded-xl border bg-card p-8 text-center text-body text-muted-foreground">
+                <div v-if="pagination.total === 0" class="rounded-xl border bg-card p-8 text-center text-body text-muted-foreground">
                     No sensors match these filters.
                 </div>
 
-                <SectionCard v-for="group in groups" :key="group.title" :title="group.title">
+                <ListPagination v-else :pagination="pagination" noun="sensors" />
+
+                <SectionCard v-for="group in groups" :key="group.key" :title="group.title">
                     <template #title-extra>
                         <span class="font-mono text-meta text-muted-foreground">{{ group.count }}</span>
                     </template>
