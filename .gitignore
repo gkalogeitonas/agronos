@@ -36,3 +36,4 @@ docs/report4.1.pdf
 docs/report5.pdf
 .playwright-mcp/
 tests/Browser/Screenshots
+scripts/ralph.sh

@@ -4,7 +4,7 @@
 # fresh Claude Code session per issue, each reachable through Remote Control
 # (claude.ai/code or the Claude app) under the name ralph-issue-<number>.
 #
-#   scripts/ralph.sh [--spec N] [--ask] [--merge] [--max N] [--timeout MINUTES] [--dry-run]
+#   scripts/ralph.sh [--spec N [--branch NAME]] [--ask] [--merge] [--max N] [--timeout MINUTES] [--dry-run]
 #
 #   --spec N           Work only the sub-issues of spec issue N. Each one is merged
 #                      locally with --no-ff into the branch spec/issue-N, with no
@@ -13,6 +13,9 @@
 #                      with a merge commit, and it closes the spec and its issues.
 #                      Issues stay open until then, so a blocker counts as
 #                      resolved once it is merged into the spec branch.
+#   --branch NAME      Name of the spec branch, with --spec (default spec/issue-N),
+#                      e.g. spec/mailchimp-ecommerce-sync. It is created from main
+#                      when it does not exist yet.
 #   --ask              Sessions ask you about decisions and wait for your reply
 #                      through Remote Control, instead of deciding themselves.
 #                      Waiting counts towards --timeout.
@@ -55,6 +58,7 @@ dry_run=false
 ask_maintainer=false
 merge_prs=false
 spec_issue=""
+spec_branch=""
 base_branch=main
 
 log() {
@@ -336,6 +340,7 @@ main() {
             --dry-run) dry_run=true; shift ;;
             --ask) ask_maintainer=true; shift ;;
             --merge) merge_prs=true; shift ;;
+            --branch) spec_branch=$2; shift 2 ;;
             --spec)
                 [[ "${2:-}" =~ ^[0-9]+$ ]] || die "--spec needs an issue number"
                 spec_issue=$2
@@ -345,6 +350,11 @@ main() {
             *) die "Unknown option: $1" ;;
         esac
     done
+
+    if [[ -n "$spec_branch" ]]; then
+        [[ -n "$spec_issue" ]] || die "--branch needs --spec"
+        base_branch=$spec_branch
+    fi
 
     if [[ -n "$spec_issue" && "$merge_prs" == true ]]; then
         die "--merge has no effect with --spec, which already merges into its branch"
