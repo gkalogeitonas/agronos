@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\SensorType;
+use App\Models\Crop;
 use App\Models\Device;
 use App\Models\Farm;
+use App\Models\Planting;
 use App\Models\Sensor;
 use App\Models\User;
 use App\Models\Zone;
@@ -83,6 +85,7 @@ class DevEnvironmentSeeder extends Seeder
                     'description' => 'Alias necessitatibus cupiditate quia recusandae hic consequatur. Omnis pariatur in cum autem sunt. Cupiditate eveniet numquam qui corrupti corrupti consequatur aut.',
                 ],
                 'zones' => ['Βόρειος αμπελώνας', 'Νότιος αμπελώνας'],
+                'crop' => 'Wine grape',
                 'user' => [
                     'name' => 'john Doe',
                     'email' => 'johndoe@gmail.com',
@@ -179,6 +182,10 @@ class DevEnvironmentSeeder extends Seeder
 
             $zones = $this->seedZones($farm, $entry['zones'] ?? []);
 
+            if (isset($entry['crop'])) {
+                $this->seedWholeFarmPlanting($farm, $entry['crop']);
+            }
+
             foreach ($entry['sensors'] as $sentry) {
                 $deviceData = $sentry['device'] ?? null;
                 $device = null;
@@ -206,6 +213,19 @@ class DevEnvironmentSeeder extends Seeder
         }
 
         $this->seedLargeFarm($deviceSecret);
+    }
+
+    /**
+     * Give the farm a single whole-farm planting of a catalogue crop, keyed by farm so re-seeding updates it in place.
+     */
+    private function seedWholeFarmPlanting(Farm $farm, string $cropName): void
+    {
+        $crop = Crop::query()->withoutGlobalScopes()->whereNull('user_id')->where('name', $cropName)->firstOrFail();
+
+        Planting::allTenants()->updateOrCreate(
+            ['farm_id' => $farm->id, 'zone_id' => null],
+            ['user_id' => $farm->user_id, 'crop_id' => $crop->id]
+        );
     }
 
     /**

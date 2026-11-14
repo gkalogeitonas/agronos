@@ -85,7 +85,7 @@ function submit(): void {
                     <Textarea
                         id="farm-description"
                         v-model="form.description"
-                        placeholder="Crops, soil, anything worth remembering"
+                        placeholder="Soil, access, anything worth remembering"
                         class="bg-card"
                     />
                 </FormField>

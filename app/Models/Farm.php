@@ -99,6 +99,16 @@ class Farm extends Model
         return Zone::AUTOMATIC_NAME_PREFIX.$number;
     }
 
+    /**
+     * What grows on this farm: whole-farm plantings, and those of its zones (ADR-0010). Deleting the farm deletes them.
+     *
+     * @return HasMany<Planting, $this>
+     */
+    public function plantings(): HasMany
+    {
+        return $this->hasMany(Planting::class);
+    }
+
     public function devices(): HasMany
     {
         return $this->hasMany(Device::class);

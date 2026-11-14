@@ -20,7 +20,6 @@ class Sensor extends Model
         'user_id',
         'device_id',
         'zone_id',
-        'crop_id',
         'name',
         'uuid',
         'type',

@@ -8,7 +8,9 @@ use App\Http\Requests\FarmRequest;
 use App\Http\Resources\AlertResource;
 use App\Http\Resources\DeviceResource;
 use App\Models\Alert;
+use App\Models\Crop;
 use App\Models\Farm;
+use App\Models\Planting;
 use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -124,6 +126,8 @@ class FarmController extends Controller
             'zones' => $farm->zones()->withCount('sensors')->orderBy('id')->get(['id', 'name'])
                 ->map->only(['id', 'name', 'sensors_count'])->values(),
             'nextZoneName' => $farm->nextZoneName(),
+            'plantings' => $this->wholeFarmPlantings($farm),
+            'crops' => Crop::orderBy('name')->get(['id', 'name']),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
             'timeSeriesStats' => Inertia::defer(fn () => $ts->farmStats($farm, '-24h')),
@@ -166,5 +170,33 @@ class FarmController extends Controller
 
         return redirect()->route('farms.index')
             ->with('success', 'Farm deleted successfully.');
+    }
+
+    /**
+     * The farm's whole-farm plantings: current first, then upcoming, then past.
+     *
+     * @return list<array{id: int, crop_id: int, crop_name: string, variety: string|null, started_on: string|null, ended_on: string|null, status: string}>
+     */
+    private function wholeFarmPlantings(Farm $farm): array
+    {
+        $today = now()->startOfDay();
+        $order = [Planting::STATUS_CURRENT => 0, Planting::STATUS_UPCOMING => 1, Planting::STATUS_PAST => 2];
+
+        return $farm->plantings()->wholeFarm()->with('crop:id,name')->get()
+            ->map(fn (Planting $planting) => [
+                'id' => $planting->id,
+                'crop_id' => $planting->crop_id,
+                'crop_name' => $planting->crop->name,
+                'variety' => $planting->variety,
+                'started_on' => $planting->started_on?->toDateString(),
+                'ended_on' => $planting->ended_on?->toDateString(),
+                'status' => $planting->statusOn($today),
+            ])
+            ->sortBy([
+                fn (array $a, array $b) => $order[$a['status']] <=> $order[$b['status']],
+                fn (array $a, array $b) => strcmp($b['started_on'] ?? '', $a['started_on'] ?? ''),
+            ])
+            ->values()
+            ->all();
     }
 }
