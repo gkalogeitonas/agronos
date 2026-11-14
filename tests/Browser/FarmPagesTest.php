@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Crop;
 use App\Models\Device;
 use App\Models\Farm;
+use App\Models\Planting;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -174,4 +176,24 @@ it('adds a zone without a name as Zone 1 from the farm page', function () {
         ->assertNoJavaScriptErrors();
 
     assertDatabaseHas('zones', ['farm_id' => $farm->id, 'name' => 'Zone 1']);
+});
+
+it('offers to end the current crop when adding the next one', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+    $olive = Crop::query()->where('name', 'Olive')->sole();
+    $wheat = Crop::query()->where('name', 'Wheat')->sole();
+    $current = Planting::factory()->for($farm)->create(['crop_id' => $olive->id, 'started_on' => '2024-01-01']);
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->click('section[aria-label="Crops"] >> text=Add crop')
+        ->select('#planting-crop', (string) $wheat->id)
+        ->fill('#planting-start', '2026-05-01')
+        ->press('[role="dialog"] button[type="submit"]')
+        ->assertSeeIn('[role="dialog"]', 'Olive (2024-01-01 to now) is still growing. End it on 2026-05-01 to add this crop?')
+        ->press('[role="dialog"] button:has-text("End it and add")')
+        ->assertSeeIn('section[aria-label="Crops"] ul', 'Wheat')
+        ->assertSeeIn('section[aria-label="Crops"] ul', '2024-01-01 to 2026-05-01')
+        ->assertNoJavaScriptErrors();
+
+    expect($current->fresh()->ended_on->toDateString())->toBe('2026-05-01');
 });

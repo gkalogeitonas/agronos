@@ -107,16 +107,29 @@ class Planting extends Model
     }
 
     /**
-     * The first other whole-farm planting on the farm that the given period would overlap, if any.
+     * Every other whole-farm planting on the farm that the given period would overlap.
+     *
+     * @return Collection<int, Planting>
      */
-    public static function clashWithin(Farm $farm, ?CarbonInterface $startedOn, ?CarbonInterface $endedOn, ?Planting $ignoring = null): ?Planting
+    public static function clashesWithin(Farm $farm, ?CarbonInterface $startedOn, ?CarbonInterface $endedOn, ?Planting $ignoring = null): Collection
     {
         /** @var Collection<int, Planting> $others */
         $others = $farm->plantings()->wholeFarm()->with('crop')
             ->when($ignoring, fn (Builder $query) => $query->whereKeyNot($ignoring->getKey()))
             ->get();
 
-        return $others->first(fn (Planting $other) => $other->overlaps($startedOn, $endedOn));
+        return $others->filter(fn (Planting $other) => $other->overlaps($startedOn, $endedOn))->values();
+    }
+
+    /**
+     * Whether a new planting starting on the given day can replace this one by ending it that day:
+     * this one has no end and started before that day.
+     */
+    public function canBeReplacedFrom(?CarbonInterface $startedOn): bool
+    {
+        return $startedOn !== null
+            && $this->ended_on === null
+            && ($this->started_on === null || $this->started_on->lessThan($startedOn));
     }
 
     /**
