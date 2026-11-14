@@ -223,7 +223,7 @@ describe('overlapping plantings', function () {
     it('names an open-ended planting that clashes', function () {
         $this->existing->update(['ended_on' => null]);
 
-        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2026-01-01'])
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'ended_on' => '2025-01-01'])
             ->assertSessionHasErrors('started_on');
 
         expect(session('errors')->first('started_on'))->toContain('Olive (2024-01-01 to now)');
@@ -253,6 +253,98 @@ describe('overlapping plantings', function () {
             ->assertSessionHasErrors('started_on');
 
         expect($later->fresh()->started_on->toDateString())->toBe('2025-01-01');
+    });
+});
+
+describe('replacing the current planting', function () {
+    beforeEach(function () {
+        $this->current = Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id, 'started_on' => '2024-01-01']);
+        $this->wheat = Crop::query()->where('name', 'Wheat')->sole();
+    });
+
+    it('ends the current planting on the new start date and adds the new one', function () {
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2026-05-01', 'end_current' => true])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('farms.show', $this->farm));
+
+        expect($this->current->fresh()->ended_on->toDateString())->toBe('2026-05-01');
+        assertDatabaseHas('plantings', ['farm_id' => $this->farm->id, 'crop_id' => $this->wheat->id, 'ended_on' => null]);
+    });
+
+    it('without the flag, asks to end the current planting and changes nothing', function () {
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2026-05-01'])
+            ->assertSessionHasErrors(['end_current' => 'Olive (2024-01-01 to now) is still growing. End it on 2026-05-01 to add this crop?']);
+
+        expect($this->current->fresh()->ended_on)->toBeNull()
+            ->and($this->farm->plantings()->count())->toBe(1);
+    });
+
+    it('replaces a current planting that has no start date', function () {
+        $this->current->update(['started_on' => null]);
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2026-05-01', 'end_current' => true])
+            ->assertSessionHasNoErrors();
+
+        expect($this->current->fresh()->ended_on->toDateString())->toBe('2026-05-01');
+    });
+
+    it('does not excuse a clash with an ended planting', function () {
+        $this->current->update(['ended_on' => '2026-08-01']);
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2026-05-01', 'end_current' => true])
+            ->assertSessionHasErrors('started_on');
+
+        expect($this->current->fresh()->ended_on->toDateString())->toBe('2026-08-01')
+            ->and($this->farm->plantings()->count())->toBe(1);
+    });
+
+    it('does not excuse a clash with a planting that starts later', function () {
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2023-01-01', 'end_current' => true])
+            ->assertSessionHasErrors('started_on');
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2024-01-01', 'end_current' => true])
+            ->assertSessionHasErrors('started_on');
+
+        expect($this->current->fresh()->ended_on)->toBeNull()
+            ->and($this->farm->plantings()->count())->toBe(1);
+    });
+
+    it('does not excuse a new planting with no start date', function () {
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'end_current' => true])
+            ->assertSessionHasErrors('started_on');
+
+        expect($this->current->fresh()->ended_on)->toBeNull();
+    });
+
+    it('does not excuse more than one clashing planting', function () {
+        $this->current->update(['ended_on' => '2026-01-01']);
+        $next = Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id, 'started_on' => '2026-01-01']);
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'started_on' => '2025-06-01', 'end_current' => true])
+            ->assertSessionHasErrors('started_on');
+
+        expect($next->fresh()->ended_on)->toBeNull()
+            ->and($this->farm->plantings()->count())->toBe(2);
+    });
+
+    it('does not replace when a planting is corrected', function () {
+        $later = Planting::factory()->for($this->farm)->create(['crop_id' => $this->wheat->id, 'started_on' => '2030-01-01']);
+
+        put(route('farms.plantings.update', [$this->farm, $later]), ['crop_id' => $this->wheat->id, 'started_on' => '2026-05-01', 'end_current' => true])
+            ->assertSessionHasErrors('started_on');
+
+        expect($this->current->fresh()->ended_on)->toBeNull()
+            ->and($later->fresh()->started_on->toDateString())->toBe('2030-01-01');
+    });
+
+    it('does not let another user replace a planting on their farm', function () {
+        $otherFarm = Farm::factory()->create();
+        $theirs = Planting::factory()->for($otherFarm)->create(['crop_id' => $this->olive->id, 'started_on' => '2024-01-01']);
+
+        post(route('farms.plantings.store', $otherFarm), ['crop_id' => $this->wheat->id, 'started_on' => '2026-05-01', 'end_current' => true])
+            ->assertNotFound();
+
+        expect($theirs->fresh()->ended_on)->toBeNull();
+        assertDatabaseMissing('plantings', ['farm_id' => $otherFarm->id, 'crop_id' => $this->wheat->id]);
     });
 });
 

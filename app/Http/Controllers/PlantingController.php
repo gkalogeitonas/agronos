@@ -8,6 +8,7 @@ use App\Models\Farm;
 use App\Models\Planting;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Adds, corrects, ends and deletes the whole-farm plantings of a farm. They have no pages of their own: this all happens in dialogs on Farm detail.
@@ -16,17 +17,27 @@ class PlantingController extends Controller
 {
     use AuthorizesRequests;
 
+    /**
+     * Adds the planting. When the grower agreed to replace the current planting, that one ends on the new start date in the same transaction.
+     */
     public function store(PlantingRequest $request, Farm $farm): RedirectResponse
     {
         $this->authorize('update', $farm);
 
-        $planting = $farm->plantings()->create([
-            ...$request->validated(),
-            'user_id' => $farm->user_id,
-        ]);
+        $ended = $request->plantingToEnd();
 
-        return redirect()->route('farms.show', $farm)
-            ->with('success', "{$planting->crop->name} added.");
+        $planting = DB::transaction(function () use ($request, $farm, $ended): Planting {
+            $ended?->update(['ended_on' => $request->date('started_on')]);
+
+            return $farm->plantings()->create([
+                ...$request->safe()->except('end_current'),
+                'user_id' => $farm->user_id,
+            ]);
+        });
+
+        $message = $ended ? "{$ended->crop->name} ended and {$planting->crop->name} added." : "{$planting->crop->name} added.";
+
+        return redirect()->route('farms.show', $farm)->with('success', $message);
     }
 
     public function update(PlantingRequest $request, Farm $farm, Planting $planting): RedirectResponse
@@ -34,7 +45,7 @@ class PlantingController extends Controller
         $this->ensureWholeFarm($planting);
         $this->authorize('update', $planting);
 
-        $planting->update($request->validated());
+        $planting->update($request->safe()->except('end_current'));
 
         return redirect()->route('farms.show', $farm)
             ->with('success', "{$planting->crop->name} updated.");

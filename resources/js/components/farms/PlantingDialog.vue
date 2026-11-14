@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 export interface FarmPlanting {
     id: number;
@@ -33,6 +33,7 @@ export interface CropOption {
 
 /**
  * Dialog that adds a whole-farm planting, or corrects one. Both dates are optional.
+ * When the new planting would follow the current one, the server asks first; the grower can then end the current one on the new start date.
  */
 const props = defineProps<{
     farmId: number;
@@ -49,6 +50,7 @@ function initialValues() {
         variety: props.planting?.variety ?? '',
         started_on: props.planting?.started_on ?? '',
         ended_on: props.planting?.ended_on ?? '',
+        end_current: false,
     };
 }
 
@@ -64,7 +66,14 @@ function onOpenChange(isOpen: boolean): void {
     }
 }
 
-function submit(): void {
+/** The offer to end the current planting names the start date, so it no longer holds once that date changes. */
+watch(
+    () => form.started_on,
+    () => form.clearErrors('end_current'),
+);
+
+function submit(endCurrent = false): void {
+    form.end_current = endCurrent;
     const options = { preserveScroll: true, onSuccess: () => (open.value = false) };
 
     if (props.planting) {
@@ -81,7 +90,7 @@ function submit(): void {
             <slot />
         </DialogTrigger>
         <DialogContent>
-            <form class="flex flex-col gap-6" @submit.prevent="submit">
+            <form class="flex flex-col gap-6" @submit.prevent="submit()">
                 <DialogHeader class="space-y-3">
                     <DialogTitle>{{ planting ? `Edit ${planting.crop_name}` : 'Add crop' }}</DialogTitle>
                     <DialogDescription>
@@ -104,6 +113,12 @@ function submit(): void {
                     <FormField :id="`planting-end${idSuffix}`" label="Ended (optional)" :error="form.errors.ended_on">
                         <Input :id="`planting-end${idSuffix}`" v-model="form.ended_on" type="date" />
                     </FormField>
+                </div>
+                <div v-if="form.errors.end_current" class="flex flex-col gap-3 rounded-md border p-3 text-body">
+                    <p class="m-0">{{ form.errors.end_current }}</p>
+                    <div>
+                        <Button type="button" size="sm" :disabled="form.processing" @click="submit(true)">End it and add</Button>
+                    </div>
                 </div>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
