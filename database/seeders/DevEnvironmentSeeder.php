@@ -183,7 +183,7 @@ class DevEnvironmentSeeder extends Seeder
             $zones = $this->seedZones($farm, $entry['zones'] ?? []);
 
             if (isset($entry['crop'])) {
-                $this->seedWholeFarmPlanting($farm, $entry['crop']);
+                $this->seedPlanting($farm, null, $entry['crop']);
             }
 
             foreach ($entry['sensors'] as $sentry) {
@@ -216,15 +216,15 @@ class DevEnvironmentSeeder extends Seeder
     }
 
     /**
-     * Give the farm a single whole-farm planting of a catalogue crop, keyed by farm so re-seeding updates it in place.
+     * Plant a catalogue crop on the whole farm or one zone, keyed by its land and crop so re-seeding updates it in place.
      */
-    private function seedWholeFarmPlanting(Farm $farm, string $cropName): void
+    private function seedPlanting(Farm $farm, ?Zone $zone, string $cropName, ?string $startedOn = null, ?string $endedOn = null): void
     {
         $crop = Crop::query()->withoutGlobalScopes()->whereNull('user_id')->where('name', $cropName)->firstOrFail();
 
         Planting::allTenants()->updateOrCreate(
-            ['farm_id' => $farm->id, 'zone_id' => null],
-            ['user_id' => $farm->user_id, 'crop_id' => $crop->id]
+            ['farm_id' => $farm->id, 'zone_id' => $zone?->id, 'crop_id' => $crop->id],
+            ['user_id' => $farm->user_id, 'started_on' => $startedOn, 'ended_on' => $endedOn]
         );
     }
 
@@ -251,6 +251,8 @@ class DevEnvironmentSeeder extends Seeder
     /**
      * A farm with many devices. Each device has one or two reading sensors and a battery sensor.
      * The reading sensors of the first grid rows are in a zone per row; battery sensors are never in a zone.
+     * The farm grows olives. The first row zone has no planting of its own, so it shows the farm's;
+     * the second grew wheat before its tomatoes, and the third is left fallow.
      * Devices and sensors are keyed by UUID and the farm and zones by name, so re-seeding updates them in place.
      */
     private function seedLargeFarm(string $deviceSecret): void
@@ -276,6 +278,11 @@ class DevEnvironmentSeeder extends Seeder
         );
 
         $rowZones = array_values($this->seedZones($farm, [...self::LARGE_FARM_ROW_ZONES, self::LARGE_FARM_EMPTY_ZONE]));
+
+        $this->seedPlanting($farm, null, 'Olive', '2015-03-01');
+        $this->seedPlanting($farm, $rowZones[1], 'Wheat', '2024-11-01', '2025-06-15');
+        $this->seedPlanting($farm, $rowZones[1], 'Tomato', '2026-04-01');
+        $this->seedPlanting($farm, $rowZones[2], 'Fallow', '2025-10-01');
 
         $columns = 10;
         $rows = (int) ceil(self::LARGE_FARM_DEVICE_COUNT / $columns);

@@ -11,6 +11,7 @@ use App\Models\Alert;
 use App\Models\Crop;
 use App\Models\Farm;
 use App\Models\Planting;
+use App\Models\Zone;
 use App\Services\FarmOverviewService;
 use App\Services\TimeSeries\FarmTimeSeriesService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -123,10 +124,9 @@ class FarmController extends Controller
             'alerts' => AlertResource::collection(
                 $farm->alerts()->open()->withLineDetails()->mostUrgentFirst()->limit(Alert::CARD_LIMIT)->get()
             )->resolve(),
-            'zones' => $farm->zones()->withCount('sensors')->orderBy('id')->get(['id', 'name'])
-                ->map->only(['id', 'name', 'sensors_count'])->values(),
+            'zones' => $this->zonesWithCrops($farm),
             'nextZoneName' => $farm->nextZoneName(),
-            'plantings' => $this->wholeFarmPlantings($farm),
+            'plantings' => $this->plantings($farm),
             'crops' => Crop::orderBy('name')->get(['id', 'name']),
             'sensorDbStats' => $sensorDbStats,
             // defer heavy/time-series work to a follow-up request so initial page is fast
@@ -173,18 +173,56 @@ class FarmController extends Controller
     }
 
     /**
-     * The farm's whole-farm plantings: current first, then upcoming, then past.
+     * The farm's zones, each with its sensor and planting counts and its crop: its current planting's,
+     * otherwise the farm's current whole-farm planting's (ADR-0010), otherwise none.
      *
-     * @return list<array{id: int, crop_id: int, crop_name: string, variety: string|null, started_on: string|null, ended_on: string|null, status: string}>
+     * @return list<array{id: int, name: string, sensors_count: int, plantings_count: int, crop: array{name: string, from_farm: bool}|null}>
      */
-    private function wholeFarmPlantings(Farm $farm): array
+    private function zonesWithCrops(Farm $farm): array
+    {
+        $today = now()->startOfDay();
+        $farmCrop = $farm->plantings()->onLand(null)->currentOn($today)->with('crop:id,name')->first()?->crop->name;
+
+        return $farm->zones()
+            ->withCount(['sensors', 'plantings'])
+            ->with(['plantings' => fn ($query) => $query->currentOn($today)->with('crop:id,name')])
+            ->orderBy('id')
+            ->get(['id', 'name'])
+            ->map(function (Zone $zone) use ($farmCrop) {
+                $zoneCrop = $zone->plantings->first()?->crop->name;
+
+                return [
+                    'id' => $zone->id,
+                    'name' => $zone->name,
+                    'sensors_count' => $zone->sensors_count,
+                    'plantings_count' => $zone->plantings_count,
+                    'crop' => match (true) {
+                        $zoneCrop !== null => ['name' => $zoneCrop, 'from_farm' => false],
+                        $farmCrop !== null => ['name' => $farmCrop, 'from_farm' => true],
+                        default => null,
+                    },
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The farm's plantings, of the whole farm and of its zones: current first, then upcoming, then past.
+     * At the same status the whole farm comes before its zones, then the most recent start first.
+     *
+     * @return list<array{id: int, zone_id: int|null, zone_name: string|null, crop_id: int, crop_name: string, variety: string|null, started_on: string|null, ended_on: string|null, status: string}>
+     */
+    private function plantings(Farm $farm): array
     {
         $today = now()->startOfDay();
         $order = [Planting::STATUS_CURRENT => 0, Planting::STATUS_UPCOMING => 1, Planting::STATUS_PAST => 2];
 
-        return $farm->plantings()->wholeFarm()->with('crop:id,name')->get()
+        return $farm->plantings()->with(['crop:id,name', 'zone:id,name'])->get()
             ->map(fn (Planting $planting) => [
                 'id' => $planting->id,
+                'zone_id' => $planting->zone_id,
+                'zone_name' => $planting->zone?->name,
                 'crop_id' => $planting->crop_id,
                 'crop_name' => $planting->crop->name,
                 'variety' => $planting->variety,
@@ -194,6 +232,7 @@ class FarmController extends Controller
             ])
             ->sortBy([
                 fn (array $a, array $b) => $order[$a['status']] <=> $order[$b['status']],
+                fn (array $a, array $b) => ($a['zone_id'] !== null) <=> ($b['zone_id'] !== null),
                 fn (array $a, array $b) => strcmp($b['started_on'] ?? '', $a['started_on'] ?? ''),
             ])
             ->values()

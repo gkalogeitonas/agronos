@@ -5,6 +5,7 @@ use App\Models\Device;
 use App\Models\Farm;
 use App\Models\Planting;
 use App\Models\User;
+use App\Models\Zone;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -217,4 +218,26 @@ it('adds a crop missing from the list and selects it in the planting dialog', fu
 
     expect($saffron->user_id)->toBe($this->user->id);
     assertDatabaseHas('plantings', ['farm_id' => $farm->id, 'crop_id' => $saffron->id]);
+});
+
+it('plants a crop in one zone, which then shows it over the farm\'s crop', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+    $north = Zone::factory()->for($farm)->create(['name' => 'North']);
+    Zone::factory()->for($farm)->create(['name' => 'South']);
+    $olive = Crop::query()->where('name', 'Olive')->sole();
+    $wheat = Crop::query()->where('name', 'Wheat')->sole();
+    Planting::factory()->for($farm)->create(['crop_id' => $olive->id]);
+
+    visit(route('farms.show', $farm, absolute: false))
+        ->assertSeeIn('section[aria-label="Zones"] ul li:has-text("North")', "Olive (farm's crop)")
+        ->click('section[aria-label="Crops"] >> text=Add crop')
+        ->select('#planting-land', (string) $north->id)
+        ->select('#planting-crop', (string) $wheat->id)
+        ->press('[role="dialog"] button[type="submit"]')
+        ->assertSeeIn('section[aria-label="Crops"] ul', 'North · Current')
+        ->assertSeeIn('section[aria-label="Zones"] ul li:has-text("North")', 'Wheat')
+        ->assertSeeIn('section[aria-label="Zones"] ul li:has-text("South")', "Olive (farm's crop)")
+        ->assertNoJavaScriptErrors();
+
+    assertDatabaseHas('plantings', ['farm_id' => $farm->id, 'zone_id' => $north->id, 'crop_id' => $wheat->id]);
 });

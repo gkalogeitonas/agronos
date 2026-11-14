@@ -70,13 +70,25 @@ class Planting extends Model
     }
 
     /**
-     * Plantings of a whole farm, not of one of its zones.
+     * Plantings of one piece of land: the whole farm when no zone is given, otherwise that zone.
      *
      * @param  Builder<Planting>  $query
      */
-    public function scopeWholeFarm(Builder $query): void
+    public function scopeOnLand(Builder $query, ?int $zoneId): void
     {
-        $query->whereNull('zone_id');
+        $query->when($zoneId === null, fn (Builder $query) => $query->whereNull('zone_id'), fn (Builder $query) => $query->where('zone_id', $zoneId));
+    }
+
+    /**
+     * Plantings that are current on the given day: started by then, and not yet ended.
+     *
+     * @param  Builder<Planting>  $query
+     */
+    public function scopeCurrentOn(Builder $query, CarbonInterface $today): void
+    {
+        $day = $today->toDateString();
+        $query->where(fn (Builder $query) => $query->whereNull('started_on')->orWhereDate('started_on', '<=', $day))
+            ->where(fn (Builder $query) => $query->whereNull('ended_on')->orWhereDate('ended_on', '>', $day));
     }
 
     /**
@@ -107,14 +119,15 @@ class Planting extends Model
     }
 
     /**
-     * Every other whole-farm planting on the farm that the given period would overlap.
+     * Every other planting on the same piece of land (the whole farm when no zone is given, otherwise that zone)
+     * that the given period would overlap. A whole-farm planting and a zone planting never clash.
      *
      * @return Collection<int, Planting>
      */
-    public static function clashesWithin(Farm $farm, ?CarbonInterface $startedOn, ?CarbonInterface $endedOn, ?Planting $ignoring = null): Collection
+    public static function clashesWithin(Farm $farm, ?int $zoneId, ?CarbonInterface $startedOn, ?CarbonInterface $endedOn, ?Planting $ignoring = null): Collection
     {
         /** @var Collection<int, Planting> $others */
-        $others = $farm->plantings()->wholeFarm()->with('crop')
+        $others = $farm->plantings()->onLand($zoneId)->with('crop')
             ->when($ignoring, fn (Builder $query) => $query->whereKeyNot($ignoring->getKey()))
             ->get();
 

@@ -133,11 +133,10 @@ describe('adding a crop', function () {
 });
 
 describe('listing plantings on the farm page', function () {
-    it('lists whole-farm plantings, current first, then upcoming, then past', function () {
+    it('lists the farm\'s plantings, current first, then upcoming, then past', function () {
         $past = Planting::factory()->for($this->farm)->ended()->create();
         $upcoming = Planting::factory()->for($this->farm)->future()->create();
         $current = Planting::factory()->for($this->farm)->create();
-        Planting::factory()->for($this->farm)->forZone()->create();
 
         get(route('farms.show', $this->farm))->assertInertia(fn (AssertableInertia $page) => $page
             ->has('plantings', 3)
@@ -148,6 +147,22 @@ describe('listing plantings on the farm page', function () {
             ->where('plantings.2.id', $past->id)
             ->where('plantings.2.status', 'past')
             ->has('crops')
+        );
+    });
+
+    it('lists zone plantings with their zone, after the whole farm\'s at the same status', function () {
+        $zone = Zone::factory()->for($this->farm)->create(['name' => 'North']);
+        $inZone = Planting::factory()->for($this->farm)->forZone($zone)->create(['started_on' => '2025-01-01']);
+        $wholeFarm = Planting::factory()->for($this->farm)->create(['started_on' => '2024-01-01']);
+
+        get(route('farms.show', $this->farm))->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('plantings', 2)
+            ->where('plantings.0.id', $wholeFarm->id)
+            ->where('plantings.0.zone_id', null)
+            ->where('plantings.0.zone_name', null)
+            ->where('plantings.1.id', $inZone->id)
+            ->where('plantings.1.zone_id', $zone->id)
+            ->where('plantings.1.zone_name', 'North')
         );
     });
 
@@ -235,7 +250,7 @@ describe('adding a planting', function () {
     it('puts the planting on the farm in the route, ignoring a farm id in the form', function () {
         $otherFarm = Farm::factory()->create(['user_id' => $this->user->id]);
 
-        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->olive->id, 'farm_id' => $otherFarm->id, 'zone_id' => Zone::factory()->for($otherFarm)->create()->id]);
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->olive->id, 'farm_id' => $otherFarm->id]);
 
         assertDatabaseHas('plantings', ['farm_id' => $this->farm->id, 'zone_id' => null]);
         assertDatabaseMissing('plantings', ['farm_id' => $otherFarm->id]);
@@ -530,14 +545,117 @@ describe('deleting a planting', function () {
 });
 
 describe('zone plantings', function () {
-    it('cannot be corrected, ended or deleted through the whole-farm routes', function () {
-        $zonePlanting = Planting::factory()->for($this->farm)->forZone()->create(['crop_id' => $this->olive->id]);
+    beforeEach(function () {
+        $this->zone = Zone::factory()->for($this->farm)->create(['name' => 'North']);
+        $this->wheat = Crop::query()->where('name', 'Wheat')->sole();
+    });
 
-        put(route('farms.plantings.update', [$this->farm, $zonePlanting]), ['crop_id' => $this->olive->id, 'variety' => 'Changed'])->assertNotFound();
-        patch(route('farms.plantings.end', [$this->farm, $zonePlanting]))->assertNotFound();
-        delete(route('farms.plantings.destroy', [$this->farm, $zonePlanting]))->assertNotFound();
+    it('adds a planting to a zone of the farm', function () {
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->olive->id, 'zone_id' => $this->zone->id])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('farms.show', $this->farm));
 
-        assertDatabaseHas('plantings', ['id' => $zonePlanting->id, 'variety' => null, 'ended_on' => null]);
+        assertDatabaseHas('plantings', ['farm_id' => $this->farm->id, 'zone_id' => $this->zone->id, 'crop_id' => $this->olive->id, 'user_id' => $this->user->id]);
+    });
+
+    it('refuses a zone of another of the user\'s farms', function () {
+        $otherZone = Zone::factory()->for(Farm::factory()->create(['user_id' => $this->user->id]))->create();
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->olive->id, 'zone_id' => $otherZone->id])
+            ->assertSessionHasErrors(['zone_id' => 'Choose a zone of this farm.']);
+
+        expect(Planting::query()->count())->toBe(0);
+    });
+
+    it('refuses another user\'s zone', function () {
+        $theirZone = Zone::factory()->create();
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->olive->id, 'zone_id' => $theirZone->id])
+            ->assertSessionHasErrors('zone_id');
+
+        expect(Planting::allTenants()->count())->toBe(0);
+    });
+
+    it('refuses an overlapping planting in the same zone', function () {
+        Planting::factory()->for($this->farm)->forZone($this->zone)->create(['crop_id' => $this->olive->id, 'started_on' => '2024-01-01', 'ended_on' => '2024-12-31']);
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'zone_id' => $this->zone->id, 'started_on' => '2024-06-01', 'ended_on' => '2025-01-01'])
+            ->assertSessionHasErrors(['started_on' => 'This overlaps the planting of Olive (2024-01-01 to 2024-12-31). A zone has one planting at a time.']);
+    });
+
+    it('lets plantings in different zones overlap', function () {
+        $south = Zone::factory()->for($this->farm)->create(['name' => 'South']);
+        Planting::factory()->for($this->farm)->forZone($south)->create(['crop_id' => $this->olive->id]);
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'zone_id' => $this->zone->id])->assertSessionHasNoErrors();
+    });
+
+    it('lets a zone planting overlap the whole-farm planting', function () {
+        Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id]);
+
+        post(route('farms.plantings.store', $this->farm), ['crop_id' => $this->wheat->id, 'zone_id' => $this->zone->id])->assertSessionHasNoErrors();
+
+        expect($this->farm->plantings()->count())->toBe(2);
+    });
+
+    it('checks a corrected planting against the land it moves to', function () {
+        $wholeFarm = Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id]);
+        Planting::factory()->for($this->farm)->forZone($this->zone)->create(['crop_id' => $this->wheat->id]);
+
+        put(route('farms.plantings.update', [$this->farm, $wholeFarm]), ['crop_id' => $this->olive->id, 'zone_id' => $this->zone->id])
+            ->assertSessionHasErrors('started_on');
+
+        expect($wholeFarm->fresh()->zone_id)->toBeNull();
+    });
+
+    it('ends the zone\'s current planting to replace it, leaving the whole-farm planting alone', function () {
+        $wholeFarm = Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id, 'started_on' => '2024-01-01']);
+        $current = Planting::factory()->for($this->farm)->forZone($this->zone)->create(['crop_id' => $this->olive->id, 'started_on' => '2024-01-01']);
+        $fields = ['crop_id' => $this->wheat->id, 'zone_id' => $this->zone->id, 'started_on' => '2026-05-01'];
+
+        post(route('farms.plantings.store', $this->farm), $fields)
+            ->assertSessionHasErrors(['end_current' => 'Olive (2024-01-01 to now) is still growing. End it on 2026-05-01 to add this crop?']);
+        post(route('farms.plantings.store', $this->farm), [...$fields, 'end_current' => true])->assertSessionHasNoErrors();
+
+        expect($current->fresh()->ended_on->toDateString())->toBe('2026-05-01')
+            ->and($wholeFarm->fresh()->ended_on)->toBeNull();
+        assertDatabaseHas('plantings', ['zone_id' => $this->zone->id, 'crop_id' => $this->wheat->id, 'ended_on' => null]);
+    });
+
+    it('can be corrected, moved to the whole farm, ended and deleted', function () {
+        $planting = Planting::factory()->for($this->farm)->forZone($this->zone)->create(['crop_id' => $this->olive->id, 'started_on' => '2024-01-01']);
+
+        put(route('farms.plantings.update', [$this->farm, $planting]), ['crop_id' => $this->olive->id, 'zone_id' => $this->zone->id, 'variety' => 'Koroneiki', 'started_on' => '2024-01-01'])
+            ->assertSessionHasNoErrors();
+        expect($planting->fresh())->variety->toBe('Koroneiki')->zone_id->toBe($this->zone->id);
+
+        put(route('farms.plantings.update', [$this->farm, $planting]), ['crop_id' => $this->olive->id, 'started_on' => '2024-01-01'])
+            ->assertSessionHasNoErrors();
+        expect($planting->fresh()->zone_id)->toBeNull();
+
+        patch(route('farms.plantings.end', [$this->farm, $planting]), ['ended_on' => '2026-05-01'])->assertSessionHasNoErrors();
+        expect($planting->fresh()->ended_on->toDateString())->toBe('2026-05-01');
+
+        delete(route('farms.plantings.destroy', [$this->farm, $planting]))->assertRedirect(route('farms.show', $this->farm));
+        assertDatabaseMissing('plantings', ['id' => $planting->id]);
+    });
+
+    it('cannot be moved to another user\'s zone', function () {
+        $planting = Planting::factory()->for($this->farm)->forZone($this->zone)->create(['crop_id' => $this->olive->id]);
+
+        put(route('farms.plantings.update', [$this->farm, $planting]), ['crop_id' => $this->olive->id, 'zone_id' => Zone::factory()->create()->id])
+            ->assertSessionHasErrors('zone_id');
+
+        expect($planting->fresh()->zone_id)->toBe($this->zone->id);
+    });
+
+    it('does not let another user add a planting to their zone', function () {
+        $theirZone = Zone::factory()->create();
+
+        post(route('farms.plantings.store', $theirZone->farm_id), ['crop_id' => $this->olive->id, 'zone_id' => $theirZone->id])
+            ->assertNotFound();
+
+        expect(Planting::allTenants()->count())->toBe(0);
     });
 
     it('cannot be reached under another of the user\'s farms', function () {

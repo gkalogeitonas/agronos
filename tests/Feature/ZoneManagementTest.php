@@ -1,10 +1,13 @@
 <?php
 
+use App\Models\Crop;
 use App\Models\Device;
 use App\Models\Farm;
+use App\Models\Planting;
 use App\Models\Sensor;
 use App\Models\User;
 use App\Models\Zone;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 
 use function Pest\Laravel\actingAs;
@@ -169,7 +172,7 @@ it('lists the farm\'s zones on its page with their sensor counts and the next au
 
     get(route('farms.show', $this->farm))->assertInertia(fn (AssertableInertia $page) => $page
         ->has('zones', 2)
-        ->where('zones.0', ['id' => $zone->id, 'name' => 'Zone 1', 'sensors_count' => 2])
+        ->where('zones.0', ['id' => $zone->id, 'name' => 'Zone 1', 'sensors_count' => 2, 'plantings_count' => 0, 'crop' => null])
         ->where('zones.1.name', 'Greenhouse')
         ->where('zones.1.sensors_count', 0)
         ->where('nextZoneName', 'Zone 2'));
@@ -181,3 +184,59 @@ it('lets only the owner rename or delete a zone', function (string $ability) {
     expect($this->user->can($ability, $zone))->toBeTrue()
         ->and(User::factory()->create()->can($ability, $zone))->toBeFalse();
 })->with(['update', 'delete']);
+
+describe('the crop of each zone on the farm page', function () {
+    beforeEach(function () {
+        $this->olive = Crop::query()->where('name', 'Olive')->sole();
+        $this->wheat = Crop::query()->where('name', 'Wheat')->sole();
+    });
+
+    it('is the zone\'s current planting, overriding the farm\'s', function () {
+        $zone = Zone::factory()->for($this->farm)->create();
+        Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id]);
+        Planting::factory()->for($this->farm)->forZone($zone)->create(['crop_id' => $this->wheat->id]);
+        Planting::factory()->for($this->farm)->forZone($zone)->ended()->create(['crop_id' => $this->olive->id]);
+
+        get(route('farms.show', $this->farm))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('zones.0.crop', ['name' => 'Wheat', 'from_farm' => false])
+            ->where('zones.0.plantings_count', 2));
+    });
+
+    it('is the farm\'s current planting when the zone has none', function () {
+        $zone = Zone::factory()->for($this->farm)->create();
+        Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id]);
+        Planting::factory()->for($this->farm)->forZone($zone)->future()->create(['crop_id' => $this->wheat->id]);
+
+        get(route('farms.show', $this->farm))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('zones.0.crop', ['name' => 'Olive', 'from_farm' => true]));
+    });
+
+    it('is loaded without a query per zone', function () {
+        $countQueries = function (): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            get(route('farms.show', $this->farm))->assertOk();
+
+            return count(DB::getQueryLog());
+        };
+
+        Planting::factory()->for($this->farm)->forZone(Zone::factory()->for($this->farm)->create())->create();
+        $withOneZone = $countQueries();
+        foreach (Zone::factory()->count(3)->for($this->farm)->create() as $zone) {
+            Planting::factory()->for($this->farm)->forZone($zone)->create();
+        }
+
+        expect($countQueries())->toBe($withOneZone);
+    });
+});
+
+it('deletes the zone\'s plantings with it, but not the farm\'s', function () {
+    $zone = Zone::factory()->for($this->farm)->create();
+    $inZone = Planting::factory()->for($this->farm)->forZone($zone)->create();
+    $wholeFarm = Planting::factory()->for($this->farm)->create();
+
+    delete(route('farms.zones.destroy', [$this->farm, $zone]))->assertRedirect(route('farms.show', $this->farm));
+
+    assertDatabaseMissing('plantings', ['id' => $inZone->id]);
+    assertDatabaseHas('plantings', ['id' => $wholeFarm->id]);
+});
