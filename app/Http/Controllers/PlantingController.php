@@ -11,7 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Adds, corrects, ends and deletes the whole-farm plantings of a farm. They have no pages of their own: this all happens in dialogs on Farm detail.
+ * Adds, corrects, ends and deletes the plantings of a farm and its zones. They have no pages of their own: this all happens in dialogs on Farm detail.
  */
 class PlantingController extends Controller
 {
@@ -30,7 +30,7 @@ class PlantingController extends Controller
             $ended?->update(['ended_on' => $request->date('started_on')]);
 
             return $farm->plantings()->create([
-                ...$request->safe()->except('end_current'),
+                ...$request->plantingAttributes(),
                 'user_id' => $farm->user_id,
             ]);
         });
@@ -42,10 +42,9 @@ class PlantingController extends Controller
 
     public function update(PlantingRequest $request, Farm $farm, Planting $planting): RedirectResponse
     {
-        $this->ensureWholeFarm($planting);
         $this->authorize('update', $planting);
 
-        $planting->update($request->safe()->except('end_current'));
+        $planting->update($request->plantingAttributes());
 
         return redirect()->route('farms.show', $farm)
             ->with('success', "{$planting->crop->name} updated.");
@@ -56,7 +55,6 @@ class PlantingController extends Controller
      */
     public function end(EndPlantingRequest $request, Farm $farm, Planting $planting): RedirectResponse
     {
-        $this->ensureWholeFarm($planting);
         $this->authorize('update', $planting);
 
         $planting->update(['ended_on' => $request->date('ended_on')]);
@@ -67,20 +65,11 @@ class PlantingController extends Controller
 
     public function destroy(Farm $farm, Planting $planting): RedirectResponse
     {
-        $this->ensureWholeFarm($planting);
         $this->authorize('delete', $planting);
 
         $planting->delete();
 
         return redirect()->route('farms.show', $farm)
             ->with('success', "{$planting->crop->name} deleted.");
-    }
-
-    /**
-     * These routes manage whole-farm plantings only; a zone's planting is not theirs to change.
-     */
-    private function ensureWholeFarm(Planting $planting): void
-    {
-        abort_unless($planting->zone_id === null, 404);
     }
 }

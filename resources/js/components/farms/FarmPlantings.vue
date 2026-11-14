@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import ConfirmDeleteButton from '@/components/agronos/ConfirmDeleteButton.vue';
 import SectionCard from '@/components/agronos/SectionCard.vue';
-import PlantingDialog, { type CropOption, type FarmPlanting } from '@/components/farms/PlantingDialog.vue';
+import PlantingDialog, { type CropOption, type FarmPlanting, type ZoneOption } from '@/components/farms/PlantingDialog.vue';
 import { Button } from '@/components/ui/button';
 import { router } from '@inertiajs/vue3';
 import { CalendarCheck, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 
 /**
- * The Crops section of Farm detail: lists what grows on the whole farm, current plantings first, then past ones.
+ * The Crops section of Farm detail: lists what grows on the whole farm and in each zone, current plantings first, then past ones.
  */
 const props = defineProps<{
     farmId: number;
     plantings: FarmPlanting[];
     crops: CropOption[];
+    zones: ZoneOption[];
 }>();
 
 const statusLabels: Record<FarmPlanting['status'], string> = { current: 'Current', upcoming: 'Upcoming', past: 'Past' };
@@ -33,7 +34,7 @@ function end(planting: FarmPlanting): void {
 <template>
     <SectionCard title="Crops">
         <template #actions>
-            <PlantingDialog :farm-id="farmId" :crops="crops">
+            <PlantingDialog :farm-id="farmId" :crops="crops" :zones="zones">
                 <Button variant="outline" size="sm"><Plus /> Add crop</Button>
             </PlantingDialog>
         </template>
@@ -43,7 +44,9 @@ function end(planting: FarmPlanting): void {
                     <span class="truncate font-medium"
                         >{{ planting.crop_name }}<template v-if="planting.variety"> · {{ planting.variety }}</template></span
                     >
-                    <span class="font-mono text-meta text-muted-foreground">{{ statusLabels[planting.status] }} · {{ period(planting) }}</span>
+                    <span class="font-mono text-meta text-muted-foreground"
+                        >{{ planting.zone_name ?? 'Whole farm' }} · {{ statusLabels[planting.status] }} · {{ period(planting) }}</span
+                    >
                 </div>
                 <div class="flex items-center gap-1">
                     <Button
@@ -55,7 +58,7 @@ function end(planting: FarmPlanting): void {
                     >
                         <CalendarCheck />
                     </Button>
-                    <PlantingDialog :farm-id="farmId" :crops="crops" :planting="planting">
+                    <PlantingDialog :farm-id="farmId" :crops="crops" :zones="zones" :planting="planting">
                         <Button variant="ghost" size="icon" :aria-label="`Edit ${planting.crop_name}`"><Pencil /></Button>
                     </PlantingDialog>
                     <ConfirmDeleteButton

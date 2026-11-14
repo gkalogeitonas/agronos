@@ -43,4 +43,14 @@ class Zone extends Model
     {
         return $this->hasMany(Sensor::class);
     }
+
+    /**
+     * What has grown, grows or will grow on the zone. Deleting the zone deletes them.
+     *
+     * @return HasMany<Planting, $this>
+     */
+    public function plantings(): HasMany
+    {
+        return $this->hasMany(Planting::class);
+    }
 }

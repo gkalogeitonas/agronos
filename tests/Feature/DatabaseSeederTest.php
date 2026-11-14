@@ -138,10 +138,26 @@ test('the dev seeder gives one farm a single whole-farm planting, once', functio
     $this->seed(DatabaseSeeder::class);
     $this->seed(DatabaseSeeder::class);
 
-    $plantings = Planting::allTenants()->with('crop')->get();
+    $farm = Farm::allTenants()->where('name', 'Τριποδες')->sole();
+    $plantings = Planting::allTenants()->whereBelongsTo($farm)->with('crop')->get();
 
     expect($plantings)->toHaveCount(1)
         ->and($plantings->first()->crop->name)->toBe('Wine grape')
-        ->and($plantings->first()->zone_id)->toBeNull()
-        ->and($plantings->first()->farm->name)->toBe('Τριποδες');
+        ->and($plantings->first()->zone_id)->toBeNull();
+});
+
+test('the dev seeder gives the large farm\'s zones different crops, with a past planting, once', function () {
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $farm = Farm::allTenants()->where('name', DevEnvironmentSeeder::LARGE_FARM_NAME)->sole();
+    $plantings = Planting::allTenants()->whereBelongsTo($farm)->with(['crop', 'zone'])->get();
+    $today = now()->startOfDay();
+    $currentByLand = $plantings->filter(fn (Planting $planting) => $planting->statusOn($today) === Planting::STATUS_CURRENT)
+        ->mapWithKeys(fn (Planting $planting) => [$planting->zone?->name ?? 'farm' => $planting->crop->name]);
+
+    expect($plantings)->toHaveCount(4)
+        ->and($currentByLand->all())->toEqual(['farm' => 'Olive', 'Σειρά 2' => 'Tomato', 'Σειρά 3' => 'Fallow'])
+        ->and($plantings->filter(fn (Planting $planting) => $planting->statusOn($today) === Planting::STATUS_PAST)->map(fn (Planting $planting) => [$planting->zone->name, $planting->crop->name])->values()->all())
+        ->toEqual([['Σειρά 2', 'Wheat']]);
 });

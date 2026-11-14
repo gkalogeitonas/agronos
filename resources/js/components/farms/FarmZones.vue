@@ -9,10 +9,13 @@ export interface FarmZone {
     id: number;
     name: string;
     sensors_count: number;
+    plantings_count: number;
+    /** What grows in the zone: its current planting's crop, otherwise the farm's (`from_farm`), otherwise none. */
+    crop: { name: string; from_farm: boolean } | null;
 }
 
 /**
- * The Zones section of Farm detail: lists the farm's zones with their sensor counts, and adds, renames and deletes them.
+ * The Zones section of Farm detail: lists the farm's zones with their crops and sensor counts, and adds, renames and deletes them.
  */
 defineProps<{
     farmId: number;
@@ -25,10 +28,25 @@ function sensorCount(count: number): string {
     return count === 1 ? '1 sensor' : `${count} sensors`;
 }
 
+function cropLabel(zone: FarmZone): string {
+    if (!zone.crop) {
+        return 'No crop';
+    }
+
+    return zone.crop.from_farm ? `${zone.crop.name} (farm's crop)` : zone.crop.name;
+}
+
 function deleteDescription(zone: FarmZone): string {
     const holds = zone.sensors_count === 1 ? 'Its 1 sensor' : `Its ${zone.sensors_count} sensors`;
+    const sensors = `${holds} will be left with no zone. No sensors are deleted.`;
 
-    return `${holds} will be left with no zone. No sensors are deleted.`;
+    if (zone.plantings_count === 0) {
+        return sensors;
+    }
+
+    const plantings = zone.plantings_count === 1 ? 'Its 1 planting is' : `Its ${zone.plantings_count} plantings are`;
+
+    return `${sensors} ${plantings} deleted with it. This cannot be undone.`;
 }
 </script>
 
@@ -43,7 +61,7 @@ function deleteDescription(zone: FarmZone): string {
             <li v-for="zone in zones" :key="zone.id" class="flex flex-wrap items-center justify-between gap-3 py-2">
                 <div class="flex min-w-0 flex-col">
                     <span class="truncate font-medium">{{ zone.name }}</span>
-                    <span class="font-mono text-meta text-muted-foreground">{{ sensorCount(zone.sensors_count) }}</span>
+                    <span class="font-mono text-meta text-muted-foreground">{{ cropLabel(zone) }} · {{ sensorCount(zone.sensors_count) }}</span>
                 </div>
                 <div class="flex items-center gap-1">
                     <ZoneDialog :farm-id="farmId" :zone="zone" :next-zone-name="nextZoneName">

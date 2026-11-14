@@ -61,11 +61,11 @@ const props = defineProps<{
     devicesOnline: number;
     /** The most urgent open alerts of the farm. */
     alerts: AlertItem[];
-    /** The farm's zones, each with how many sensors it holds. */
+    /** The farm's zones, each with its crop and how many sensors and plantings it holds. */
     zones: FarmZone[];
     /** The name a new zone gets when it is given none. */
     nextZoneName: string;
-    /** What grows on the whole farm: current first, then upcoming, then past. */
+    /** What grows on the whole farm and in its zones: current first, then upcoming, then past. */
     plantings: FarmPlanting[];
     /** The crops a planting can be of: the shared catalogue plus the user's own. */
     crops: CropOption[];
@@ -238,7 +238,7 @@ const farmInfo = computed<DescriptionItem[]>(() => [
 
             <FarmZones :farm-id="farm.id" :zones="zones" :next-zone-name="nextZoneName" />
 
-            <FarmPlantings :farm-id="farm.id" :plantings="plantings" :crops="crops" />
+            <FarmPlantings :farm-id="farm.id" :plantings="plantings" :crops="crops" :zones="zones" />
 
             <div class="flex flex-wrap items-stretch gap-4">
                 <SectionCard title="Map" class="flex-[2_1_480px]">

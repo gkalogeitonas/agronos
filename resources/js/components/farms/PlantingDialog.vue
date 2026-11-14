@@ -18,6 +18,9 @@ import { computed, ref, watch } from 'vue';
 
 export interface FarmPlanting {
     id: number;
+    /** The zone the planting is of, or null for the whole farm. */
+    zone_id: number | null;
+    zone_name: string | null;
     crop_id: number;
     crop_name: string;
     variety: string | null;
@@ -31,6 +34,11 @@ export interface CropOption {
     name: string;
 }
 
+export interface ZoneOption {
+    id: number;
+    name: string;
+}
+
 /** Value of the crop select's "Add a crop…" option, which opens the field for a new crop's name. */
 const ADD_CROP = 'add';
 
@@ -38,13 +46,15 @@ const ADD_CROP = 'add';
 type CropChoice = number | '' | typeof ADD_CROP;
 
 /**
- * Dialog that adds a whole-farm planting, or corrects one. Both dates are optional.
+ * Dialog that adds a planting of the whole farm or one of its zones, or corrects one. Both dates are optional.
  * When the new planting would follow the current one, the server asks first; the grower can then end the current one on the new start date.
  * A crop missing from the list can be added from the crop select by name; once added it is selected.
  */
 const props = defineProps<{
     farmId: number;
     crops: CropOption[];
+    /** The farm's zones, offered as land after the whole farm. */
+    zones: ZoneOption[];
     /** Planting to correct; omit to add a new one. */
     planting?: FarmPlanting;
 }>();
@@ -53,6 +63,8 @@ const open = ref(false);
 
 function initialValues() {
     return {
+        /** Empty for the whole farm; the server reads an empty value as none. */
+        zone_id: (props.planting?.zone_id ?? '') as number | '',
         crop_id: (props.planting?.crop_id ?? '') as CropChoice,
         variety: props.planting?.variety ?? '',
         started_on: props.planting?.started_on ?? '',
@@ -106,9 +118,9 @@ function onOpenChange(isOpen: boolean): void {
     }
 }
 
-/** The offer to end the current planting names the start date, so it no longer holds once that date changes. */
+/** The offer to end the current planting names that planting and the start date, so it no longer holds once either the land or the date changes. */
 watch(
-    () => form.started_on,
+    () => [form.started_on, form.zone_id],
     () => form.clearErrors('end_current'),
 );
 
@@ -134,9 +146,16 @@ function submit(endCurrent = false): void {
                 <DialogHeader class="space-y-3">
                     <DialogTitle>{{ planting ? `Edit ${planting.crop_name}` : 'Add crop' }}</DialogTitle>
                     <DialogDescription>
-                        What grows on the whole farm. Leave a date empty if you do not know it: no start means long ago, no end means still growing.
+                        What grows on the whole farm or one zone. A zone's crop overrides the farm's there. Leave a date empty if you do not know it:
+                        no start means long ago, no end means still growing.
                     </DialogDescription>
                 </DialogHeader>
+                <FormField :id="`planting-land${idSuffix}`" label="Land" :error="form.errors.zone_id">
+                    <NativeSelect :id="`planting-land${idSuffix}`" v-model="form.zone_id">
+                        <option value="">Whole farm</option>
+                        <option v-for="zone in zones" :key="zone.id" :value="zone.id">{{ zone.name }}</option>
+                    </NativeSelect>
+                </FormField>
                 <FormField :id="`planting-crop${idSuffix}`" label="Crop" :error="form.errors.crop_id">
                     <NativeSelect :id="`planting-crop${idSuffix}`" v-model="form.crop_id" required>
                         <option value="" disabled>Choose a crop</option>
