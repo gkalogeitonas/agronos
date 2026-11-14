@@ -364,6 +364,27 @@ describe('deleting a planting', function () {
     });
 });
 
+describe('zone plantings', function () {
+    it('cannot be corrected, ended or deleted through the whole-farm routes', function () {
+        $zonePlanting = Planting::factory()->for($this->farm)->forZone()->create(['crop_id' => $this->olive->id]);
+
+        put(route('farms.plantings.update', [$this->farm, $zonePlanting]), ['crop_id' => $this->olive->id, 'variety' => 'Changed'])->assertNotFound();
+        patch(route('farms.plantings.end', [$this->farm, $zonePlanting]))->assertNotFound();
+        delete(route('farms.plantings.destroy', [$this->farm, $zonePlanting]))->assertNotFound();
+
+        assertDatabaseHas('plantings', ['id' => $zonePlanting->id, 'variety' => null, 'ended_on' => null]);
+    });
+
+    it('cannot be reached under another of the user\'s farms', function () {
+        $otherFarm = Farm::factory()->create(['user_id' => $this->user->id]);
+        $planting = Planting::factory()->for($otherFarm)->create(['crop_id' => $this->olive->id]);
+
+        delete(route('farms.plantings.destroy', [$this->farm, $planting]))->assertNotFound();
+
+        assertDatabaseHas('plantings', ['id' => $planting->id]);
+    });
+});
+
 describe('deleting a farm', function () {
     it('deletes its plantings, and keeps the crop', function () {
         $planting = Planting::factory()->for($this->farm)->create(['crop_id' => $this->olive->id]);

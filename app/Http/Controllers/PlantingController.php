@@ -31,6 +31,7 @@ class PlantingController extends Controller
 
     public function update(PlantingRequest $request, Farm $farm, Planting $planting): RedirectResponse
     {
+        $this->ensureWholeFarm($planting);
         $this->authorize('update', $planting);
 
         $planting->update($request->validated());
@@ -44,6 +45,7 @@ class PlantingController extends Controller
      */
     public function end(EndPlantingRequest $request, Farm $farm, Planting $planting): RedirectResponse
     {
+        $this->ensureWholeFarm($planting);
         $this->authorize('update', $planting);
 
         $planting->update(['ended_on' => $request->date('ended_on')]);
@@ -54,11 +56,20 @@ class PlantingController extends Controller
 
     public function destroy(Farm $farm, Planting $planting): RedirectResponse
     {
+        $this->ensureWholeFarm($planting);
         $this->authorize('delete', $planting);
 
         $planting->delete();
 
         return redirect()->route('farms.show', $farm)
             ->with('success', "{$planting->crop->name} deleted.");
+    }
+
+    /**
+     * These routes manage whole-farm plantings only; a zone's planting is not theirs to change.
+     */
+    private function ensureWholeFarm(Planting $planting): void
+    {
+        abort_unless($planting->zone_id === null, 404);
     }
 }
