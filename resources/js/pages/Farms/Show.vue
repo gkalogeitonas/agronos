@@ -9,7 +9,9 @@ import SectionCard from '@/components/agronos/SectionCard.vue';
 import SensorTable from '@/components/agronos/SensorTable.vue';
 import StatTile from '@/components/agronos/StatTile.vue';
 import FarmMapbox from '@/components/FarmMapbox.vue';
+import FarmPlantings from '@/components/farms/FarmPlantings.vue';
 import FarmZones, { type FarmZone } from '@/components/farms/FarmZones.vue';
+import type { CropOption, FarmPlanting } from '@/components/farms/PlantingDialog.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -63,6 +65,10 @@ const props = defineProps<{
     zones: FarmZone[];
     /** The name a new zone gets when it is given none. */
     nextZoneName: string;
+    /** What grows on the whole farm: current first, then upcoming, then past. */
+    plantings: FarmPlanting[];
+    /** The crops a planting can be of: the shared catalogue plus the user's own. */
+    crops: CropOption[];
     sensorDbStats?: {
         totalSensors: number;
         sensorTypeStats: Record<string, number>;
@@ -154,7 +160,11 @@ const farmInfo = computed<DescriptionItem[]>(() => [
                     <Button variant="outline" as-child>
                         <Link :href="route('farms.edit', farm.id)"><Pencil /> Edit</Link>
                     </Button>
-                    <ConfirmDeleteButton :url="route('farms.destroy', farm.id)" :item-name="farm.name" />
+                    <ConfirmDeleteButton
+                        :url="route('farms.destroy', farm.id)"
+                        :item-name="farm.name"
+                        description="This also deletes the farm's zones and plantings. Its devices stay, unassigned. This cannot be undone."
+                    />
                     <Button as-child>
                         <Link :href="route('devices.create', { farm: farm.id })"><Plus /> Add device</Link>
                     </Button>
@@ -227,6 +237,8 @@ const farmInfo = computed<DescriptionItem[]>(() => [
             </SectionCard>
 
             <FarmZones :farm-id="farm.id" :zones="zones" :next-zone-name="nextZoneName" />
+
+            <FarmPlantings :farm-id="farm.id" :plantings="plantings" :crops="crops" />
 
             <div class="flex flex-wrap items-stretch gap-4">
                 <SectionCard title="Map" class="flex-[2_1_480px]">

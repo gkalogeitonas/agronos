@@ -3,6 +3,7 @@
 use App\Enums\SensorType;
 use App\Models\Device;
 use App\Models\Farm;
+use App\Models\Planting;
 use App\Models\Sensor;
 use App\Models\User;
 use App\Models\Zone;
@@ -131,4 +132,16 @@ test('re-seeding updates the seeded zones in place', function () {
 
     expect(Zone::allTenants()->orderBy('id')->pluck('id'))->toEqual($zoneIds)
         ->and(Sensor::allTenants()->orderBy('uuid')->pluck('zone_id', 'uuid'))->toEqual($sensorZones);
+});
+
+test('the dev seeder gives one farm a single whole-farm planting, once', function () {
+    $this->seed(DatabaseSeeder::class);
+    $this->seed(DatabaseSeeder::class);
+
+    $plantings = Planting::allTenants()->with('crop')->get();
+
+    expect($plantings)->toHaveCount(1)
+        ->and($plantings->first()->crop->name)->toBe('Wine grape')
+        ->and($plantings->first()->zone_id)->toBeNull()
+        ->and($plantings->first()->farm->name)->toBe('Τριποδες');
 });

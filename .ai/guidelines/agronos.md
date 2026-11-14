@@ -6,7 +6,7 @@
 
 ## Tenancy
 
-Farm, Device and Sensor are tenant-scoped (ADR-0003). Code that runs without a signed-in user (device API, webhooks, jobs, commands) must use `allTenants()`.
+Farm, Zone, Device, Sensor and Planting are tenant-scoped (ADR-0003). Crop is not: it has its own scope for the shared catalogue plus the tenant's crops (ADR-0010). Code that runs without a signed-in user (device API, webhooks, jobs, commands) must use `allTenants()`.
 Feature tests for a tenant-scoped resource cover, per action, both the owner succeeding and another user getting 403 or not seeing the record.
 
 ## UI

@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
 use App\Http\Controllers\GatewayController;
+use App\Http\Controllers\PlantingController;
 use App\Http\Controllers\SensorController;
 use App\Http\Controllers\ZoneController;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +48,12 @@ Route::resource('farms', FarmController::class)
 Route::middleware(['auth', 'verified'])->scopeBindings()->group(function () {
     Route::resource('farms.zones', ZoneController::class)
         ->only(['store', 'update', 'destroy']);
+
+    // Plantings are managed in dialogs on Farm detail too
+    Route::resource('farms.plantings', PlantingController::class)
+        ->only(['store', 'update', 'destroy']);
+    Route::patch('farms/{farm}/plantings/{planting}/end', [PlantingController::class, 'end'])
+        ->name('farms.plantings.end');
 });
 
 // Device registration and management routes
