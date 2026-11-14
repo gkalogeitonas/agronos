@@ -26,6 +26,12 @@ export interface FlashMessages {
     info?: string;
 }
 
+/** All Inertia flash data: the toast messages, plus values a page reads once after a request. */
+export interface FlashData extends FlashMessages {
+    /** The crop a tenant just added (`CropController`), so the planting dialog can select it. */
+    createdCrop?: { id: number; name: string };
+}
+
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     name: string;
     quote: { message: string; author: string };

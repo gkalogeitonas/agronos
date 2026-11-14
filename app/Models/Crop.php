@@ -45,6 +45,14 @@ class Crop extends Model
     }
 
     /**
+     * Whether a crop the signed-in tenant can choose already has this name, ignoring case.
+     */
+    public static function nameIsTaken(string $name): bool
+    {
+        return static::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->exists();
+    }
+
+    /**
      * @return HasMany<Planting, $this>
      */
     public function plantings(): HasMany

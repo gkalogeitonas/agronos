@@ -197,3 +197,24 @@ it('offers to end the current crop when adding the next one', function () {
 
     expect($current->fresh()->ended_on->toDateString())->toBe('2026-05-01');
 });
+
+it('adds a crop missing from the list and selects it in the planting dialog', function () {
+    $farm = Farm::factory()->create(['user_id' => $this->user->id]);
+
+    $page = visit(route('farms.show', $farm, absolute: false))
+        ->click('section[aria-label="Crops"] >> text=Add crop')
+        ->select('#planting-crop', 'add')
+        ->fill('#new-crop-name', 'Saffron')
+        ->press('Add to my crops')
+        ->assertDontSee('New crop name');
+
+    $saffron = Crop::query()->where('name', 'Saffron')->sole();
+
+    $page->assertSelected('#planting-crop', (string) $saffron->id)
+        ->press('[role="dialog"] button[type="submit"]')
+        ->assertSeeIn('section[aria-label="Crops"] ul', 'Saffron')
+        ->assertNoJavaScriptErrors();
+
+    expect($saffron->user_id)->toBe($this->user->id);
+    assertDatabaseHas('plantings', ['farm_id' => $farm->id, 'crop_id' => $saffron->id]);
+});

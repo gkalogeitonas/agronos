@@ -59,6 +59,79 @@ describe('the crop catalogue', function () {
     });
 });
 
+describe('adding a crop', function () {
+    it('creates a crop with only a name, owned by the user, and offers it on the farm page', function () {
+        post(route('crops.store'), ['name' => 'Saffron'], ['referer' => route('farms.show', $this->farm)])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('farms.show', $this->farm));
+
+        $crop = Crop::query()->where('name', 'Saffron')->sole();
+
+        expect($crop->user_id)->toBe($this->user->id)
+            ->and($crop->eppo_code)->toBeNull();
+
+        get(route('farms.show', $this->farm))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('crops', fn ($crops) => collect($crops)->pluck('id')->contains($crop->id))
+        );
+    });
+
+    it('hands the new crop back so the planting dialog can select it', function () {
+        $response = post(route('crops.store'), ['name' => 'Saffron']);
+        $crop = Crop::query()->where('name', 'Saffron')->sole();
+
+        $response->assertInertiaFlash('createdCrop.id', $crop->id)
+            ->assertInertiaFlash('createdCrop.name', 'Saffron');
+    });
+
+    it('requires a name', function () {
+        post(route('crops.store'), ['name' => ''])->assertSessionHasErrors('name');
+    });
+
+    it('refuses a name that is not text', function () {
+        post(route('crops.store'), ['name' => ['Saffron']])->assertSessionHasErrors('name');
+    });
+
+    it('refuses a name that differs from a listed crop only in spacing', function () {
+        Crop::factory()->forTenant($this->user)->create(['name' => 'Sweet potato']);
+
+        post(route('crops.store'), ['name' => 'Sweet   potato'])->assertSessionHasErrors('name');
+    });
+
+    it('refuses a name that is already in the catalogue, ignoring case', function () {
+        post(route('crops.store'), ['name' => 'oLIVE'])->assertSessionHasErrors('name');
+
+        expect(Crop::query()->whereRaw('LOWER(name) = ?', ['olive'])->count())->toBe(1);
+    });
+
+    it('refuses a name the user already added, ignoring case', function () {
+        Crop::factory()->forTenant($this->user)->create(['name' => 'Saffron']);
+
+        post(route('crops.store'), ['name' => 'SAFFRON'])->assertSessionHasErrors('name');
+    });
+
+    it('accepts a name another user added, and neither user sees the other\'s crop', function () {
+        $other = User::factory()->create();
+        $theirs = Crop::factory()->forTenant($other)->create(['name' => 'Saffron']);
+
+        post(route('crops.store'), ['name' => 'Saffron'])->assertSessionHasNoErrors();
+        $mine = Crop::query()->where('name', 'Saffron')->sole();
+
+        expect($mine->id)->not->toBe($theirs->id)
+            ->and(Crop::query()->pluck('id'))->not->toContain($theirs->id);
+
+        actingAs($other);
+        expect(Crop::query()->pluck('id'))->toContain($theirs->id)->not->toContain($mine->id);
+    });
+
+    it('is refused to a guest', function () {
+        auth()->logout();
+
+        post(route('crops.store'), ['name' => 'Saffron'])->assertRedirect(route('login'));
+
+        assertDatabaseMissing('crops', ['name' => 'Saffron']);
+    });
+});
+
 describe('listing plantings on the farm page', function () {
     it('lists whole-farm plantings, current first, then upcoming, then past', function () {
         $past = Planting::factory()->for($this->farm)->ended()->create();

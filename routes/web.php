@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AlertController;
+use App\Http\Controllers\CropController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\FarmController;
@@ -54,6 +55,9 @@ Route::middleware(['auth', 'verified'])->scopeBindings()->group(function () {
         ->only(['store', 'update', 'destroy']);
     Route::patch('farms/{farm}/plantings/{planting}/end', [PlantingController::class, 'end'])
         ->name('farms.plantings.end');
+
+    // A tenant adds their own crop from the planting dialog
+    Route::post('crops', [CropController::class, 'store'])->name('crops.store');
 });
 
 // Device registration and management routes
